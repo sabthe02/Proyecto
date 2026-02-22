@@ -1,22 +1,13 @@
 package com.Proyecto.SpringBoot.Datos;
 
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
 import com.Proyecto.SpringBoot.Modelos.Jugador;
 
-public class JugadoresDAO {
+@Repository
+public interface JugadoresDAO extends JpaRepository<Jugador, String> {
 
-    public JugadoresDAO() {
-    }
-
-    
-    public void agregarJugador(String nickName, String team) {
-
-
-    }
-
-    
-    public Jugador obtenerJugador(String nickName) {
-       
-        return new Jugador(nickName, nickName, nickName); 
-    }
+    Jugador findByNickName(String nickName);
 
 }

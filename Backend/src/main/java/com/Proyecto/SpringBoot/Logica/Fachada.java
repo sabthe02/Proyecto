@@ -3,6 +3,7 @@ package com.Proyecto.SpringBoot.Logica;
 import java.util.Dictionary;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.Proyecto.SpringBoot.Datos.JugadoresDAO;
@@ -14,34 +15,36 @@ import com.Proyecto.SpringBoot.Modelos.Jugador;
 public class Fachada implements iFachada {
 
 
+	@Autowired
+    private JugadoresDAO jugadoresDAO;
+
     Dictionary<String, Jugador> usuariosConectados; 
     Dictionary<String, Jugador> jugadoresEnLobby;
     Dictionary<String, Jugador> jugadorEnSesion;
     Dictionary<String, SesionJuego> sesionesActivas;
-
     iHandler handler;
-
-    JugadoresDAO jugadoresDAO;
-
-    public Fachada(iHandler handler) {
-        this.handler = handler;
-        usuariosConectados = new java.util.Hashtable<String, Jugador>();
-        jugadoresEnLobby = new java.util.Hashtable<String, Jugador>();
-        jugadorEnSesion = new java.util.Hashtable<String, Jugador>();
-        sesionesActivas = new java.util.Hashtable<String, SesionJuego>();
+    
 
 
-        jugadoresDAO = new JugadoresDAO();
+    public Fachada() {
+    	
+    	  usuariosConectados = new java.util.Hashtable<>();
+          jugadoresEnLobby = new java.util.Hashtable<>();
+          jugadorEnSesion = new java.util.Hashtable<>();
+          sesionesActivas = new java.util.Hashtable<>();
+
+        
     }
 
-    public Jugador conectarUsuario(String nickName) throws JugadorNoExisteException
-    {
-        Jugador jugador = jugadoresDAO.obtenerJugador(nickName);
+    public Jugador conectarUsuario(String nickName) throws JugadorNoExisteException {
+
+        Jugador jugador = jugadoresDAO.findByNickName(nickName);
+
         if (jugador != null) {
             usuariosConectados.put(jugador.getId(), jugador);
             return jugador;
         }
-        
+
         throw new JugadorNoExisteException("El jugador " + nickName + " no existe");
     }
 
@@ -78,10 +81,10 @@ public class Fachada implements iFachada {
         return false;
     }
 
-    @Override
-    public boolean EnviarActualizaciones(List<Jugador> jugadores, List<Evento> acciones) {
-        handler.enviarAcciones(jugadores, acciones);
-        return true;
-    }
+	@Override
+	public boolean EnviarActualizaciones(List<Jugador> jugadores, List<Evento> acciones) {
+		return false;
+	}
+
 
 }

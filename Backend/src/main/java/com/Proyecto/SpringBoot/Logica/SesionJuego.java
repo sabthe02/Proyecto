@@ -13,13 +13,43 @@ public class SesionJuego extends GameLoop {
     private List<Evento> accionesPendientesEnviar;
     private List<Evento> accionesPendientesProcesar;
 
-    public SesionJuego(String idSesion) {
+    public SesionJuego(String idSesion, List<Jugador> jugadores) {
         this.idSesion = idSesion;
-        jugadores = new java.util.Hashtable<String, Jugador>();
+        this.jugadores = new java.util.Hashtable<String, Jugador>();
+        for(Jugador jugador : jugadores) {
+            this.jugadores.put(jugador.getId(), jugador);
+        }
         elementosEnJuego = new java.util.Hashtable<String, Elemento>();
         accionesPendientesEnviar = new java.util.ArrayList<Evento>();
         accionesPendientesProcesar = new java.util.ArrayList<Evento>();
+
+
+        // Enviar notificacion a jugadores de inicio de sesion
+
+        
     }
+
+    public String getIdSesion() {
+        return idSesion;
+    }
+
+    public Dictionary<String, Jugador> getJugadores() {
+        return jugadores;
+    }
+
+    public Dictionary<String, Elemento> getElementosEnJuego() {
+        return elementosEnJuego;
+    }
+
+    public List<Evento> getAccionesPendientesEnviar() {
+        return accionesPendientesEnviar;
+    }
+
+    public List<Evento> getAccionesPendientesProcesar() {
+        return accionesPendientesProcesar;
+    }
+
+
 
     @Override
     protected void processGameLoop() {

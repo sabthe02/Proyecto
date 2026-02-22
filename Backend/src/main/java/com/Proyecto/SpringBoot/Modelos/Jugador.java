@@ -1,18 +1,18 @@
 package com.Proyecto.SpringBoot.Modelos;
 
-
-
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-
-
+import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(name = "jugadores")
+@Table(name = "jugadores", uniqueConstraints = @UniqueConstraint(columnNames = { "nickName" }))
 public class Jugador {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
     private String nickName;
@@ -28,6 +28,7 @@ public class Jugador {
     public Jugador() {
 
     }
+
     public String getId() {
         return id;
     }
@@ -51,7 +52,5 @@ public class Jugador {
     public void setTeam(String team) {
         this.team = team;
     }
-
-    
 
 }

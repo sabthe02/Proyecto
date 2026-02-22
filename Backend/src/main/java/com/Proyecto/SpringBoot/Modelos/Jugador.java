@@ -1,11 +1,23 @@
 package com.Proyecto.SpringBoot.Modelos;
 
+
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
+
+
+@Entity
+@Table(name = "jugadores")
 public class Jugador {
 
-    public String id;
-    public String nickName;
-    public String team;
+    @Id
+    private String id;
 
+    private String nickName;
+
+    private String team;
 
     public Jugador(String id, String nickName, String team) {
         this.id = id;
@@ -13,6 +25,9 @@ public class Jugador {
         this.team = team;
     }
 
+    public Jugador() {
+
+    }
     public String getId() {
         return id;
     }

@@ -102,7 +102,7 @@ export class Greeting extends Phaser.Scene {
 
     
 
-        // botones - Registro y Login
+        // botones
         const buttonsContainer = this.add.dom(width / 2 + 47, height / 2 + 70).createFromHTML(`
             <div style="display:flex;flex-direction:row;align-items:center;gap:8px;width:260px;">
                 <button id="registro" style="
@@ -195,9 +195,12 @@ export class Greeting extends Phaser.Scene {
         });
 
         // Mensaje de error
-        this.statusText = this.add.text(20, 20, '', { fontSize: '16px', fill: '#ffffff' }).setScrollFactor(0);
+        this.statusText = this.add.text(20, 20, '', { 
+            fontSize: '16px', 
+            fill: '#ffffff' 
+        }).setScrollFactor(0);
 
-        // WebSocket - store globally so it persists across scenes
+
         if (!window.gameSocket) {
             window.gameSocket = new WebSocket("ws://localhost:8080/ws");
         }

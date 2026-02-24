@@ -99,7 +99,7 @@ public class Fachada implements iFachada {
         throw new UnsupportedOperationException("No implementado aun");
     }
 
-    public boolean pasarALobby(Jugador jugador) throws Exception {
+    public boolean pasarALobby(Jugador jugador) throws LobbyException {
     
         if(jugadoresEnLobby.get(jugador.getId()) != null) {
             throw new LobbyException("El jugador ya esta en el lobby");

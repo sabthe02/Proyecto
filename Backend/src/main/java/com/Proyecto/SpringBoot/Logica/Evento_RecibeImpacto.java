@@ -8,7 +8,7 @@ public class Evento_RecibeImpacto extends Evento {
         idElementoEmisor = 0;
     }
 
-    public Evento_RecibeImpacto(int idElemento, int idElementoEmisor) {
+    public Evento_RecibeImpacto(Elemento idElemento, int idElementoEmisor) {
         super(idElemento);
         this.idElementoEmisor = idElementoEmisor;
     }

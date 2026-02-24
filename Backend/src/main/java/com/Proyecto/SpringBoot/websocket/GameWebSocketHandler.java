@@ -85,6 +85,22 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
                 return;
             }
             response = pasarLobby(session, node);
+        } else if (tipo.equals("MOVER_ELEMENTO")) {
+            if (usuariosConectadosbySocket.get(session) == null) {
+                response.put("tipo", "ERROR");
+                response.put("mensaje", "El jugador no ha iniciado sesión.");
+                session.sendMessage(new TextMessage(response.toString()));
+                return;
+            }
+            response = procesarMovimiento(session, node);
+        }else if (tipo.equals("DISPARAR_BOMBA")) {
+            if (usuariosConectadosbySocket.get(session) == null) {
+                response.put("tipo", "ERROR");
+                response.put("mensaje", "El jugador no ha iniciado sesión.");
+                session.sendMessage(new TextMessage(response.toString()));
+                return;
+            }
+            response = procesarDisparo(session, node);
         } else {
             System.out.println("Tipo de mensaje no reconocido: " + tipo);
         }
@@ -103,6 +119,54 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
     @Override
     public boolean enviarAcciones(List<Jugador> jugadores, List<Evento> acciones) {
         throw new UnsupportedOperationException("Unimplemented method 'enviarAcciones'");
+    }
+
+    private ObjectNode procesarDisparo(WebSocketSession session, JsonNode node) {
+        ObjectNode response = new ObjectMapper().createObjectNode();
+
+        try {
+            int idElemento = node.get("idElemento").asInt();
+
+            boolean resultado = fachada.accion_disparar(usuariosConectadosbySocket.get(session), idElemento);
+
+            if (resultado) {
+                response.put("tipo", "DISPARO_PROCESADO");
+            } else {
+                response.put("tipo", "DISPARO_FALLIDO");
+                response.put("mensaje", "No se pudo procesar el disparo.");
+            }
+        } catch (Exception e) {
+            response.put("tipo", "ERROR");
+            response.put("mensaje", "Error al procesar el disparo: " + e.getMessage());
+        }
+
+        return response;
+    }
+
+    private ObjectNode procesarMovimiento(WebSocketSession session, JsonNode node) {
+        ObjectNode response = new ObjectMapper().createObjectNode();
+
+        try {
+            int idElemento = node.get("idElemento").asInt();
+            float x = node.get("PosicionX").floatValue();
+            float y = node.get("PosicionY").floatValue();
+            float z = node.get("PosicionZ").floatValue();
+            int angulo = node.get("Angulo").asInt();
+
+            boolean resultado = fachada.accion_mover(usuariosConectadosbySocket.get(session), idElemento, x, y, z, angulo);
+
+            if (resultado) {
+                response.put("tipo", "MOVIMIENTO_PROCESADO");
+            } else {
+                response.put("tipo", "MOVIMIENTO_FALLIDO");
+                response.put("mensaje", "No se pudo procesar el movimiento.");
+            }
+        } catch (Exception e) {
+            response.put("tipo", "ERROR");
+            response.put("mensaje", "Error al procesar el movimiento: " + e.getMessage());
+        }
+
+        return response;
     }
 
     private ObjectNode pasarLobby(WebSocketSession session, JsonNode node) {

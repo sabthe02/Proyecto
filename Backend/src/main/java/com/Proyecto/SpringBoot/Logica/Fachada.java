@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.Proyecto.SpringBoot.Datos.JugadoresDAO;
+import com.Proyecto.SpringBoot.Logica.Excepciones.AccionInvalidaException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.ExisteNickNameException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.JugadorNoExisteException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.LobbyException;
@@ -23,10 +24,17 @@ public class Fachada implements iFachada {
     @Autowired
     private JugadoresDAO jugadoresDAO;
 
+    //Dado un id de usuario obtenermos el jugador.
     Dictionary<String, Jugador> usuariosConectados;
+
+    //Dado un id de usuario, se obtiene el jugador en el Lobby.
     Map<String, Jugador> jugadoresEnLobby;
-    Dictionary<String, Jugador> jugadorEnSesion;
-    Dictionary<String, SesionJuego> sesionesActivas;
+
+    //Dado un id de usuario, se obtiene la sesion en la que esta el jugador.
+    Map<String, String> jugadorEnSesion;
+
+    //Dado el id de una sesion, se obtiene la sesion de juego.
+    Map<String, SesionJuego> sesionesActivas;
 
     iHandler handler;
 
@@ -54,22 +62,21 @@ public class Fachada implements iFachada {
 
     public void ActualizarLobby() {
 
-        while (jugadoresEnLobby.size() > 1) {
-
-            String key1 = (String) jugadoresEnLobby.keySet().toArray()[0];
-            String key2 = (String) jugadoresEnLobby.keySet().toArray()[1];
+        while (sesionesActivas.size() < 10 && jugadoresEnLobby.size() > 1) {
 
             List<Jugador> jugadoresParaSesion = new java.util.ArrayList<>();
+            String idSesion = "Sesion-" + System.currentTimeMillis();
 
-            jugadoresParaSesion.add(jugadoresEnLobby.remove(key1));
-            jugadoresParaSesion.add(jugadoresEnLobby.remove(key2));
+            for(int i = 0; i < 2; i++) {
+                String key1 = (String) jugadoresEnLobby.keySet().toArray()[0];
+                jugadoresParaSesion.add(jugadoresEnLobby.remove(key1));
+                jugadorEnSesion.put(key1, idSesion);
+            }
 
-            SesionJuego nuevaSesion = new SesionJuego("Sesion-" + System.currentTimeMillis(), jugadoresParaSesion,
-                    this);
-
+            SesionJuego nuevaSesion = new SesionJuego(idSesion, jugadoresParaSesion, this);
             sesionesActivas.put(nuevaSesion.getIdSesion(), nuevaSesion);
-            nuevaSesion.iniciarSesion();
 
+            nuevaSesion.iniciarSesion();
         }
     }
 
@@ -121,12 +128,28 @@ public class Fachada implements iFachada {
         throw new UnsupportedOperationException("No implementado aun");
     }
 
-    public boolean accion_mover(Jugador jugador, float x, float y, int angulo) {
-        throw new UnsupportedOperationException("No implementado aun");
+    public boolean accion_mover(Jugador jugador, int idElemento, float x, float y, float z, int angulo) throws AccionInvalidaException {
+        String sesionId = jugadorEnSesion.get(jugador.getId());
+
+        if(sesionId == null) {
+            throw new AccionInvalidaException("El jugador no esta en una sesion activa.");
+        }
+
+        Elemento elemento = sesionesActivas.get(sesionId).getElementosEnJuego().get(idElemento);
+        Evento_Movimiento evento = new Evento_Movimiento(elemento, y, z, angulo);
+        return sesionesActivas.get(sesionId).getAccionesPendientesProcesar().add(evento);
     }
 
-    public boolean accion_disparar(Jugador jugador, String elemento) {
-        throw new UnsupportedOperationException("No implementado aun");
+    public boolean accion_disparar(Jugador jugador, int idElemento) throws AccionInvalidaException {
+        String sesionId = jugadorEnSesion.get(jugador.getId());
+
+        if(sesionId == null) {
+            throw new AccionInvalidaException("El jugador no esta en una sesion activa.");
+        }
+
+        Elemento elemento = sesionesActivas.get(sesionId).getElementosEnJuego().get(idElemento);
+        Evento_Disparo evento = new Evento_Disparo(elemento);
+        return sesionesActivas.get(sesionId).getAccionesPendientesProcesar().add(evento);
     }
 
     public boolean pasarALobby(Jugador jugador) throws LobbyException {
@@ -136,10 +159,8 @@ public class Fachada implements iFachada {
         }
 
         if (usuariosConectados.get(jugador.getId()) != null) {
-
             jugadoresEnLobby.put(jugador.getId(), jugador);
             return true;
-
         }
 
         return false;

@@ -17,6 +17,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import com.Proyecto.SpringBoot.Datos.JugadoresDAO;
 import com.Proyecto.SpringBoot.Logica.Evento;
 import com.Proyecto.SpringBoot.Logica.Fachada;
+import com.Proyecto.SpringBoot.Logica.PortaDron;
 import com.Proyecto.SpringBoot.Logica.iHandler;
 import com.Proyecto.SpringBoot.Logica.Excepciones.ExisteNickNameException;
 import com.Proyecto.SpringBoot.Modelos.Jugador;
@@ -101,7 +102,7 @@ public class Sabine_GameWebSocketHandler extends TextWebSocketHandler implements
     }
 
     @Override
-    public void enviarAcciones(List<Jugador> jugadores, List<Evento> acciones) {
+    public boolean enviarAcciones(List<Jugador> jugadores, List<Evento> acciones) {
         throw new UnsupportedOperationException("Metodo en construccion 'enviarAcciones'");
     }
 
@@ -271,6 +272,12 @@ public class Sabine_GameWebSocketHandler extends TextWebSocketHandler implements
         }
 
         return response;
+    }
+
+    @Override
+    public boolean enviarInicioPartida(List<PortaDron> portaDrones) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'enviarInicioPartida'");
     }
 
 }

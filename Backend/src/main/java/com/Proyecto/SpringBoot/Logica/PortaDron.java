@@ -17,6 +17,11 @@ public class PortaDron extends Elemento {
         this.tipo = tipo;
     }
 
+
+    public void AgregarDron(Dron dron) {
+        drones.add(dron);
+    }
+
     public TipoElemento getTipo() {
         return tipo;
     }

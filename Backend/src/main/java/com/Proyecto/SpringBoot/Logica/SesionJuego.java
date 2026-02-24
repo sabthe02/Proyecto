@@ -3,14 +3,15 @@ package com.Proyecto.SpringBoot.Logica;
 import java.util.Dictionary;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import com.Proyecto.SpringBoot.Modelos.Jugador;
 
 public class SesionJuego extends GameLoop {
 
     private String idSesion;
-    private Dictionary<Jugador, PortaDron> elementosJugadores;
-    private Dictionary<Integer, Elemento> elementosEnJuego;
+    private Map<Jugador, PortaDron> elementosJugadores;
+    private Map<Integer, Elemento> elementosEnJuego;
     private List<Evento> accionesPendientesEnviar;
     private List<Evento> accionesPendientesProcesar;
 
@@ -37,10 +38,10 @@ public class SesionJuego extends GameLoop {
         
         int i = 0;
 
-        Iterator<Jugador> it = elementosJugadores.keys().asIterator();
-        while(it.hasNext()) {
-            Jugador jugador = it.next();
-           
+
+        //Recorro la lista de jugadores y les creo los portadrones y drones.
+        for(int h = 0; h<elementosJugadores.size(); h++) {
+            Jugador jugador = (Jugador) elementosJugadores.keySet().toArray()[h];
 
             if(i%2 == 0) {
                 PortaDron p = new PortaDron(elementosEnJuego.size(), 0f, 0f, 0f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0, TipoElemento.AEREO, jugador);
@@ -56,6 +57,7 @@ public class SesionJuego extends GameLoop {
                     int idMunicion = elementosEnJuego.size();
                     elementosEnJuego.put(idMunicion, d.agregarMunicion(idMunicion));
                     
+                    p.AgregarDron(d);
                     j++;
                 }
             } else {
@@ -70,6 +72,8 @@ public class SesionJuego extends GameLoop {
                     elementosEnJuego.put(d.getId(), d);
                     int idMunicion = elementosEnJuego.size();
                     elementosEnJuego.put(idMunicion, d.agregarMunicion(idMunicion));
+
+                    p.AgregarDron(d);
                     j++;
                 }
             }
@@ -78,11 +82,9 @@ public class SesionJuego extends GameLoop {
         }
 
         List<PortaDron> portaDrones = new java.util.ArrayList<PortaDron>();
-        Iterator<PortaDron> itValues = elementosJugadores.elements().asIterator();
-        while(itValues.hasNext()) {
-            PortaDron p = itValues.next();
-            portaDrones.add(p);
-        }
+        elementosJugadores.forEach((jugador, portaDron) -> {
+            portaDrones.add(portaDron);
+        });
 
         fachada.EnviarInicioPartida(portaDrones);
         //startGameLoop();
@@ -92,13 +94,14 @@ public class SesionJuego extends GameLoop {
         return idSesion;
     }
 
-    public Dictionary<Jugador, PortaDron> getElementosJugadores() {
+    public Map<Jugador, PortaDron> getElementosJugadores() {
         return elementosJugadores;
     }
 
-    public Dictionary<Integer, Elemento> getElementosEnJuego() {
+    public Map<Integer, Elemento> getElementosEnJuego() {
         return elementosEnJuego;
-    }
+    }   
+    
 
     public List<Evento> getAccionesPendientesEnviar() {
         return accionesPendientesEnviar;

@@ -1,23 +1,27 @@
 package com.Proyecto.SpringBoot.Logica;
 
 public abstract class Evento {
-    int idElemento;
+    Elemento elemento;
 
     public Evento() {
-        idElemento = 0;
+        elemento = null;
     }
 
-    public Evento(int idElemento) {
-        this.idElemento = idElemento;
+    public Evento(Elemento elemento) {
+        this.elemento = elemento;
     }
 
     public int getIdElemento() {
-        return idElemento;
+        return elemento.getId();
     }
 
-    public void setIdElemento(int idElemento) {
-        this.idElemento = idElemento;
+    public Elemento getElemento() {
+        return elemento;
     }
 
+    public void setElemento(Elemento elemento) {
+        this.elemento = elemento;
+    }
+    
 
 }

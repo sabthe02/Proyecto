@@ -6,5 +6,6 @@ import com.Proyecto.SpringBoot.Modelos.Jugador;
 
 public interface iHandler {
 
-    void enviarAcciones(List<Jugador> jugadores, List<Evento> acciones);
+    boolean enviarAcciones(List<Jugador> jugadores, List<Evento> acciones);
+    boolean enviarInicioPartida(List<PortaDron> portaDrones);
 }

@@ -1,26 +1,23 @@
 package com.Proyecto.SpringBoot.websocket;
 
+import java.io.IOException;
 import java.util.Dictionary;
-import java.util.Hashtable;
 import java.util.List;
-import java.util.Queue;
-import java.util.Map;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-
-import com.Proyecto.SpringBoot.Datos.JugadoresDAO;
 import com.Proyecto.SpringBoot.Logica.Evento;
 import com.Proyecto.SpringBoot.Logica.Fachada;
+import com.Proyecto.SpringBoot.Logica.PortaDron;
 import com.Proyecto.SpringBoot.Logica.iHandler;
 import com.Proyecto.SpringBoot.Logica.Excepciones.ExisteNickNameException;
+import com.Proyecto.SpringBoot.Logica.Excepciones.LobbyException;
 import com.Proyecto.SpringBoot.Modelos.Jugador;
 
+import jakarta.annotation.PostConstruct;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -31,18 +28,19 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
     @Autowired
     Fachada fachada;
 
-    private Dictionary<String, Jugador> usuariosConectadosSocket = new Hashtable<>();
-    
-    private Queue<Jugador> lobbyWaiting = new ConcurrentLinkedQueue<>();
-    private Map<String, WebSocketSession> sesionesActivas = new ConcurrentHashMap<>();
-    
-    @Autowired
-    private JugadoresDAO jugadoresDAO;
-    
+    Dictionary<WebSocketSession, Jugador> usuariosConectadosbySocket;
+    Dictionary<String, WebSocketSession> usuariosConectadosbyIdJugador;
+
+    @PostConstruct
+    public void init() {
+        fachada.setHandler(this);
+        usuariosConectadosbySocket = new java.util.Hashtable<>();
+        usuariosConectadosbyIdJugador = new java.util.Hashtable<>();
+    }
+
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         System.out.println("Cliente conectado: " + session.getId());
-        sesionesActivas.put(session.getId(), session);
     }
 
     @Override
@@ -51,8 +49,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
         ObjectMapper mapper = new ObjectMapper();
         JsonNode node = null;
 
-        try{
-             node = mapper.readTree(message.getPayload());
+        try {
+            node = mapper.readTree(message.getPayload());
         } catch (Exception e) {
             ObjectNode response = new ObjectMapper().createObjectNode();
             response.put("tipo", "ERROR");
@@ -61,13 +59,12 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
             session.sendMessage(new TextMessage(response.toString()));
             return;
         }
-        
 
         ObjectNode response = new ObjectMapper().createObjectNode();
 
         String tipo = node.get("tipo").asString();
-        
-        if(tipo == null) {
+
+        if (tipo == null) {
             response.put("tipo", "ERROR");
             response.put("mensaje", "El mensaje no contiene un campo 'tipo' válido.");
             session.sendMessage(new TextMessage(response.toString()));
@@ -76,201 +73,191 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
 
         if (tipo.equals("REGISTRAR_JUGADOR")) {
             response = RegistrarJugador(session, node);
-            session.sendMessage(new TextMessage(response.toString()));
         } else if (tipo.equals("LOGIN_JUGADOR")) {
             response = LoginJugador(session, node);
-            session.sendMessage(new TextMessage(response.toString()));
+            
+
         } else if (tipo.equals("PASAR_LOBBY")) {
-            pasarLobby(session, node);
-        }
-        else {
+            if (usuariosConectadosbySocket.get(session) == null) {
+                response.put("tipo", "ERROR");
+                response.put("mensaje", "El jugador no ha iniciado sesión.");
+                session.sendMessage(new TextMessage(response.toString()));
+                return;
+            }
+            response = pasarLobby(session, node);
+        } else if (tipo.equals("MOVER_ELEMENTO")) {
+            if (usuariosConectadosbySocket.get(session) == null) {
+                response.put("tipo", "ERROR");
+                response.put("mensaje", "El jugador no ha iniciado sesión.");
+                session.sendMessage(new TextMessage(response.toString()));
+                return;
+            }
+            response = procesarMovimiento(session, node);
+        }else if (tipo.equals("DISPARAR_BOMBA")) {
+            if (usuariosConectadosbySocket.get(session) == null) {
+                response.put("tipo", "ERROR");
+                response.put("mensaje", "El jugador no ha iniciado sesión.");
+                session.sendMessage(new TextMessage(response.toString()));
+                return;
+            }
+            response = procesarDisparo(session, node);
+        } else {
             System.out.println("Tipo de mensaje no reconocido: " + tipo);
-            session.sendMessage(new TextMessage(response.toString()));
         }
+        session.sendMessage(new TextMessage(response.toString()));
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-        Jugador jugador = usuariosConectadosSocket.remove(session.getId());
-        sesionesActivas.remove(session.getId());
-        if (jugador != null) {
-            lobbyWaiting.remove(jugador);
-        }
+        usuariosConectadosbySocket.remove(session);
+        usuariosConectadosbyIdJugador.remove(usuariosConectadosbySocket.get(session));
+        fachada.desconectarUsuario(usuariosConectadosbySocket.get(session).getId());
 
         System.out.println("Cliente desconectado: " + session.getId());
     }
 
     @Override
-    public void enviarAcciones(List<Jugador> jugadores, List<Evento> acciones) {
-        throw new UnsupportedOperationException("Metodo en construccion 'enviarAcciones'");
+    public boolean enviarAcciones(List<Jugador> jugadores, List<Evento> acciones) {
+        throw new UnsupportedOperationException("Unimplemented method 'enviarAcciones'");
     }
 
-    private void pasarLobby(WebSocketSession session, JsonNode node) throws Exception {
+    private ObjectNode procesarDisparo(WebSocketSession session, JsonNode node) {
+        ObjectNode response = new ObjectMapper().createObjectNode();
+
         try {
-            
-            Jugador jugador = usuariosConectadosSocket.get(session.getId());
-            if (jugador == null) {
-            
-                ObjectNode error = new ObjectMapper().createObjectNode();
-                error.put("tipo", "PASAR_LOBBY_FALLIDO");
-                error.put("mensaje", "Sesion de jugador no encontrada");
-                session.sendMessage(new TextMessage(error.toString()));
-                return;
-            }
+            int idElemento = node.get("idElemento").asInt();
 
-            fachada.pasarALobby(jugador);
+            boolean resultado = fachada.accion_disparar(usuariosConectadosbySocket.get(session), idElemento);
 
-            lobbyWaiting.add(jugador);
-            
-            if (lobbyWaiting.size() >= 2) {
-
-                Jugador jugador1 = lobbyWaiting.poll();
-                Jugador jugador2 = lobbyWaiting.poll();
-                
-                String session1Id = findSessionIdByJugador(jugador1);
-                String session2Id = findSessionIdByJugador(jugador2);
-                
-                if (session1Id != null && session2Id != null) {
-                    WebSocketSession wsSession1 = sesionesActivas.get(session1Id);
-                    WebSocketSession wsSession2 = sesionesActivas.get(session2Id);
-                    
-                    if (wsSession1 != null && wsSession1.isOpen()) {
-                        ObjectNode startMsg = new ObjectMapper().createObjectNode();
-                        startMsg.put("tipo", "PARTIDA_INICIADA");
-                        startMsg.put("rival", jugador2.getNickName()); // o debería ser jugador_2?
-                        wsSession1.sendMessage(new TextMessage(startMsg.toString()));
-                    } else {
-                        System.out.println("ERROR - wsSession1 es null o no esta abierto");
-                    }
-                    
-                    if (wsSession2 != null && wsSession2.isOpen()) {
-                        ObjectNode startMsg = new ObjectMapper().createObjectNode();
-                        startMsg.put("tipo", "PARTIDA_INICIADA");
-                        startMsg.put("rival", jugador1.getNickName());
-                        wsSession2.sendMessage(new TextMessage(startMsg.toString()));
-                    } else {
-                        System.out.println("ERROR - wsSession2 es null o no esta abierto");
-                    }
-                
-                } else {
-                    System.out.println("ERROR - No se pudieron encontrar ambas sesiones");
-                    System.out.println("  Session1Id: " + (session1Id != null ? session1Id : "NULL"));
-                    System.out.println("  Session2Id: " + (session2Id != null ? session2Id : "NULL"));
-                    ObjectNode error = new ObjectMapper().createObjectNode();
-                    error.put("tipo", "PASAR_LOBBY_FALLIDO");
-                    error.put("mensaje", "Error al encontrar sesiones de los jugadores");
-                    try {
-                        if (session1Id != null) sesionesActivas.get(session1Id).sendMessage(new TextMessage(error.toString()));
-                        if (session2Id != null) sesionesActivas.get(session2Id).sendMessage(new TextMessage(error.toString()));
-                    } catch (Exception ex) {
-                        System.err.println("Error al enviar error: " + ex.getMessage());
-                    }
-                }
+            if (resultado) {
+                response.put("tipo", "DISPARO_PROCESADO");
             } else {
-                ObjectNode response = new ObjectMapper().createObjectNode();
-                response.put("tipo", "PASAR_LOBBY_EXITOSO");
-                session.sendMessage(new TextMessage(response.toString()));
+                response.put("tipo", "DISPARO_FALLIDO");
+                response.put("mensaje", "No se pudo procesar el disparo.");
             }
-            
         } catch (Exception e) {
-            e.printStackTrace();
-            ObjectNode error = new ObjectMapper().createObjectNode();
-            error.put("tipo", "PASAR_LOBBY_FALLIDO");
-            error.put("mensaje", e.getMessage());
-            session.sendMessage(new TextMessage(error.toString()));
+            response.put("tipo", "ERROR");
+            response.put("mensaje", "Error al procesar el disparo: " + e.getMessage());
         }
+
+        return response;
     }
-    
-    private String findSessionIdByJugador(Jugador jugador) {
-        
-        for (String sessionId : sesionesActivas.keySet()) {
-            Jugador j = usuariosConectadosSocket.get(sessionId);
-            
-            if (j != null && j.getId().equals(jugador.getId())) {
-                return sessionId;
+
+    private ObjectNode procesarMovimiento(WebSocketSession session, JsonNode node) {
+        ObjectNode response = new ObjectMapper().createObjectNode();
+
+        try {
+            int idElemento = node.get("idElemento").asInt();
+            float x = node.get("PosicionX").floatValue();
+            float y = node.get("PosicionY").floatValue();
+            float z = node.get("PosicionZ").floatValue();
+            int angulo = node.get("Angulo").asInt();
+
+            boolean resultado = fachada.accion_mover(usuariosConectadosbySocket.get(session), idElemento, x, y, z, angulo);
+
+            if (resultado) {
+                response.put("tipo", "MOVIMIENTO_PROCESADO");
+            } else {
+                response.put("tipo", "MOVIMIENTO_FALLIDO");
+                response.put("mensaje", "No se pudo procesar el movimiento.");
             }
+        } catch (Exception e) {
+            response.put("tipo", "ERROR");
+            response.put("mensaje", "Error al procesar el movimiento: " + e.getMessage());
         }
-        System.out.println("No se encontro sesion para jugador " + jugador.getNickName());
-        return null;
+
+        return response;
     }
 
-    private ObjectNode RegistrarJugador(WebSocketSession session, JsonNode node) {
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode response = mapper.createObjectNode();
+    private ObjectNode pasarLobby(WebSocketSession session, JsonNode node) {
+        ObjectNode response = new ObjectMapper().createObjectNode();
 
-        String nickname = null;
-        if (node.has("nickname") && !node.get("nickname").isNull()) {
-            nickname = node.get("nickname").asText().trim();
-        }
-
-        if (nickname == null || nickname.isEmpty()) {
-            response.put("tipo", "REGISTRO_FALLIDO");
-            response.put("mensaje", "Nickname requerido");
+        try {
+            fachada.pasarALobby(usuariosConectadosbySocket.get(session));
+            response.put("tipo", "PASAR_LOBBY_EXITOSO");
+        } catch (LobbyException e) {
+            response.put("tipo", "PASAR_LOBBY_FALLIDO");
+            response.put("mensaje", e.getMessage());
             return response;
         }
 
+        return response;
+    }
+
+    private ObjectNode RegistrarJugador(WebSocketSession session, JsonNode node) throws Exception {
+        String nickname = node.get("nickname").asString();
+        String team = node.get("team").asString();
+        ObjectNode response = new ObjectMapper().createObjectNode();
+
+        Jugador nuevoJugador = null;
+
         try {
-        	Jugador existente = null;
-        	if (jugadoresDAO != null) {
-        	    existente = jugadoresDAO.findByNickName(nickname);
-        	}
-            if (existente != null) {
-                response.put("tipo", "REGISTRO_FALLIDO");
-                response.put("mensaje", "El apodo " + nickname + " ya existe.");
-                return response;
-            }
-
-            Jugador nuevoJugador = fachada.crearUsuario(nickname, null);
-            usuariosConectadosSocket.put(session.getId(), nuevoJugador);
-            System.out.println("REGISTRO Jugador registrado: " + nickname + " | Session ID: " + session.getId() + " | Usuarios en map: " + usuariosConectadosSocket.size());
-
+            nuevoJugador = fachada.crearUsuario(nickname, team);
+            usuariosConectadosbySocket.put(session, nuevoJugador);
+            usuariosConectadosbyIdJugador.put(nuevoJugador.getId(), session);
             response.put("tipo", "JUGADOR_CREADO");
             response.put("id", nuevoJugador.getId());
             response.put("nickname", nuevoJugador.getNickName());
         } catch (ExisteNickNameException e) {
             response.put("tipo", "REGISTRO_FALLIDO");
             response.put("mensaje", e.getMessage());
-        } catch (Exception e) {
-            System.err.println("Excepcion inesperada al registrar jugador: " + e);
-            response.put("tipo", "ERROR");
-            response.put("mensaje", "Error interno: " + e.getMessage());
         }
 
         return response;
     }
 
-    private ObjectNode LoginJugador(WebSocketSession session, JsonNode node) {
-        String nickname = null;
-        if (node.has("nickname") && !node.get("nickname").isNull()) {
-            nickname = node.get("nickname").asText().trim();
-        }
-
-        if (nickname == null || nickname.isEmpty()) {
-            ObjectNode response = new ObjectMapper().createObjectNode();
-            response.put("tipo", "LOGIN_FALLIDO");
-            response.put("mensaje", "Nickname requerido");
-            return response;
-        }
+    private ObjectNode LoginJugador(WebSocketSession session, JsonNode node) throws Exception {
+        String nickname = node.get("nickname").asString();
 
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode response = mapper.createObjectNode();
 
         Jugador jugador = null;
+        
         try {
             jugador = fachada.loginUsuario(nickname);
 
-            usuariosConectadosSocket.put(session.getId(), jugador);
+            usuariosConectadosbySocket.put(session, jugador);
+            usuariosConectadosbyIdJugador.put(jugador.getId(), session);
+            System.err.println("Jugador " + jugador.getNickName() + " ha iniciado sesión con ID: " + jugador.getId());
 
             response.put("tipo", "LOGIN_EXITOSO");
             response.put("id", jugador.getId());
             response.put("nickname", jugador.getNickName());
-        } catch (Exception e) {
-            System.err.println("LOGIN Error al hacer login: " + e.getMessage());
+        } catch (Exception JugadorNoExisteException) {
+
             response.put("tipo", "LOGIN_FALLIDO");
             response.put("mensaje", "Nickname no encontrado");
+
         }
 
         return response;
+
+    }
+
+    @Override
+    public boolean enviarInicioPartida(List<PortaDron> portaDrones) {
+
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode sobre = mapper.createObjectNode();
+        JsonNode datos = mapper.valueToTree(portaDrones);
+        sobre.put("tipo", "PARTIDA_INICIADA");
+        sobre.set("datos", datos);
+        String jsonFinal = mapper.writeValueAsString(sobre);
+
+        for (PortaDron portaDron : portaDrones) {
+            try {
+                WebSocketSession session = usuariosConectadosbyIdJugador.get(portaDron.getJugador().getId());
+                session.sendMessage(new TextMessage(jsonFinal));
+                //usuariosConectadosbyIdJugador.get(portaDron.getJugador().getId()).sendMessage(new TextMessage(jsonFinal));
+            } catch (IOException e) {
+                System.err.println("Error al enviar mensaje al jugador: " + e.getMessage());
+            }
+        }
+
+        
+
+        return true;
     }
 
 }

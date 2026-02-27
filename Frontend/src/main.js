@@ -21,8 +21,28 @@ const config = {
     }
 };
 
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
 const game = new Phaser.Game(config);
+
+const socket = new WebSocket('ws://localhost:8080/ws');
+window.gameSocket = socket;
+
+socket.onopen = () => {
+    console.log(" Conectado al servidor de batalla");
+};
+
+socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+
+    if (game.scene.keys.Game) {
+        game.scene.keys.Game.events.emit('ACTUALIZAR_PARTIDA', data);
+    }
+};
+
+
 
 window.onload = () => {
 

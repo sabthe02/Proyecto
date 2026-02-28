@@ -10,6 +10,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.Proyecto.SpringBoot.Datos.JugadoresDAO;
+import com.Proyecto.SpringBoot.Logica.DTO.DronAereoDTO;
+import com.Proyecto.SpringBoot.Logica.DTO.DronNavalDTO;
+import com.Proyecto.SpringBoot.Logica.DTO.EscenarioInicialDTO;
+import com.Proyecto.SpringBoot.Logica.DTO.JugadorDTO;
+import com.Proyecto.SpringBoot.Logica.DTO.PortaDronAereoDTO;
+import com.Proyecto.SpringBoot.Logica.DTO.PortaDronNavalDTO;
 import com.Proyecto.SpringBoot.Logica.Excepciones.AccionInvalidaException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.ExisteNickNameException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.JugadorNoExisteException;
@@ -56,6 +62,7 @@ public class Fachada implements iFachada {
                 ActualizarLobby();
             }
         };
+
         // Ejecutar después de 1 segundo, luego cada 3 segundos
         timerLobby.schedule(tarea, 1000, 3000);
     }
@@ -173,9 +180,36 @@ public class Fachada implements iFachada {
 
     @Override
     public boolean EnviarInicioPartida(List<PortaDron> portaDrones) {
+
+        EscenarioInicialDTO escenarioInicial = new EscenarioInicialDTO();
+
+        for (PortaDron portaDron : portaDrones) {
+            escenarioInicial.agregarJugador(new JugadorDTO(portaDron.jugador.getId(), portaDron.jugador.getNickName()));
+
+            if(portaDron.tipo == TipoElemento.AEREO)
+            {
+                PortaDronAereoDTO portaD = new PortaDronAereoDTO(portaDron.getId(), portaDron.getPosicionX(),portaDron.getPosicionY(), portaDron.getPosicionZ(), portaDron.getAngulo(), portaDron.getVida(), portaDron.getEstado().toString(), portaDron.getJugador().getNickName());
+                
+                for (Dron dron : portaDron.getDrones()) {
+                    portaD.agregarDron(new DronAereoDTO(dron.getId(), dron.getPosicionX(), dron.getPosicionY(), dron.getPosicionZ(), dron.getAngulo(), dron.getVida(), dron.getEstado().toString(), dron.getBateria()));
+                }
+
+                escenarioInicial.agregarPortaDronAereo(portaD);
+            }else if(portaDron.tipo == TipoElemento.NAVAL)
+            {
+                PortaDronNavalDTO portaD = new PortaDronNavalDTO(portaDron.getId(), portaDron.getPosicionX(),portaDron.getPosicionY(), portaDron.getPosicionZ(), portaDron.getAngulo(), portaDron.getVida(), portaDron.getEstado().toString(), portaDron.getJugador().getNickName());
+                
+                for (Dron dron : portaDron.getDrones()) {
+                    portaD.agregarDron(new DronNavalDTO(dron.getId(), dron.getPosicionX(), dron.getPosicionY(), dron.getPosicionZ(), dron.getAngulo(), dron.getVida(), dron.getEstado().toString(), dron.getBateria()));
+                }
+
+                escenarioInicial.agregarPortaDronNaval(portaD);
+            }
+        }
+
         if (handler != null) {
 
-            return handler.enviarInicioPartida(portaDrones);
+            return handler.enviarInicioPartida(escenarioInicial);
         }
 
         return false;

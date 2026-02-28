@@ -13,6 +13,8 @@ import com.Proyecto.SpringBoot.Logica.Evento;
 import com.Proyecto.SpringBoot.Logica.Fachada;
 import com.Proyecto.SpringBoot.Logica.PortaDron;
 import com.Proyecto.SpringBoot.Logica.iHandler;
+import com.Proyecto.SpringBoot.Logica.DTO.EscenarioInicialDTO;
+import com.Proyecto.SpringBoot.Logica.DTO.JugadorDTO;
 import com.Proyecto.SpringBoot.Logica.Excepciones.ExisteNickNameException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.LobbyException;
 import com.Proyecto.SpringBoot.Modelos.Jugador;
@@ -236,26 +238,23 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
     }
 
     @Override
-    public boolean enviarInicioPartida(List<PortaDron> portaDrones) {
+    public boolean enviarInicioPartida(EscenarioInicialDTO partida) {
 
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode sobre = mapper.createObjectNode();
-        JsonNode datos = mapper.valueToTree(portaDrones);
+        JsonNode datos = mapper.valueToTree(partida);
         sobre.put("tipo", "PARTIDA_INICIADA");
         sobre.set("datos", datos);
         String jsonFinal = mapper.writeValueAsString(sobre);
 
-        for (PortaDron portaDron : portaDrones) {
+        for (JugadorDTO jugador : partida.getListaJugadores()) {
             try {
-                WebSocketSession session = usuariosConectadosbyIdJugador.get(portaDron.getJugador().getId());
+                WebSocketSession session = usuariosConectadosbyIdJugador.get(jugador.getId());
                 session.sendMessage(new TextMessage(jsonFinal));
-                //usuariosConectadosbyIdJugador.get(portaDron.getJugador().getId()).sendMessage(new TextMessage(jsonFinal));
             } catch (IOException e) {
                 System.err.println("Error al enviar mensaje al jugador: " + e.getMessage());
             }
         }
-
-        
 
         return true;
     }

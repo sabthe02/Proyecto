@@ -9,7 +9,15 @@ const config = {
     parent: 'game-container',
     width: window.innerWidth,
     height: window.innerHeight,
-    scene: [ Greeting, GameChoice, Start, Lobby, Game ],
+    scene: [Greeting, GameChoice, Lobby , Game],
+
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: { y: 0 },
+            debug: false 
+        }
+    },
 
     scale: {
         mode: Phaser.Scale.RESIZE,
@@ -20,6 +28,7 @@ const config = {
         createContainer: true
     }
 };
+
 
 
 const game = new Phaser.Game(config);

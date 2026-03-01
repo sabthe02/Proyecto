@@ -11,8 +11,18 @@ public class Dron extends Elemento {
     List<Municion> municiones;
     TipoElemento tipo;
 
-    public Dron(int id, Float posicionX, Float posicionY, float posicionZ, Integer angulo, Integer vida,
-            EstadoElemento estado, int cantidadMiniciones, int cantidadUsada, int bateria, TipoElemento tipo, Jugador jugador) {
+    public Dron(int id, 
+                Float posicionX, 
+                Float posicionY, 
+                float posicionZ, 
+                Integer angulo, 
+                Integer vida,
+                EstadoElemento estado, 
+                int cantidadMiniciones, 
+                int cantidadUsada, 
+                int bateria, 
+                TipoElemento tipo, 
+                Jugador jugador) {
         super(id, posicionX, posicionY, posicionZ, angulo, vida, estado, jugador);
 
         municiones = new java.util.ArrayList<Municion>();

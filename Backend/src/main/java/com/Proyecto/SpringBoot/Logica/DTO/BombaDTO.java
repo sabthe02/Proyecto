@@ -10,6 +10,7 @@ public class BombaDTO {
     String estado;
 
     float radioExplosion;
+    boolean usada;
 
     public BombaDTO() {
         }
@@ -23,6 +24,19 @@ public class BombaDTO {
             this.vida = vida;
             this.estado = estado;
             this.radioExplosion = radioExplosion;
+            this.usada = false;
+        }
+
+        public BombaDTO(int id, float x, float y, float z, int angulo, int vida, String estado, float radioExplosion, boolean usada) {
+            this.id = id;
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.angulo = angulo;
+            this.vida = vida;
+            this.estado = estado;
+            this.radioExplosion = radioExplosion;
+            this.usada = usada;
         }
 
         public int getId() {
@@ -87,6 +101,14 @@ public class BombaDTO {
 
         public void setRadioExplosion(float radioExplosion) {
             this.radioExplosion = radioExplosion;
+        }
+
+        public boolean isUsada() {
+            return usada;
+        }
+
+        public void setUsada(boolean usada) {
+            this.usada = usada;
         }
 
 }

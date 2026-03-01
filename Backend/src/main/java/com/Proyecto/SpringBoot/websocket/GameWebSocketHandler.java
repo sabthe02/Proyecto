@@ -10,7 +10,12 @@ import org.springframework.web.socket.*;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import com.Proyecto.SpringBoot.Logica.Evento;
+import com.Proyecto.SpringBoot.Logica.Bomba;
+import com.Proyecto.SpringBoot.Logica.Dron;
+import com.Proyecto.SpringBoot.Logica.Elemento;
 import com.Proyecto.SpringBoot.Logica.Fachada;
+import com.Proyecto.SpringBoot.Logica.Misil;
+import com.Proyecto.SpringBoot.Logica.Municion;
 import com.Proyecto.SpringBoot.Logica.PortaDron;
 import com.Proyecto.SpringBoot.Logica.iHandler;
 import com.Proyecto.SpringBoot.Logica.DTO.EscenarioInicialDTO;
@@ -95,7 +100,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
                 return;
             }
             response = procesarMovimiento(session, node);
-        }else if (tipo.equals("DISPARAR_BOMBA")) {
+        }else if (tipo.equals("DISPARAR_BOMBA") || tipo.equals("DISPARAR")) {
             if (usuariosConectadosbySocket.get(session) == null) {
                 response.put("tipo", "ERROR");
                 response.put("mensaje", "El jugador no ha iniciado sesión.");
@@ -120,26 +125,150 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
 
     @Override
     public boolean enviarAcciones(List<Jugador> jugadores, List<Evento> acciones) {
-        throw new UnsupportedOperationException("Unimplemented method 'enviarAcciones'");
+        if (jugadores == null || acciones == null || acciones.isEmpty()) {
+            return false;
+        }
+        //Sabine metió mano acá, por favor corregir si está mal!!
+        ObjectNode response = new ObjectMapper().createObjectNode();
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode sobre = mapper.createObjectNode();
+        ObjectNode datos = mapper.createObjectNode();
+        tools.jackson.databind.node.ArrayNode elementos = mapper.createArrayNode();
+
+        for (Evento accion : acciones) {
+            if (accion == null) {
+                continue;
+            }
+
+            Elemento elemento = accion.getElemento();
+            if (elemento == null) {
+                continue;
+            }
+
+            ObjectNode jsonElemento = mapper.createObjectNode();
+            jsonElemento.put("id", elemento.getId());
+            jsonElemento.put("x", elemento.getPosicionX());
+            jsonElemento.put("y", elemento.getPosicionY());
+            jsonElemento.put("z", elemento.getPosicionZ());
+            jsonElemento.put("angulo", elemento.getAngulo());
+            jsonElemento.put("vida", elemento.getVida());
+            jsonElemento.put("estado", elemento.getEstado().toString());
+
+            if (elemento instanceof PortaDron) {
+                PortaDron porta = (PortaDron) elemento;
+                jsonElemento.put("clase", "PORTADRON");
+                jsonElemento.put("tipoEquipo", porta.getTipo().toString());
+            } else if (elemento instanceof Dron) {
+                Dron dron = (Dron) elemento;
+                jsonElemento.put("clase", "DRON");
+                jsonElemento.put("tipoEquipo", dron.getTipo().toString());
+
+                int municionDisponible = 0;
+                String tipoMunicion = "MISIL";
+                if (dron.getTipo().toString().equals("AEREO")) {
+                    tipoMunicion = "BOMBA";
+                }
+                if (dron.getMuniciones() != null) {
+                    for (Municion municion : dron.getMuniciones()) {
+                        if (municion == null) {
+                            continue;
+                        }
+                        if (!municion.isUsada()) {
+                            municionDisponible++;
+                        }
+                        if (municion instanceof Bomba) {
+                            tipoMunicion = "BOMBA";
+                        } else if (municion instanceof Misil) {
+                            tipoMunicion = "MISIL";
+                        }
+                    }
+                }
+
+                jsonElemento.put("municionDisponible", municionDisponible);
+                jsonElemento.put("tipoMunicion", tipoMunicion);
+            } else if (elemento instanceof Misil) {
+                Misil misil = (Misil) elemento;
+                jsonElemento.put("clase", "MISIL");
+                jsonElemento.put("velocidad", misil.getVelocidad());
+                jsonElemento.put("alcance", misil.getDistancia());
+            } else if (elemento instanceof Bomba) {
+                Bomba bomba = (Bomba) elemento;
+                jsonElemento.put("clase", "BOMBA");
+                jsonElemento.put("radioExplosion", bomba.getRadioExplosion());
+            }
+
+            elementos.add(jsonElemento);
+        }
+
+        if (elementos.isEmpty()) {
+            return false;
+        }
+
+        datos.set("elementos", elementos);
+        sobre.put("tipo", "ACTUALIZAR_PARTIDA");
+        sobre.set("datos", datos);
+        String jsonFinal = mapper.writeValueAsString(sobre);
+
+        boolean enviado = false;
+        for (Jugador jugador : jugadores) {
+            if (jugador == null) {
+                continue;
+            }
+
+            try {
+                WebSocketSession session = usuariosConectadosbyIdJugador.get(jugador.getId());
+                if (session != null && session.isOpen()) {
+                    session.sendMessage(new TextMessage(jsonFinal));
+                    enviado = true;
+                    System.out.println("ACTUALIZAR_PARTIDA enviado a jugador:" + jugador.getId());
+                } else {
+                    System.out.println("No se envio ACTUALIZAR_PARTIDA a jugador:" + jugador.getId() + " (session nula o cerrada)");
+                }
+            } catch (Exception e) {
+                response.put("tipo", "ERROR");
+                response.put("mensaje", "Error al procesar al enviar la accion: " + e.getMessage());
+                System.err.println("[WS] Error enviando ACTUALIZAR_PARTIDA a jugador:" + jugador.getId() + ": " + e.getMessage());
+            }
+        }
+
+        return enviado;
     }
 
     private ObjectNode procesarDisparo(WebSocketSession session, JsonNode node) {
         ObjectNode response = new ObjectMapper().createObjectNode();
-
+//Sabine metió mano acá, esto hay que cambiarlo luego cuando se implemente GameLoop, 
+// se debería encolar y mandar en cada tick, ahora está mandando mensajes directamente 
+// para probar si el Frontend los agarra
         try {
-            int idElemento = node.get("idElemento").asInt();
+            int idElemento = -1;
+            if (node.has("IdDron") && !node.get("IdDron").isNull()) {
+                idElemento = node.get("IdDron").asInt();
+            } else if (node.has("idElemento") && !node.get("idElemento").isNull()) {
+                idElemento = node.get("idElemento").asInt();
+            }
+
+            if (idElemento < 0) {
+                response.put("tipo", "DISPARO_FALLIDO");
+                response.put("mensaje", "Falta IdDron/idElemento para procesar el disparo.");
+                return response;
+            }
+
+            System.out.println("DISPARAR recibido -> jugador=" + usuariosConectadosbySocket.get(session).getId() + " idDron=" + idElemento);
 
             boolean resultado = fachada.accion_disparar(usuariosConectadosbySocket.get(session), idElemento);
 
             if (resultado) {
                 response.put("tipo", "DISPARO_PROCESADO");
+                System.out.println("DISPARO_PROCESADO -> idDron=" + idElemento);
             } else {
                 response.put("tipo", "DISPARO_FALLIDO");
                 response.put("mensaje", "No se pudo procesar el disparo.");
+                System.out.println("DISPARO_FALLIDO -> idDron=" + idElemento);
             }
         } catch (Exception e) {
             response.put("tipo", "ERROR");
             response.put("mensaje", "Error al procesar el disparo: " + e.getMessage());
+            System.err.println("ERROR en procesarDisparo: " + e.getMessage());
         }
 
         return response;
@@ -147,7 +276,10 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
 
     private ObjectNode procesarMovimiento(WebSocketSession session, JsonNode node) {
         ObjectNode response = new ObjectMapper().createObjectNode();
-
+        
+        // Sabine metió mano acá, esto va a tener que cambiar luego cuando se implemente GameLoop
+        // Se debería encolar y mandar en cada tick, ahora está mandando mensajes directamente 
+        //para probar si el Frontend los agarra
         try {
             int idElemento = node.get("idElemento").asInt();
             float x = node.get("PosicionX").floatValue();
@@ -155,17 +287,22 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
             float z = node.get("PosicionZ").floatValue();
             int angulo = node.get("Angulo").asInt();
 
+            System.out.println("[WS] MOVER_ELEMENTO recibido -> jugador=" + usuariosConectadosbySocket.get(session).getId() + " idElemento=" + idElemento + " x=" + x + " y=" + y + " z=" + z + " angulo=" + angulo);
+
             boolean resultado = fachada.accion_mover(usuariosConectadosbySocket.get(session), idElemento, x, y, z, angulo);
 
             if (resultado) {
-                response.put("tipo", "MOVIMIENTO_PROCESADO");
+                response.put("tipo", "MOVIMIENTO_PROCESADO"); // esto luego significa que está encolado y con próximo tick se ejecuta
+                System.out.println("MOVIMIENTO_PROCESADO -> idElemento=" + idElemento);
             } else {
                 response.put("tipo", "MOVIMIENTO_FALLIDO");
                 response.put("mensaje", "No se pudo procesar el movimiento.");
+                System.out.println("MOVIMIENTO_FALLIDO -> idElemento=" + idElemento);
             }
         } catch (Exception e) {
             response.put("tipo", "ERROR");
             response.put("mensaje", "Error al procesar el movimiento: " + e.getMessage());
+            System.err.println("ERROR en procesarMovimiento: " + e.getMessage());
         }
 
         return response;

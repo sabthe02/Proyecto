@@ -149,5 +149,11 @@ public class SesionJuego extends GameLoop {
         throw new UnsupportedOperationException("Unimplemented method 'update'");
 
     }
+///Agregado para que no dé más error, si no no puedo probar front
+	@Override
+	protected void update(long tiempoTranscurrido) {
+		// TODO Auto-generated method stub
+		
+	}
 
 }

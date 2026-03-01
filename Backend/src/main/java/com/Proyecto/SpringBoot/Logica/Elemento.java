@@ -36,11 +36,17 @@ public abstract class Elemento {
         estado = EstadoElemento.ACTIVO;
     }
 
-    public Elemento(int id, Float posicionX, Float posicionY, float posicionZ, Integer angulo, Integer vida,
-            EstadoElemento estado,  Jugador jugador) {
+    public Elemento(int id,
+            float posicionX2,
+            float posicionY2,
+            float posicionZ,
+            Integer angulo,
+            Integer vida,
+            EstadoElemento estado,
+            Jugador jugador) {
         this.id = id;
-        this.posicionX = posicionX;
-        this.posicionY = posicionY;
+        this.posicionX = posicionX2;
+        this.posicionY = posicionY2;
         this.posicionZ = posicionZ;
         this.angulo = angulo;
         this.vida = vida;
@@ -100,14 +106,12 @@ public abstract class Elemento {
         this.estado = estado;
     }
 
-        public Jugador getJugador() {
-            return jugador;
-        }
+    public Jugador getJugador() {
+        return jugador;
+    }
 
-        public void setJugador(Jugador jugador) {
-            this.jugador = jugador;
-        }
-
-
+    public void setJugador(Jugador jugador) {
+        this.jugador = jugador;
+    }
 
 }

@@ -13,12 +13,24 @@ public class Bomba extends Municion {
         this.radioExplosion = 5f;
     }
 
-    public Bomba(int id, Float posicionX, Float posicionY, float posicionZ, Integer angulo, Integer vida,
-            EstadoElemento estado, int peso, float radioExplosion, Jugador jugador) {
+    public Bomba(int id, 
+                Float posicionX, 
+                Float posicionY, 
+                float posicionZ, 
+                Integer angulo, 
+                Integer vida,
+                EstadoElemento estado, 
+                int peso, 
+                float radioExplosion, 
+                Jugador jugador) {
         super(id, posicionX, posicionY, posicionZ, angulo, vida, estado, jugador);
         this.peso = peso;
         this.radioExplosion = radioExplosion;
     }
+
+    //public Bomba(String string, int i, int j, int k, int l, int m) {
+        //TODO Auto-generated constructor stub
+    //}
 
     public int getPeso() {
         return peso;

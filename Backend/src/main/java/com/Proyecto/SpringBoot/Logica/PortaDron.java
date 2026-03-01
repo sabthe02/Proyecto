@@ -10,8 +10,18 @@ public class PortaDron extends Elemento {
     TipoElemento tipo;    
 
 
-    public PortaDron(int id, Float posicionX, Float posicionY, float posicionZ, Integer angulo, Integer vida,
-            EstadoElemento estado, int cantidadMiniciones, int cantidadUsada, int bateria, TipoElemento tipo, Jugador jugador) {
+    public PortaDron(int id, 
+                    Float posicionX, 
+                    Float posicionY, 
+                    float posicionZ, 
+                    Integer angulo, 
+                    Integer vida,
+                    EstadoElemento estado, 
+                    int cantidadMiniciones, 
+                    int cantidadUsada, 
+                    int bateria, 
+                    TipoElemento tipo, 
+                    Jugador jugador) {
         super(id, posicionX, posicionY, posicionZ, angulo, vida, estado,    jugador);
         drones = new java.util.ArrayList<Dron>();
         this.tipo = tipo;

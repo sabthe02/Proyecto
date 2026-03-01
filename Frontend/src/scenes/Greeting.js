@@ -5,7 +5,10 @@ export class Greeting extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('background', 'assets/background.png');
+        if (this.textures.exists('menu_background')) {
+            this.textures.remove('menu_background');
+        }
+        this.load.image('menu_background', 'assets/background.png');
     }
 
     create() {
@@ -14,7 +17,7 @@ export class Greeting extends Phaser.Scene {
         const width = this.scale.width;
         const height = this.scale.height;
 
-        this.bg = this.add.image(width / 2, height / 2, 'background');
+        this.bg = this.add.image(width / 2, height / 2, 'menu_background');
         this.bg.setDisplaySize(width, height);
 
         this.tweens.add({
@@ -233,6 +236,13 @@ export class Greeting extends Phaser.Scene {
             // Solo navegar a GameChoice si el mensaje indica un registro/login exitoso o paso exitoso al lobby
             if (tipo === 'JUGADOR_CREADO' || tipo === 'LOGIN_EXITOSO' || tipo === 'PASAR_LOBBY_EXITOSO') {
                 console.log('Registro/login exitoso:', data);
+                // guardar el nombre localmente para poder recuperarlo más adelante
+                if (data.nickname) {
+                    sessionStorage.setItem('nickname', data.nickname);
+                }
+                if (data.id) {
+                    sessionStorage.setItem('playerId', data.id);
+                }
                 if (this.statusText) 
                     {
                         this.statusText.setText('Registro OK — entrando');
@@ -305,7 +315,9 @@ export class Greeting extends Phaser.Scene {
             this.socket.addEventListener('open', () => {
                 console.log('Socket abrio — enviando mensaje');
                 this.socket.send(JSON.stringify(mensaje));
-            }, { once: true });
+            }, 
+            { once: 
+                true });
         } else {
             console.warn('WebSocket no inicializado');
         }

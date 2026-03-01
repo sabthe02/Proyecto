@@ -1,6 +1,5 @@
 import { Greeting } from './scenes/Greeting.js';
 import { GameChoice } from './scenes/GameChoice.js';
-import { Start } from './scenes/Start.js';
 import { Lobby } from './scenes/Lobby.js';
 import { Game } from './scenes/Game.js';
 
@@ -9,7 +8,7 @@ const config = {
     parent: 'game-container',
     width: window.innerWidth,
     height: window.innerHeight,
-    scene: [Greeting, GameChoice, Lobby , Game],
+    scene: [Greeting, GameChoice, Lobby, Game],
 
     physics: {
         default: 'arcade',

@@ -5,7 +5,10 @@ export class GameChoice extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('background', 'assets/background.png');
+        if (this.textures.exists('menu_background')) {
+            this.textures.remove('menu_background');
+        }
+        this.load.image('menu_background', 'assets/background.png');
     }
 
     create() {
@@ -13,7 +16,7 @@ export class GameChoice extends Phaser.Scene {
         const height = this.scale.height;
 
         // Fondo
-        this.bg = this.add.image(width / 2, height / 2, 'background');
+        this.bg = this.add.image(width / 2, height / 2, 'menu_background');
         this.bg.setDisplaySize(width, height);
         this.tweens.add({
             targets: this.bg,
@@ -111,10 +114,19 @@ export class GameChoice extends Phaser.Scene {
                 tipo = String(data.tipo);
             }
 
-            // Handle match start (may arrive while still in GameChoice waiting for PASAR_LOBBY_EXITOSO)
+            // Manejar comienzo del juego cuando PASAR_LOBBY_EXITOSO)
             if (tipo === 'PARTIDA_INICIADA') {
-                console.log('¡PARTIDA INICIADA! Rival:', data.rival);
-                this.scene.start('Start');
+                console.log('¡PARTIDA INICIADA! datos:', data);
+                // al comenzar partida arrancamos el escenario de juego
+                // pasamos al menos el apodo/ equipo local si están disponibles
+                // en este prototipo sólo utilizamos el apodo almacenado y un
+                // equipo por defecto; el servidor todavía no decide el bando local
+                const extras = {
+                    playerId: sessionStorage.getItem('playerId') || '',
+                    nickname: sessionStorage.getItem('nickname') || 'Player',
+                    partidaInicial: data.datos
+                };
+                this.scene.start('Game', extras);
                 return;
             }
 

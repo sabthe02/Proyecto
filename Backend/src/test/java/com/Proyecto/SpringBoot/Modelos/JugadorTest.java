@@ -25,4 +25,20 @@ public class JugadorTest {
         assertEquals("Naval", jugador.getTeam());
     }
 
+    @Test
+    void constructor_conParametros_seteaCampos() {
+        Jugador jugador = new Jugador("id-3", "Lucho", "Terrestre");
+        assertEquals("id-3", jugador.getId());
+        assertEquals("Lucho", jugador.getNickName());
+        assertEquals("Terrestre", jugador.getTeam());
+    }
+
+    @Test
+    void constructor_porDefecto_seteaCamposVacios() {
+        Jugador jugador = new Jugador();
+        assertEquals(null, jugador.getId());
+        assertEquals(null, jugador.getNickName());
+        assertEquals(null, jugador.getTeam());
+    }
+
 }

@@ -5,7 +5,10 @@ export class Lobby extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('background', 'assets/background.png');
+        if (this.textures.exists('menu_background')) {
+            this.textures.remove('menu_background');
+        }
+        this.load.image('menu_background', 'assets/background.png');
     }
 
     create() {
@@ -13,7 +16,7 @@ export class Lobby extends Phaser.Scene {
         const height = this.scale.height;
 
         // Fondo
-        this.bg = this.add.image(width / 2, height / 2, 'background');
+        this.bg = this.add.image(width / 2, height / 2, 'menu_background');
         this.bg.setDisplaySize(width, height);
         this.tweens.add({
             targets: this.bg,
@@ -95,8 +98,12 @@ export class Lobby extends Phaser.Scene {
             if (tipo === 'PARTIDA_INICIADA') {
                 console.log('Juego iniciando:', data);
                 this.statusText.setText('Iniciando juego...');
-                // Navigar a la escena del juego
-                this.scene.start('Start');
+                // navegar a la escena del juego
+                this.scene.start('Game', {
+                    playerId: sessionStorage.getItem('playerId') || '',
+                    nickname: sessionStorage.getItem('nickname') || 'Player',
+                    partidaInicial: data.datos
+                });
                 return;
             }
 

@@ -1,6 +1,7 @@
 package com.Proyecto.SpringBoot.Logica;
 
 import java.util.List;
+import java.util.Map;
 
 import com.Proyecto.SpringBoot.Modelos.Jugador;
 
@@ -32,6 +33,35 @@ public class Dron extends Elemento {
         municiones.add(municion);
         return municion;
 
+    }
+
+    public int getCantidadMunicionInicial() {
+        if (tipo == TipoElemento.AEREO) {
+            return 1;
+        }
+
+        if (tipo == TipoElemento.NAVAL) {
+            return 2;
+        }
+
+        return 0;
+    }
+
+    public void cargarMunicionInicial(Map<Integer, Elemento> elementosEnJuego) {
+        if (elementosEnJuego == null) {
+            return;
+        }
+
+        int cantidadMunicionInicial = getCantidadMunicionInicial();
+        int i = 0;
+        while (i < cantidadMunicionInicial) {
+            int idMunicion = elementosEnJuego.size();
+            Municion municion = agregarMunicion(idMunicion);
+            if (municion != null) {
+                elementosEnJuego.put(idMunicion, municion);
+            }
+            i++;
+        }
     }
 
     public TipoElemento getTipo() {

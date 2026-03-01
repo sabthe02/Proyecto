@@ -29,21 +29,32 @@ public class SesionJuego extends GameLoop {
         accionesPendientesProcesar = new java.util.ArrayList<Evento>();
     }
 
+    // Sabine: traté de corregirla, chequear que esté bien, por fa.
     private PortaDron crearPortaDronParaJugador(Jugador jugador) {
-        // Corregir Logica
-        return new PortaDron(0, 0f, 0f, 0f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0, TipoElemento.AEREO, jugador);
+        TipoElemento tipoJugador = obtenerTipoElementoJugador(jugador);
+        return new PortaDron(0, 0f, 0f, 0f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0, tipoJugador, jugador);
+    }
+
+    private TipoElemento obtenerTipoElementoJugador(Jugador jugador) {
+        if (jugador == null || jugador.getTeam() == null) {
+            return TipoElemento.NAVAL;
+        }
+
+        String team = jugador.getTeam().trim().toUpperCase();
+        if ("AEREO".equals(team)) {
+            return TipoElemento.AEREO;
+        }
+
+        return TipoElemento.NAVAL;
     }
 
     public void iniciarSesion() {
-        
-        int i = 0;
-
-
         //Recorro la lista de jugadores y les creo los portadrones y drones.
         for(int h = 0; h<elementosJugadores.size(); h++) {
             Jugador jugador = (Jugador) elementosJugadores.keySet().toArray()[h];
+            TipoElemento tipoJugador = obtenerTipoElementoJugador(jugador);
 
-            if(i%2 == 0) {
+            if(tipoJugador == TipoElemento.AEREO) {
                 PortaDron p = new PortaDron(elementosEnJuego.size(), 0f, 0f, 0f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0, TipoElemento.AEREO, jugador);
                 elementosEnJuego.put(p.getId(), p);
                 elementosJugadores.put(jugador, p);
@@ -54,8 +65,7 @@ public class SesionJuego extends GameLoop {
                 {
                     Dron d = new Dron(elementosEnJuego.size(), 0f, 0f, 0f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0, TipoElemento.AEREO, jugador);
                     elementosEnJuego.put(d.getId(), d);
-                    int idMunicion = elementosEnJuego.size();
-                    elementosEnJuego.put(idMunicion, d.agregarMunicion(idMunicion));
+                    d.cargarMunicionInicial(elementosEnJuego);
                     
                     p.AgregarDron(d);
                     j++;
@@ -70,15 +80,12 @@ public class SesionJuego extends GameLoop {
                 {
                     Dron d = new Dron(elementosEnJuego.size(), 0f, 0f, 0f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0, TipoElemento.NAVAL, jugador);
                     elementosEnJuego.put(d.getId(), d);
-                    int idMunicion = elementosEnJuego.size();
-                    elementosEnJuego.put(idMunicion, d.agregarMunicion(idMunicion));
+                    d.cargarMunicionInicial(elementosEnJuego);
 
                     p.AgregarDron(d);
                     j++;
                 }
             }
-
-            i++;
         }
 
         List<PortaDron> portaDrones = new java.util.ArrayList<PortaDron>();

@@ -70,10 +70,9 @@ public abstract class GameLoop {
                 Evento evento;
                 while ((evento = colaEventosEntrada.poll()) != null) {
                     processInput(evento);
+                    // ACTUALIZAMOS EL ESTADO DEL JUEGO
+                    update(tiempoTranscurrido);
                 }
-
-                // ACTUALIZAMOS EL ESTADO DEL JUEGO
-                update(tiempoTranscurrido);
 
                 // RENDERIZAMOS EL JUEGO
                 render();

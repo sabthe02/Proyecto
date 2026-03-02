@@ -8,12 +8,14 @@ public class EscenarioInicialDTO {
     List<JugadorDTO> listaJugadores;
     List<PortaDronAereoDTO> listaPortaDronesAereos;
     List<PortaDronNavalDTO> listaPortaDronesNavales;
+    MapaDTO mapa;
 
     public EscenarioInicialDTO()
     {
         listaJugadores = new ArrayList<>();
         listaPortaDronesAereos = new ArrayList<>();
         listaPortaDronesNavales = new ArrayList<>();
+        mapa = new MapaDTO();
     }
 
     public List<JugadorDTO> getListaJugadores() {
@@ -26,6 +28,16 @@ public class EscenarioInicialDTO {
 
     public List<PortaDronNavalDTO> getListaPortaDronesNavales() {
         return listaPortaDronesNavales;
+    }
+
+    public MapaDTO getMapa()
+    {
+        return mapa;
+    }
+
+    public void agregarMapa(MapaDTO mapa)
+    {
+        this.mapa = mapa;
     }
 
     public void agregarJugador(JugadorDTO jugador)

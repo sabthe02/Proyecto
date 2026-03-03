@@ -118,4 +118,21 @@ public class Dron extends Elemento {
         return municiones;
     }
 
+    public void consumirBateriaPorMovimiento() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'consumirBateriaPorMovimiento'");
+    }
+
+    public Elemento disparar(Evento_Disparo intencion) {
+         this.cantidadUsada = this.cantidadUsada+1;
+        if (this.getTipo() == TipoElemento.AEREO) {
+            Bomba bomba = new Bomba(generarId(), this.getPosicionX(), this.getPosicionY(), this.getPosicionZ(), this.getAngulo(), 1, EstadoElemento.ACTIVO, jugador);
+            return bomba;
+        } else if (this.getTipo() == TipoElemento.NAVAL) {
+            Misil misil = new Misil(generarId(), this.getPosicionX(), this.getPosicionY(), this.getPosicionZ(), this.getAngulo(), 1, EstadoElemento.ACTIVO, jugador);
+            return misil;
+        }
+        throw new UnsupportedOperationException("Unimplemented method 'disparar'");
+    }
+
 }

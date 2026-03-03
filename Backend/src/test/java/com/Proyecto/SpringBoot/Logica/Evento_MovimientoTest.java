@@ -27,8 +27,7 @@ public class Evento_MovimientoTest {
         assertEquals(1, evento.getIdElemento());
         assertEquals(10f, evento.getNuevaPosX());
         assertEquals(20f, evento.getNuevaPosY());
-        assertEquals(90, evento.getAngulo());
-        assertEquals(90, evento.getAngulo());
+        assertEquals(90, evento.getNuevoAngulo());
     }
 
     @Test
@@ -87,8 +86,8 @@ public class Evento_MovimientoTest {
                             TipoElemento.AEREO, 
                             j4);
         Evento_Movimiento evento = new Evento_Movimiento(elemento, 10f, 20f, 90);
-        evento.setAngulo(180);
-        assertEquals(180, evento.getAngulo());
+        evento.setNuevoAngulo(180);
+        assertEquals(180, evento.getNuevoAngulo());
     }
 
     @Test

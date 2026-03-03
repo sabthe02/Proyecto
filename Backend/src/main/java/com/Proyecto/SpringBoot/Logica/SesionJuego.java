@@ -21,7 +21,7 @@ public class SesionJuego extends GameLoop {
         this.idSesion = idSesion;
         this.fachada = fachada;
         this.elementosJugadores = new java.util.Hashtable<Jugador, PortaDron>();
-        for(Jugador jugador : jugadores) {
+        for (Jugador jugador : jugadores) {
             this.elementosJugadores.put(jugador, crearPortaDronParaJugador(jugador));
         }
         elementosEnJuego = new java.util.Hashtable<Integer, Elemento>();
@@ -49,36 +49,37 @@ public class SesionJuego extends GameLoop {
     }
 
     public void iniciarSesion() {
-        //Recorro la lista de jugadores y les creo los portadrones y drones.
-        for(int h = 0; h<elementosJugadores.size(); h++) {
+        // Recorro la lista de jugadores y les creo los portadrones y drones.
+        for (int h = 0; h < elementosJugadores.size(); h++) {
             Jugador jugador = (Jugador) elementosJugadores.keySet().toArray()[h];
             TipoElemento tipoJugador = obtenerTipoElementoJugador(jugador);
 
-            if(tipoJugador == TipoElemento.AEREO) {
-                PortaDron p = new PortaDron(elementosEnJuego.size(), 0f, 0f, 0f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0, TipoElemento.AEREO, jugador);
+            if (tipoJugador == TipoElemento.AEREO) {
+                PortaDron p = new PortaDron(elementosEnJuego.size(), 0f, 0f, 0f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0,
+                        TipoElemento.AEREO, jugador);
                 elementosEnJuego.put(p.getId(), p);
                 elementosJugadores.put(jugador, p);
 
-
                 int j = 0;
-                while(j< 12)
-                {
-                    Dron d = new Dron(elementosEnJuego.size(), 0f, 0f, 0f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0, TipoElemento.AEREO, jugador);
+                while (j < 12) {
+                    Dron d = new Dron(elementosEnJuego.size(), 0f, 0f, 0f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0,
+                            TipoElemento.AEREO, jugador);
                     elementosEnJuego.put(d.getId(), d);
                     d.cargarMunicionInicial(elementosEnJuego);
-                    
+
                     p.AgregarDron(d);
                     j++;
                 }
             } else {
-                PortaDron p = new PortaDron(elementosEnJuego.size(), 0f, 0f, 0f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0, TipoElemento.NAVAL, jugador);
+                PortaDron p = new PortaDron(elementosEnJuego.size(), 0f, 0f, 0f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0,
+                        TipoElemento.NAVAL, jugador);
                 elementosEnJuego.put(p.getId(), p);
                 elementosJugadores.put(jugador, p);
 
                 int j = 0;
-                while(j< 12)
-                {
-                    Dron d = new Dron(elementosEnJuego.size(), 0f, 0f, 0f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0, TipoElemento.NAVAL, jugador);
+                while (j < 12) {
+                    Dron d = new Dron(elementosEnJuego.size(), 0f, 0f, 0f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0,
+                            TipoElemento.NAVAL, jugador);
                     elementosEnJuego.put(d.getId(), d);
                     d.cargarMunicionInicial(elementosEnJuego);
 
@@ -94,7 +95,7 @@ public class SesionJuego extends GameLoop {
         });
 
         fachada.EnviarInicioPartida(portaDrones);
-        //startGameLoop();
+        // startGameLoop();
     }
 
     public String getIdSesion() {
@@ -107,8 +108,7 @@ public class SesionJuego extends GameLoop {
 
     public Map<Integer, Elemento> getElementosEnJuego() {
         return elementosEnJuego;
-    }   
-    
+    }
 
     public List<Evento> getAccionesPendientesEnviar() {
         return accionesPendientesEnviar;
@@ -117,8 +117,6 @@ public class SesionJuego extends GameLoop {
     public List<Evento> getAccionesPendientesProcesar() {
         return accionesPendientesProcesar;
     }
-
-
 
     @Override
     protected void processGameLoop() {
@@ -137,14 +135,66 @@ public class SesionJuego extends GameLoop {
         throw new UnsupportedOperationException("Unimplemented method 'processGameLoop'");
     }
 
-
     @Override
-    protected void processInput(Evento accion) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'processInput'");
+    protected void processInput(Evento intencion) {
+        switch (intencion.getClass().getSimpleName()) {
+            case "Evento_Movimiento":
+                Evento_Movimiento eventoMovimiento = (Evento_Movimiento) intencion;
+                Dron dron = (Dron) elementosEnJuego.get(intencion.getIdElemento());
+
+                if (dron == null) {
+                    return;
+                }
+
+                if (dron.getEstado() != EstadoElemento.ACTIVO || dron.getBateria() <= 0 || dron.getVida() <= 0) {
+                    // Que vamos a retornar cunado el dron no se puede mover? Por ahora solo
+                    // retorno,
+                    // pero habría que avisarle al cliente que el movimiento no se pudo realizar.
+                    return;
+                }
+                dron.setPosicionX(eventoMovimiento.getNuevaPosX());
+                dron.setPosicionY(eventoMovimiento.getNuevaPosY());
+                dron.setAngulo(eventoMovimiento.getNuevoAngulo());
+                break;
+            case "Evento_Disparo":
+                Evento_Disparo eventoDisparo = (Evento_Disparo) intencion;
+                Dron dronDisparador = (Dron) elementosEnJuego.get(intencion.getIdElemento());
+
+                if (dronDisparador == null) {
+                    return;
+                }
+                if (dronDisparador.getEstado() != EstadoElemento.ACTIVO ||
+                        dronDisparador.getBateria() <= 0 ||
+                        dronDisparador.getVida() <= 0 ||
+                        dronDisparador.cantidadMunicionesDisponibles() <= 0) {
+                    return;
+                }
+                Elemento municion = dronDisparador.disparar(eventoDisparo);
+                if (municion != null) {
+                    elementosEnJuego.put(municion.getId(), municion);
+                }
+                break;
+            case "Evento_Recarga":
+                // Procesar evento de recarga
+                break;
+            case "Evento_RecibeImpacto":
+                // Procesar evento de recibir impacto
+                break;
+
+            default:
+                System.out.println("Acción desconocida: " + intencion.getClass().getSimpleName());
+        }
     }
 
     private void update(Evento accion) {
+        switch (accion) {
+            case value:
+
+                break;
+
+            default:
+                break;
+        }
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'update'");
 

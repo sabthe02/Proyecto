@@ -14,10 +14,12 @@ public class SesionJuego extends GameLoop {
     private Map<Integer, Elemento> elementosEnJuego;
     private List<Evento> accionesPendientesEnviar;
     private List<Evento> accionesPendientesProcesar;
+    private Mapa mapa;
 
     private iFachada fachada;
 
     public SesionJuego(String idSesion, List<Jugador> jugadores, iFachada fachada) {
+        this.mapa = new Mapa();
         this.idSesion = idSesion;
         this.fachada = fachada;
         this.elementosJugadores = new java.util.Hashtable<Jugador, PortaDron>();
@@ -94,8 +96,8 @@ public class SesionJuego extends GameLoop {
             portaDrones.add(portaDron);
         });
 
-        fachada.EnviarInicioPartida(portaDrones);
-        // startGameLoop();
+        fachada.EnviarInicioPartida(portaDrones, mapa);
+        //startGameLoop();
     }
 
     public String getIdSesion() {
@@ -134,6 +136,13 @@ public class SesionJuego extends GameLoop {
         }
         throw new UnsupportedOperationException("Unimplemented method 'processGameLoop'");
     }
+
+    public boolean agregarEvento (Evento ev)
+    {   
+        accionesPendientesProcesar.add(ev);
+        return true;
+    }
+
 
     @Override
     protected void processInput(Evento intencion) {
@@ -198,6 +207,18 @@ public class SesionJuego extends GameLoop {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'update'");
 
+    }
+///Agregado para que no dé más error, si no no puedo probar front
+	@Override
+	protected void update(long tiempoTranscurrido) {
+		// TODO Auto-generated method stub
+		
+	}
+
+    @Override
+    protected void update(long deltaTime) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'update'");
     }
 
 }

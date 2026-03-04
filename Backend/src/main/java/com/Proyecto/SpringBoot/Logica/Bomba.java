@@ -28,10 +28,6 @@ public class Bomba extends Municion {
         this.radioExplosion = radioExplosion;
     }
 
-    //public Bomba(String string, int i, int j, int k, int l, int m) {
-        //TODO Auto-generated constructor stub
-    //}
-
     public int getPeso() {
         return peso;
     }
@@ -46,6 +42,11 @@ public class Bomba extends Municion {
 
     public void setRadioExplosion(float radioExplosion) {
         this.radioExplosion = radioExplosion;
+    }
+
+    @Override
+    public void moverse(Evento_Movimiento intencion) {
+        // TODO Auto-generated method stub
     }
 
 

@@ -26,6 +26,6 @@ public abstract class Municion extends Elemento {
         this.usada = usada;
     }
 
-
+    public abstract void moverse(Evento_Movimiento intencion);
 
 }

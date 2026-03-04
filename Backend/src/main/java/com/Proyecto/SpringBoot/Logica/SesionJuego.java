@@ -97,7 +97,7 @@ public class SesionJuego extends GameLoop {
         });
 
         fachada.EnviarInicioPartida(portaDrones, mapa);
-        //startGameLoop();
+        // startGameLoop();
     }
 
     public String getIdSesion() {
@@ -137,12 +137,10 @@ public class SesionJuego extends GameLoop {
         throw new UnsupportedOperationException("Unimplemented method 'processGameLoop'");
     }
 
-    public boolean agregarEvento (Evento ev)
-    {   
+    public boolean agregarEvento(Evento ev) {
         accionesPendientesProcesar.add(ev);
         return true;
     }
-
 
     @Override
     protected void processInput(Evento intencion) {
@@ -185,13 +183,13 @@ public class SesionJuego extends GameLoop {
             case "Evento_Recarga":
                 Evento_Recarga eventoRecarga = (Evento_Recarga) intencion;
                 Dron dronRecarga = (Dron) elementosEnJuego.get(intencion.getIdElemento());
-                if(dronRecarga == null) {
+                if (dronRecarga == null) {
                     return;
                 }
-                if (dronRecarga.getEstado() != EstadoElemento.ACTIVO || dronRecarga.getBateria() <= 0 || dronRecarga.getVida() <= 0) {
+                if (dronRecarga.getEstado() != EstadoElemento.ACTIVO || dronRecarga.getBateria() <= 0
+                        || dronRecarga.getVida() <= 0) {
                     return;
                 }
-                dronRecarga.recargar(eventoRecarga);
                 eventoRecarga.habilitar();
                 break;
 
@@ -201,33 +199,38 @@ public class SesionJuego extends GameLoop {
     }
 
     private void update(Evento accion) {
-        if(!accion.estaHabilitado()) {
+        if (!accion.estaHabilitado()) {
             return;
         }
-        switch (accion.getClass().getSimpleName()){
+        switch (accion.getClass().getSimpleName()) {
             case "Evento_Movimiento":
-                Evento_Movimiento eventoMovimiento = (Evento_Movimiento) accion;
-                Dron dron = (Dron) elementosEnJuego.get(accion.getIdElemento());
-                dron.moverse(eventoMovimiento);
-                accion.deshabilitar();
+                if (accion.estaHabilitado()) {
+                    Evento_Movimiento eventoMovimiento = (Evento_Movimiento) accion;
+                    Dron dron = (Dron) elementosEnJuego.get(accion.getIdElemento());
+                    dron.moverse(eventoMovimiento);
+                }
                 break;
             case "Evento_Disparo":
-                Evento_Disparo eventoDisparo = (Evento_Disparo) accion;
-                Dron dronDisparador = (Dron) elementosEnJuego.get(accion.getIdElemento());
-                Elemento municion = dronDisparador.disparar(eventoDisparo);
-                if (municion != null) {
-                    elementosEnJuego.put(municion.getId(), municion);
+                if (accion.estaHabilitado()) {
+                    Evento_Disparo eventoDisparo = (Evento_Disparo) accion;
+                    Dron dronDisparador = (Dron) elementosEnJuego.get(accion.getIdElemento());
+                    Elemento municion = dronDisparador.disparar(eventoDisparo);
+                    if (municion != null) {
+                        elementosEnJuego.put(municion.getId(), municion);
+                    }
+                    Evento_Movimiento eventoMovimientoMunicion = new Evento_Movimiento();
+                    municion.moverse(eventoMovimientoMunicion);
+                    processInput(eventoMovimientoMunicion);
+                    accion.deshabilitar();
                 }
-                Evento_Movimiento eventoMovimientoMunicion = new Evento_Movimiento();
-                municion.moverse(eventoMovimientoMunicion);
-                processInput(eventoMovimientoMunicion);
-                accion.deshabilitar();
                 break;
             case "Evento_Recarga":
-                Evento_Recarga eventoRecarga = (Evento_Recarga) accion;
-                Dron dronRecarga = (Dron) elementosEnJuego.get(accion.getIdElemento());
-                if(dronRecarga.getBateria() < dronRecarga.getMAX_BATERIA()) {
-                    dronRecarga.recargar(eventoRecarga);
+                if (accion.estaHabilitado()) {
+                    Evento_Recarga eventoRecarga = (Evento_Recarga) accion;
+                    Dron dronRecarga = (Dron) elementosEnJuego.get(accion.getIdElemento());
+                    if (dronRecarga.getBateria() < dronRecarga.getMAX_BATERIA()) {
+                        dronRecarga.recargar(eventoRecarga);
+                    }
                 }
 
                 break;
@@ -238,12 +241,13 @@ public class SesionJuego extends GameLoop {
         throw new UnsupportedOperationException("Unimplemented method 'update'");
 
     }
-///Agregado para que no dé más error, si no no puedo probar front
-	@Override
-	protected void update(long tiempoTranscurrido) {
-		// TODO Auto-generated method stub
-		
-	}
+
+    /// Agregado para que no dé más error, si no no puedo probar front
+    @Override
+    protected void update(long tiempoTranscurrido) {
+        // TODO Auto-generated method stub
+
+    }
 
     @Override
     protected void update(long deltaTime) {

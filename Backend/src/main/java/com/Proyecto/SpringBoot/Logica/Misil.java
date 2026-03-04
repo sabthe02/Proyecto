@@ -13,8 +13,16 @@ public class Misil extends Municion {
         distancia = 1;
     }
 
-    public Misil(int id, Float posicionX, Float posicionY, float posicionZ, Integer angulo, Integer vida,
-            EstadoElemento estado, int velocidad, float distancia, Jugador jugador) {
+    public Misil(int id, 
+                Float posicionX, 
+                Float posicionY, 
+                float posicionZ, 
+                Integer angulo, 
+                Integer vida,
+                EstadoElemento estado, 
+                int velocidad, 
+                float distancia, 
+                Jugador jugador) {
         super(id, posicionX, posicionY, posicionZ, angulo, vida, estado, jugador);
         this.velocidad = velocidad;
         this.distancia = distancia;
@@ -34,6 +42,15 @@ public class Misil extends Municion {
 
     public void setDistancia(float distancia) {
         this.distancia = distancia;
+    }
+
+    public void moverse(Evento_Movimiento intencion) {
+        if (intencion == null) {
+            return;
+        }
+        this.setPosicionX(intencion.getNuevaPosX());
+        this.setPosicionY(intencion.getNuevaPosY());
+        this.setAngulo(intencion.getNuevoAngulo());
     }
     
 

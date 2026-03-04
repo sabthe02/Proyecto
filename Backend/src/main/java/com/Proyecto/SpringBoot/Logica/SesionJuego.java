@@ -161,9 +161,7 @@ public class SesionJuego extends GameLoop {
                     // pero habría que avisarle al cliente que el movimiento no se pudo realizar.
                     return;
                 }
-                dron.setPosicionX(eventoMovimiento.getNuevaPosX());
-                dron.setPosicionY(eventoMovimiento.getNuevaPosY());
-                dron.setAngulo(eventoMovimiento.getNuevoAngulo());
+                eventoMovimiento.habilitar();
                 break;
             case "Evento_Disparo":
                 Evento_Disparo eventoDisparo = (Evento_Disparo) intencion;
@@ -181,13 +179,20 @@ public class SesionJuego extends GameLoop {
                 Elemento municion = dronDisparador.disparar(eventoDisparo);
                 if (municion != null) {
                     elementosEnJuego.put(municion.getId(), municion);
+                    eventoDisparo.habilitar();
                 }
                 break;
             case "Evento_Recarga":
-                // Procesar evento de recarga
-                break;
-            case "Evento_RecibeImpacto":
-                // Procesar evento de recibir impacto
+                Evento_Recarga eventoRecarga = (Evento_Recarga) intencion;
+                Dron dronRecarga = (Dron) elementosEnJuego.get(intencion.getIdElemento());
+                if(dronRecarga == null) {
+                    return;
+                }
+                if (dronRecarga.getEstado() != EstadoElemento.ACTIVO || dronRecarga.getBateria() <= 0 || dronRecarga.getVida() <= 0) {
+                    return;
+                }
+                dronRecarga.recargar(eventoRecarga);
+                eventoRecarga.habilitar();
                 break;
 
             default:
@@ -196,15 +201,40 @@ public class SesionJuego extends GameLoop {
     }
 
     private void update(Evento accion) {
-        switch (accion) {
-            case value:
+        if(!accion.estaHabilitado()) {
+            return;
+        }
+        switch (accion.getClass().getSimpleName()){
+            case "Evento_Movimiento":
+                Evento_Movimiento eventoMovimiento = (Evento_Movimiento) accion;
+                Dron dron = (Dron) elementosEnJuego.get(accion.getIdElemento());
+                dron.moverse(eventoMovimiento);
+                accion.deshabilitar();
+                break;
+            case "Evento_Disparo":
+                Evento_Disparo eventoDisparo = (Evento_Disparo) accion;
+                Dron dronDisparador = (Dron) elementosEnJuego.get(accion.getIdElemento());
+                Elemento municion = dronDisparador.disparar(eventoDisparo);
+                if (municion != null) {
+                    elementosEnJuego.put(municion.getId(), municion);
+                }
+                Evento_Movimiento eventoMovimientoMunicion = new Evento_Movimiento();
+                municion.moverse(eventoMovimientoMunicion);
+                processInput(eventoMovimientoMunicion);
+                accion.deshabilitar();
+                break;
+            case "Evento_Recarga":
+                Evento_Recarga eventoRecarga = (Evento_Recarga) accion;
+                Dron dronRecarga = (Dron) elementosEnJuego.get(accion.getIdElemento());
+                if(dronRecarga.getBateria() < dronRecarga.getMAX_BATERIA()) {
+                    dronRecarga.recargar(eventoRecarga);
+                }
 
                 break;
 
             default:
                 break;
         }
-        // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'update'");
 
     }

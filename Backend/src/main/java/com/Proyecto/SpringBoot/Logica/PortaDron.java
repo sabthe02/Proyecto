@@ -48,6 +48,15 @@ public class PortaDron extends Elemento {
         this.drones = drones;
     }
 
+    public void moverse(Evento_Movimiento intencion) {
+        if (intencion == null) {
+            return;
+        }
+        this.setPosicionX(intencion.getNuevaPosX());
+        this.setPosicionY(intencion.getNuevaPosY());
+        this.setAngulo(intencion.getNuevoAngulo());
+    }
+
     
 }
 

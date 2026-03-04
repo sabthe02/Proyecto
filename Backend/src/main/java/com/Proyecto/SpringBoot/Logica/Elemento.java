@@ -114,4 +114,6 @@ public abstract class Elemento {
         this.jugador = jugador;
     }
 
+    public abstract void moverse(Evento_Movimiento intencion); 
+
 }

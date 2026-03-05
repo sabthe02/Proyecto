@@ -405,4 +405,9 @@ public class Fachada implements iFachada {
         this.handler = handler;
     }
 
+    @Override
+    public void EnviarFinPartida(String ganador) {
+        return handler.enviarFinPartida(ganador);
+    }
+
 }

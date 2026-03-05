@@ -34,7 +34,7 @@ public abstract class GameLoop {
      * }
      */
 
-    public void stop() {
+    public void stopGameLoop() {
         corriendo = false;
         estadoJuego = EstadoJuego.FINALIZADO;
     }

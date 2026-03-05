@@ -53,11 +53,11 @@ export class Game extends Phaser.Scene {
         this.pendingRechargeRequest = null;
         this.toastText = null;
         this.lastDeploymentTime = 0; // Debounce para despliegue de drones
-        this.pendingDroneDeployment = false; // Bandera para cambiar automáticamente al dron recién desplegado
-        this.dronesAnimandoCaida = new Set(); // Rastrear drones reproduciendo animación de muerte
-        this.portersAnimandoDestruccion = new Set(); // Rastrear portadores reproduciendo animación de destrucción
-        this.gameOverTriggered = false; // Prevenir múltiples activaciones de fin de juego
-        this.lastUpdateLog = 0; // Para debug: rastrear si update() está ejecutándose
+        this.pendingDroneDeployment = false; // Bandera para cambiar automÃ¡ticamente al dron reciÃ©n desplegado
+        this.dronesAnimandoCaida = new Set(); // Rastrear drones reproduciendo animaciÃ³n de muerte
+        this.portersAnimandoDestruccion = new Set(); // Rastrear portadores reproduciendo animaciÃ³n de destrucciÃ³n
+        this.gameOverTriggered = false; // Prevenir mÃºltiples activaciones de fin de juego
+        this.lastUpdateLog = 0; // Para debug: rastrear si update() estÃ¡ ejecutÃ¡ndose
         if (data && data.partidaInicial) {
             this.partidaInicial = data.partidaInicial;
         }
@@ -77,7 +77,7 @@ export class Game extends Phaser.Scene {
         this.load.image('proyectil_misil', 'effectos/speed.png');
         this.load.image('proyectil_bomba', 'effectos/fire00.png');
         
-        // Cargar todos los fotogramas de animación de fuego para efectos de destrucción
+        // Cargar todos los fotogramas de animaciÃ³n de fuego para efectos de destrucciÃ³n
         for (let i = 0; i < 20; i++) {
             const frameNum = String(i).padStart(2, '0');
             this.load.image(`fire${frameNum}`, `effectos/fire${frameNum}.png`);
@@ -85,14 +85,14 @@ export class Game extends Phaser.Scene {
     }
 
     create() {
-        console.log("Visualizador de Batalla iniciado");
+        this.depurar("Visualizador de Batalla iniciado");
         
         // ADVERTENCIA CRITICA: PROBLEMA DE SALUD DEL PORTADRON
-        console.warn('%cPROBLEMA DE ESCALADO DE SALUD: Los portadrones mueren mas rapido de lo esperado', 'color: #ff0000; font-size: 14px; font-weight: bold');
-        console.warn('El frontend muestra: AEREO=1000 HP, NAVAL=800 HP (escalado para UI)');
-        console.warn('El backend usa: TODOS LOS PORTADRONES=100 HP maximo (autoritativo)');
-        console.warn('Resultado: Los portadrones mueren en 2 impactos porque el backend verifica salud contra 100, NO 1000/800');
-        console.warn('SOLUCION REQUERIDA: El backend debe usar maxHealth=1000 para AEREO, maxHealth=800 para NAVAL');
+        this.depurar('%cPROBLEMA DE ESCALADO DE SALUD: Los portadrones mueren mas rapido de lo esperado', 'color: #ff0000; font-size: 14px; font-weight: bold');
+        this.depurar('El frontend muestra: AEREO=1000 HP, NAVAL=800 HP (escalado para UI)');
+        this.depurar('El backend usa: TODOS LOS PORTADRONES=100 HP maximo (autoritativo)');
+        this.depurar('Resultado: Los portadrones mueren en 2 impactos porque el backend verifica salud contra 100, NO 1000/800');
+        this.depurar('SOLUCION REQUERIDA: El backend debe usar maxHealth=1000 para AEREO, maxHealth=800 para NAVAL');
 
         this.lastMouseMoveSentAt = 0;
 
@@ -111,7 +111,7 @@ export class Game extends Phaser.Scene {
         this.fog.setScrollFactor(0);
         this.fog.setDepth(9000);
 
-        // círculo que servirá como máscara (área visible)
+        // cÃ­rculo que servirÃ¡ como mÃ¡scara (Ã¡rea visible)
         this.visionCircle = this.add.graphics();
         this.visionCircle.setScrollFactor(0);
         this.visionCircle.setVisible(false);
@@ -123,7 +123,7 @@ export class Game extends Phaser.Scene {
         this.proyectiles = this.physics.add.group();
         this.cursors = this.input.keyboard.createCursorKeys();
         this.dronesActivosOrdenados = []; // Lista ordenada de drones activos para ciclado
-        this.currentDronIndex = -1; // Índice actual en el ciclo de drones
+        this.currentDronIndex = -1; // Ãndice actual en el ciclo de drones
 
         
         this.configurarUnidadSegunEquipo();
@@ -138,7 +138,7 @@ export class Game extends Phaser.Scene {
 
         
         this.input.keyboard.on('keydown-SPACE', () => {
-            // Ciclo: PORTADRONES → DRON1 → DRON2 → ... → PORTADRONES
+            // Ciclo: PORTADRONES â†’ DRON1 â†’ DRON2 â†’ ... â†’ PORTADRONES
             // BARRA ESPACIADORA SOLO CICLA - NUNCA DESPLIEGA
             if (this.controlMode === 'DRON') {
                 // Si estamos en un dron, intentar ir al siguiente dron o volver al porter
@@ -151,47 +151,47 @@ export class Game extends Phaser.Scene {
             // Si estamos en PORTADRONES, intentar ir al primer dron activo
             if (this.controlMode === 'PORTADRONES') {
                 if (!this.ciclarAlPrimerDron()) {
-                    console.log('Ciclo: Sin drones disponibles para ciclar, permaneciendo en porter');
+                    this.depurar('Ciclo: Sin drones disponibles para ciclar, permaneciendo en porter');
                 }
             }
         });
 
         // Tecla 'R' para activar recarga cuando se controla un dron
         this.input.keyboard.on('keydown-R', () => {
-            console.log('Recarga: ========== TECLA R PRESIONADA ==========');
-            console.log('Recarga: Modo actual:', this.controlMode);
+            this.depurar('Recarga: ========== TECLA R PRESIONADA ==========');
+            this.depurar('Recarga: Modo actual:', this.controlMode);
             let activeDronStatus;
             if (this.activeDron) {
                 activeDronStatus = 'existe';
             } else {
                 activeDronStatus = 'NULO';
             }
-            console.log('Recarga: Dron activo:', activeDronStatus);
+            this.depurar('Recarga: Dron activo:', activeDronStatus);
             
             if (this.controlMode === 'DRON' && this.activeDron) {
                 const porta = this.obtenerEstadoPortadronPropio();
                 if (porta) {
-                    console.log('Recarga: Portadron no encontrado, llamando solicitarRecargaDron');
+                    this.depurar('Recarga: Portadron no encontrado, llamando solicitarRecargaDron');
                     this.solicitarRecargaDron(porta.id);
                 } else {
-                    console.log('Recarga: Portadron no encontrado');
+                    this.depurar('Recarga: Portadron no encontrado');
                 }
             } else {
-                console.log('Recarga: No esta en modo DRON o no hay dron activo');
+                this.depurar('Recarga: No esta en modo DRON o no hay dron activo');
             }
         });
 
-        // recibir actualizaciones desde el servidor (algunos mensajes ya se escuchan en el menú, re‑usamos)
+        // recibir actualizaciones desde el servidor (algunos mensajes ya se escuchan en el menÃº, reâ€‘usamos)
         this.socket = window.gameSocket;
         if (this.socket) {
             this.socket.onmessage = (evt) => {
                 try {
                     const msg = JSON.parse(evt.data);
-                    // console.log('[Game] mensaje servidor', msg);
+                    // this.depurar('[Game] mensaje servidor', msg);
                     switch (msg.tipo) {
                         case 'PARTIDA_INICIADA':
                             // puede contener el estado inicial de la partida, lanzamos la
-                            // misma función que para actualizaciones continuas
+                            // misma funciÃ³n que para actualizaciones continuas
                             this.idPartida = msg.datos?.idPartida || this.idPartida;
                             if (msg.datos) {
                                 this.procesarPartidaIniciada(msg.datos);
@@ -199,20 +199,20 @@ export class Game extends Phaser.Scene {
                             break;
                         case 'ACTUALIZAR_PARTIDA':
                             this.actualizarRealidad(msg.datos);
-                            // Si acabamos de desplegar un dron y todavía estamos en modo porter, cambiar a él
+                            // Si acabamos de desplegar un dron y todavÃ­a estamos en modo porter, cambiar a Ã©l
                             if (this.pendingDroneDeployment && this.controlMode === 'PORTADRONES') {
-                                console.log('Despliegue: Auto-cambiando al dron recien desplegado despues de la actualizacion');
+                                this.depurar('Despliegue: Auto-cambiando al dron recien desplegado despues de la actualizacion');
                                 setTimeout(() => {
                                     const success = this.ciclarAlUltimoDron();
                                     if (success) {
-                                        console.log('Despliegue: Cambio exitoso al nuevo dron');
+                                        this.depurar('Despliegue: Cambio exitoso al nuevo dron');
                                         this.pendingDroneDeployment = false;
                                     } else {
-                                        console.log('Despliegue: Fallo al cambiar al nuevo dron, se reintentara en la proxima actualizacion');
+                                        this.depurar('Despliegue: Fallo al cambiar al nuevo dron, se reintentara en la proxima actualizacion');
                                     }
                                 }, 100);
                             }
-                            // Verificar condición de fin de juego después de cada actualización
+                            // Verificar condiciÃ³n de fin de juego despuÃ©s de cada actualizaciÃ³n
                             if (!this.gameOverTriggered) {
                                 this.checkGameOverCondition();
                             }
@@ -221,9 +221,9 @@ export class Game extends Phaser.Scene {
                             this.confirmarMovimientoPendiente();
                             break;
                         case 'DISPARO_PROCESADO':
-                            console.log('Disparo: Disparo confirmado por el servidor');
+                            this.depurar('Disparo: Disparo confirmado por el servidor');
                             this.confirmarDisparoPendiente();
-                            // Backend puede enviar duración del vuelo del proyectil
+                            // Backend puede enviar duraciÃ³n del vuelo del proyectil
                             const duracionBackend = msg.duracion || msg.tiempoVuelo || null;
                             this.crearProyectilTemporal(duracionBackend);
                             break;
@@ -233,7 +233,7 @@ export class Game extends Phaser.Scene {
                         case 'ERROR':
                             this.rechazarMovimientoPendiente(msg);
                             this.rechazarDisparoPendiente(msg);
-                            console.warn('Juego: error servidor', msg.mensaje || msg);
+                            this.depurar('Juego: error servidor', msg.mensaje || msg);
                             break;
                         case 'DISPARO_FALLIDO':
                             this.rechazarDisparoPendiente(msg);
@@ -249,22 +249,22 @@ export class Game extends Phaser.Scene {
                             } else {
                                 disconnectedPlayerId = msg.idJugador;
                             }
-                            console.log('Desconexion: Jugador desconectado:', disconnectedPlayerId, 'Jugador actual:', this.playerId);
+                            this.depurar('Desconexion: Jugador desconectado:', disconnectedPlayerId, 'Jugador actual:', this.playerId);
                             
-                            // Solo mostrar pantalla de empate a quien no se desconectó sin guardar
+                            // Solo mostrar pantalla de empate a quien no se desconectÃ³ sin guardar
                             if (disconnectedPlayerId && String(disconnectedPlayerId) !== String(this.playerId)) {
                                 if (!this.gameOverTriggered) {
                                     this.gameOverTriggered = true;
-                                    console.log('FinDeJuego: Oponente desconectado - EMPATE');
+                                    this.depurar('FinDeJuego: Oponente desconectado - EMPATE');
                                     setTimeout(() => {
                                         this.transitionToGameOver('opponent_left');
                                     }, 1000);
                                 }
                             } else if (!disconnectedPlayerId) {
-                                // Si backend no manda el id, se asume que el oponente se desconectó (caso de desconexión abrupta sin guardar)
+                                // Si backend no manda el id, se asume que el oponente se desconectÃ³ (caso de desconexiÃ³n abrupta sin guardar)
                                 if (!this.gameOverTriggered) {
                                     this.gameOverTriggered = true;
-                                    console.log('FinDeJuego: Jugador desconectado (sin ID provisto) - asumiendo oponente se fue');
+                                    this.depurar('FinDeJuego: Jugador desconectado (sin ID provisto) - asumiendo oponente se fue');
                                     setTimeout(() => {
                                         this.transitionToGameOver('opponent_left');
                                     }, 1000);
@@ -272,7 +272,7 @@ export class Game extends Phaser.Scene {
                             }
                             break;
                         case 'RECARGADO_EXITOSO':
-                            console.log(`%cRecarga: Backend confirmo RECARGADO_EXITOSO a las ${new Date().toLocaleTimeString()}`, 'color: #00ff00; font-weight: bold', msg);
+                            this.depurar(`%cRecarga: Backend confirmo RECARGADO_EXITOSO a las ${new Date().toLocaleTimeString()}`, 'color: #00ff00; font-weight: bold', msg);
                             this.confirmarRecargaPendiente(msg);
                             break;
                         case 'RECARGADO_FALLIDO':
@@ -281,13 +281,13 @@ export class Game extends Phaser.Scene {
                             break;
                         case 'DRON_DESPLEGADO_EXITOSO':
                             this.mostrarMensajeTemporal('Dron desplegado', 1500, '#d6ffd6');
-                            // Establecer bandera para cambiar automáticamente al dron recién desplegado después de la siguiente actualización
+                            // Establecer bandera para cambiar automÃ¡ticamente al dron reciÃ©n desplegado despuÃ©s de la siguiente actualizaciÃ³n
                             this.pendingDroneDeployment = true;
-                            console.log('Despliegue: Despliegue exitoso, cambiara automaticamente en la proxima actualizacion');
-                            // Timeout de seguridad: limpiar bandera después de 3 segundos si no se limpia con un cambio exitoso
+                            this.depurar('Despliegue: Despliegue exitoso, cambiara automaticamente en la proxima actualizacion');
+                            // Timeout de seguridad: limpiar bandera despuÃ©s de 3 segundos si no se limpia con un cambio exitoso
                             setTimeout(() => {
                                 if (this.pendingDroneDeployment) {
-                                    console.log('Despliegue: Tiempo de espera de cambio automatico, limpiando bandera');
+                                    this.depurar('Despliegue: Tiempo de espera de cambio automatico, limpiando bandera');
                                     this.pendingDroneDeployment = false;
                                 }
                             }, 3000);
@@ -299,13 +299,13 @@ export class Game extends Phaser.Scene {
                             break;
                     }
                 } catch (e) {
-                    console.warn('Juego: error parseando mensaje', e);
+                    this.depurar('Juego: error parseando mensaje', e);
                 }
             };
         }
 
         this.input.on('pointerdown', (pointer, gameObjects) => {
-            console.log('Clic: Clic de raton detectado', {
+            this.depurar('Clic: Clic de raton detectado', {
                 controlMode: this.controlMode,
                 hasActiveDron: !!this.activeDron,
                 gameObjectsCount: gameObjects?.length || 0
@@ -314,26 +314,26 @@ export class Game extends Phaser.Scene {
             // Si estamos controlando el portadrones
             if (this.controlMode === 'PORTADRONES') {
                 // Todo clic en modo portadrones = desplegar nuevo dron
-                // La recarga ocurre automáticamente cuando los drones regresan a la proximidad del portadrones
-                console.log('Clic: Modo portadrones: desplegando nuevo dron');
+                // La recarga ocurre automÃ¡ticamente cuando los drones regresan a la proximidad del portadrones
+                this.depurar('Clic: Modo portadrones: desplegando nuevo dron');
                 this.solicitarDesplegarDron();
                 return;
             }
             
             if (this.controlMode !== 'DRON' || !this.activeDron) {
-                console.log('Clic: BLOQUEADO: No esta en modo DRON o no hay dron activo');
+                this.depurar('Clic: BLOQUEADO: No esta en modo DRON o no hay dron activo');
                 return;
             }
 
             // Chequear si se hizo clic en el portadrones propio - activar recarga en lugar de disparar
             const portaPropioClickeado = this.obtenerPortadronPropioClickeado(gameObjects);
             if (portaPropioClickeado) {
-                console.log('Clic: Se hizo clic en el portadrones propio - activando recarga en lugar de disparar');
+                this.depurar('Clic: Se hizo clic en el portadrones propio - activando recarga en lugar de disparar');
                 const porta = this.obtenerEstadoPortadronPropio();
                 if (porta) {
                     this.solicitarRecargaDron(porta.id);
                 } else {
-                    console.warn('Clic: Se hizo clic en el portadrones propio pero no se encontro en el estado');
+                    this.depurar('Clic: Se hizo clic en el portadrones propio pero no se encontro en el estado');
                 }
                 return; // No disparar al propio portador!
             }
@@ -341,14 +341,14 @@ export class Game extends Phaser.Scene {
             // Chequear - bloquear disparo para prevenir fuego amigo
             let clickedOwnNonPorterUnit = false;
             if (Array.isArray(gameObjects) && gameObjects.length > 0) {
-                console.log('Clic: Procesando', gameObjects.length, 'objetos clickeados');
+                this.depurar('Clic: Procesando', gameObjects.length, 'objetos clickeados');
                 
                 const clickedElements = gameObjects
                     .filter(obj => obj && obj.getData)
                     .map(obj => {
                         const elementId = obj.getData('elementId');
                         if (!elementId) {
-                            console.log('Clic: Objeto no tiene elementId, omitiendo');
+                            this.depurar('Clic: Objeto no tiene elementId, omitiendo');
                             return null;
                         }
                         
@@ -368,7 +368,7 @@ export class Game extends Phaser.Scene {
                         }
                         
                         if (!elemento) {
-                            console.log('Clic: Elemento', elementId, 'no encontrado en el estado');
+                            this.depurar('Clic: Elemento', elementId, 'no encontrado en el estado');
                             return null;
                         }
                         
@@ -381,15 +381,15 @@ export class Game extends Phaser.Scene {
                             parentPortadronId: elemento.parentPortadronId
                         };
                         
-                        console.log('Clic: Elemento mapeado:', result);
+                        this.depurar('Clic: Elemento mapeado:', result);
                         return result;
                     })
                     .filter(e => e !== null);
                 
-                console.log('Clic: ===== ARREGLO FINAL DE ELEMENTOS CLICKEADOS =====', clickedElements);
-                console.log('Clic: ownPortadronId:', this.ownPortadronId);
+                this.depurar('Clic: ===== ARREGLO FINAL DE ELEMENTOS CLICKEADOS =====', clickedElements);
+                this.depurar('Clic: ownPortadronId:', this.ownPortadronId);
                 
-                // Obtener dron activo ID para explorar si el clic incluye otros drones propios (fuego amigo) pero EXCLUIR el dron activo (se asume que el jugador sabe que está haciendo clic en su dron activo)
+                // Obtener dron activo ID para explorar si el clic incluye otros drones propios (fuego amigo) pero EXCLUIR el dron activo (se asume que el jugador sabe que estÃ¡ haciendo clic en su dron activo)
                 let activeDronId;
                 if (this.activeDron && this.activeDron.getData) {
                     activeDronId = this.activeDron.getData('elementId');
@@ -401,7 +401,7 @@ export class Game extends Phaser.Scene {
                 } else {
                     activeDronId = null;
                 }
-                console.log('Clic: ID de dron activo (sera excluido del chequeo):', activeDronId);
+                this.depurar('Clic: ID de dron activo (sera excluido del chequeo):', activeDronId);
                 
                 // Chequear drones propios (pero EXCLUIR el dron activo - no puedes dispararte a ti mismo)
                 const ownDrones = clickedElements.filter(e => {
@@ -418,25 +418,25 @@ export class Game extends Phaser.Scene {
                 });
                 
                 if (ownDrones.length > 0) {
-                    console.log('Clic: Se encontraron OTROS drones propios en el clic (no el activo):', ownDrones);
+                    this.depurar('Clic: Se encontraron OTROS drones propios en el clic (no el activo):', ownDrones);
                     clickedOwnNonPorterUnit = true;
                 } else {
-                    console.log('Clic: No se encontraron otros drones propios en el clic (seguro para disparar)');
+                    this.depurar('Clic: No se encontraron otros drones propios en el clic (seguro para disparar)');
                     clickedOwnNonPorterUnit = false;
                 }
             } else {
-                console.log('Clic: Se hizo clic en espacio vacio');
+                this.depurar('Clic: Se hizo clic en espacio vacio');
             }
 
             // Bloquear disparo a propios drones para prevenir fuego amigo
             if (clickedOwnNonPorterUnit) {
-                console.log('Clic: BLOQUEADO: Se hizo clic en un dron propio. No se puede disparar a unidades amigas');
-                this.mostrarMensajeTemporal('¡No puedes disparar a tus propias unidades!', 2000, '#ff6666');
+                this.depurar('Clic: BLOQUEADO: Se hizo clic en un dron propio. No se puede disparar a unidades amigas');
+                this.mostrarMensajeTemporal('Â¡No puedes disparar a tus propias unidades!', 2000, '#ff6666');
                 return;
             }
 
-            // Permitir disparar a enemigos o espacio vacío
-            console.log('Clic: Procediendo a emitirDisparo en la posicion del mundo:', {
+            // Permitir disparar a enemigos o espacio vacÃ­o
+            this.depurar('Clic: Procediendo a emitirDisparo en la posicion del mundo:', {
                 worldX: pointer.worldX,
                 worldY: pointer.worldY
             });
@@ -502,9 +502,9 @@ export class Game extends Phaser.Scene {
                 this.solicitarRecargaDron(this.ownPortadronId);
                 return;
             }
-            // Al controlar el portadron, hacer clic en él debería desplegar un nuevo dron
+            // Al controlar el portadron, hacer clic en Ã©l deberÃ­a desplegar un nuevo dron
             if (this.controlMode === 'PORTADRONES') {
-                console.log('Clic: Se hizo clic en sprite de porter, desplegando dron');
+                this.depurar('Clic: Se hizo clic en sprite de porter, desplegando dron');
                 this.solicitarDesplegarDron();
                 return;
             }
@@ -525,19 +525,19 @@ export class Game extends Phaser.Scene {
     update() {
         // Debug: Rastrear si update() esta ejecutandose (para detectar congelamientos)
         if (!this.lastUpdateLog || Date.now() - this.lastUpdateLog > 5000) {
-            console.log(`%cUPDATE: Bucle de juego ejecutandose - ${new Date().toLocaleTimeString()}`, 'color: #00ff00');
+            this.depurar(`%cUPDATE: Bucle de juego ejecutandose - ${new Date().toLocaleTimeString()}`, 'color: #00ff00');
             this.lastUpdateLog = Date.now();
         }
         
-        // Chequeo de seguridad: si está en modo DRON pero activeDron está destruido/null, volver al portadron
+        // Chequeo de seguridad: si estÃ¡ en modo DRON pero activeDron estÃ¡ destruido/null, volver al portadron
         if (this.controlMode === 'DRON') {
             if (!this.activeDron || !this.activeDron.active || this.activeDron.alpha <= 0) {
-                console.log('Actualizacion: Dron activo es destruido/invalido, regresando al porter');
+                this.depurar('Actualizacion: Dron activo es destruido/invalido, regresando al porter');
                 this.volverAlPortadron();
                 return;
             }
             
-            // Verificar si el dron activo está marcado como DESTRUIDO en el estado del backend
+            // Verificar si el dron activo estÃ¡ marcado como DESTRUIDO en el estado del backend
             let activeDronId;
             if (this.activeDron && this.activeDron.getData) {
                 activeDronId = this.activeDron.getData('elementId');
@@ -553,7 +553,7 @@ export class Game extends Phaser.Scene {
                     dronEstado = null;
                 }
                 if (dronEstado && dronEstado.estado === 'DESTRUIDO') {
-                    console.log('Actualizacion: Dron activo marcado como DESTRUIDO en backend, volviendo al porter');
+                    this.depurar('Actualizacion: Dron activo marcado como DESTRUIDO en backend, volviendo al porter');
                     this.volverAlPortadron();
                     return;
                 }
@@ -567,7 +567,7 @@ export class Game extends Phaser.Scene {
             target = this.unit;
         }
         
-        // Validar que el objetivo existe y tiene posición
+        // Validar que el objetivo existe y tiene posiciÃ³n
         if (!target) {
             console.error('Actualizacion: No se encontro objetivo, intentando recuperacion');
             if (this.controlMode === 'DRON') {
@@ -586,7 +586,7 @@ export class Game extends Phaser.Scene {
         if (target.x === undefined || target.x === null || !Number.isFinite(target.x)) {
             console.error('Actualizacion: El objetivo tiene posicion invalida', { mode: this.controlMode, x: target.x, y: target.y });
             
-            // Intentar recuperación
+            // Intentar recuperaciÃ³n
             if (this.controlMode === 'DRON') {
                 console.error('Actualizacion: Posicion de dron invalida, volviendo a PORTER');
                 this.volverAlPortadron();
@@ -595,7 +595,7 @@ export class Game extends Phaser.Scene {
                 const porterEstado = this.obtenerEstadoPortadronPropio();
                 if (porterEstado && Number.isFinite(porterEstado.x) && Number.isFinite(porterEstado.y)) {
                     target.setPosition(Number(porterEstado.x), Number(porterEstado.y));
-                    console.log('Actualizacion: Posicion de Porter corregida a:', porterEstado.x, porterEstado.y);
+                    this.depurar('Actualizacion: Posicion de Porter corregida a:', porterEstado.x, porterEstado.y);
                 } else {
                     console.error('Actualizacion: No se puede corregir la posicion del porter, estado del backend invalido');
                     target.setPosition(5000, 5000); // Centro del mundo como fallback
@@ -604,11 +604,11 @@ export class Game extends Phaser.Scene {
             return;
         }
 
-        // Verificar drones sin batería cada frame
+        // Verificar drones sin baterÃ­a cada frame
         this.verificarDronesSinBateria();
         
-        // Aplicar visualización de drenaje de batería en frontend (solo visual, el backend es autoritativo)
-        // Esto asegura que la barra de batería se actualice suavemente incluso cuando el dron está estacionario
+        // Aplicar visualizaciÃ³n de drenaje de baterÃ­a en frontend (solo visual, el backend es autoritativo)
+        // Esto asegura que la barra de baterÃ­a se actualice suavemente incluso cuando el dron estÃ¡ estacionario
         this.aplicarDrenajeTemporalBateria();
 
         let moved = false;
@@ -661,7 +661,7 @@ export class Game extends Phaser.Scene {
         }
 
         
-        // fondo estático uniforme para mantener apariencia consistente
+        // fondo estÃ¡tico uniforme para mantener apariencia consistente
 
         if (moved) {
             this.solicitarMovimientoObjetivo(target, nextX, nextY, nextAngle);
@@ -725,7 +725,7 @@ export class Game extends Phaser.Scene {
             etiquetaPortadron,
             puntoDron,
             etiquetaDron,
-            dronePoints: [], // Arreglo para puntos de drones dinámicos
+            dronePoints: [], // Arreglo para puntos de drones dinÃ¡micos
         };
 
         this.posicionarMiniMapa();
@@ -875,7 +875,7 @@ export class Game extends Phaser.Scene {
             
             // DEBUGUEAR: Registrar visibilidad de portadron enemigo en minimapa
             if (totalPorters > 0) {
-                console.log(`%cMINIMAPA: Portadrones: ${totalPorters} total, ${currentEnemyPorters.length} ENEMIGOS mostrados`, 'color: #ff00ff; font-weight: bold', {
+                this.depurar(`%cMINIMAPA: Portadrones: ${totalPorters} total, ${currentEnemyPorters.length} ENEMIGOS mostrados`, 'color: #ff00ff; font-weight: bold', {
                     playerTeam: this.playerTeam,
                     ownPortadronId: this.ownPortadronId,
                     enemyPorters: currentEnemyPorters.map(p => ({ 
@@ -965,7 +965,7 @@ export class Game extends Phaser.Scene {
             return true;
         });
         
-        // Renderizar todos los drones enemigos en NARANJA (círculos más pequeños)
+        // Renderizar todos los drones enemigos en NARANJA (cÃ­rculos mÃ¡s pequeÃ±os)
         currentEnemyDrones.forEach(enemyDrone => {
             const posEnemy = this.mundoAMiniMapa(enemyDrone.x, enemyDrone.y, limites);
             if (!posEnemy) return;
@@ -993,11 +993,11 @@ export class Game extends Phaser.Scene {
             activeDronId = null;
         }
         
-        // Ocultar puntos de drones antiguos que ya no están activos
+        // Ocultar puntos de drones antiguos que ya no estÃ¡n activos
         const currentDroneIds = new Set(this.dronesActivosOrdenados.map(d => d.id));
         this.minimap.dronePoints = this.minimap.dronePoints.filter(point => {
             if (!currentDroneIds.has(point.dronId)) {
-                // Destruir puntos para drones que ya no están en la lista
+                // Destruir puntos para drones que ya no estÃ¡n en la lista
                 point.circle.destroy();
                 point.label.destroy();
                 return false;
@@ -1041,7 +1041,7 @@ export class Game extends Phaser.Scene {
                 this.minimap.dronePoints.push(point);
             }
             
-            // Actualizar posición y apariencia
+            // Actualizar posiciÃ³n y apariencia
             point.circle.setPosition(posDron.x, posDron.y);
             point.circle.setVisible(true);
             
@@ -1054,7 +1054,7 @@ export class Game extends Phaser.Scene {
                 point.circle.setRadius(3.5); // Smaller
             }
             
-            // Actualizar etiqueta con número de dron
+            // Actualizar etiqueta con nÃºmero de dron
             const droneLabel = this.obtenerEtiquetaElementoMasLinda(dron);
             point.label.setText(droneLabel);
             point.label.setPosition(posDron.x + 8, posDron.y + 6);
@@ -1080,46 +1080,46 @@ export class Game extends Phaser.Scene {
         this.portadronDirectionArrow.setDepth(9400);
         this.portadronDirectionArrow.setVisible(false);
 
-        // Crear indicador de zona de recarga (círculo alrededor del portadron)
+        // Crear indicador de zona de recarga (cÃ­rculo alrededor del portadron)
         this.rechargeZoneGraphics = this.add.graphics();
-        this.rechargeZoneGraphics.setScrollFactor(1, 1); // Seguir cámara (predeterminado pero explícito)
+        this.rechargeZoneGraphics.setScrollFactor(1, 1); // Seguir cÃ¡mara (predeterminado pero explÃ­cito)
         this.rechargeZoneGraphics.setDepth(9600); // Por encima de todo incluyendo niebla y elementos de UI
         this.rechargeZoneGraphics.setVisible(false);
-        console.log('Zona de Recarga: Graficos inicializados - scrollFactor:', this.rechargeZoneGraphics.scrollFactorX, this.rechargeZoneGraphics.scrollFactorY, 'depth:', this.rechargeZoneGraphics.depth);
+        this.depurar('Zona de Recarga: Graficos inicializados - scrollFactor:', this.rechargeZoneGraphics.scrollFactorX, this.rechargeZoneGraphics.scrollFactorY, 'depth:', this.rechargeZoneGraphics.depth);
 
         // Crear zona clickeable invisible para recarga
         this.rechargeZoneClickable = this.add.zone(0, 0, 440, 440); // 220px radius = 440px diameter
         this.rechargeZoneClickable.setOrigin(0.5, 0.5);
-        this.rechargeZoneClickable.setScrollFactor(1, 1); // Seguir cámara
+        this.rechargeZoneClickable.setScrollFactor(1, 1); // Seguir cÃ¡mara
         this.rechargeZoneClickable.setInteractive({ useHandCursor: true, draggable: false });
         this.rechargeZoneClickable.setDepth(9599);
-        // NOTA: Las zonas son invisibles por defecto, nunca llamar setVisible(false) o el input no funcionará!
-        console.log('Zona de Recarga: Zona clickeable inicializada');
+        // NOTA: Las zonas son invisibles por defecto, nunca llamar setVisible(false) o el input no funcionarÃ¡!
+        this.depurar('Zona de Recarga: Zona clickeable inicializada');
         this.rechargeZoneClickable.on('pointerdown', () => {
-            console.log('Zona de Recarga: ========== ZONA CLICKEADA ==========');
-            console.log('Zona de Recarga: Modo actual:', this.controlMode);
+            this.depurar('Zona de Recarga: ========== ZONA CLICKEADA ==========');
+            this.depurar('Zona de Recarga: Modo actual:', this.controlMode);
             let activeDronStatus;
             if (this.activeDron) {
                 activeDronStatus = 'exists';
             } else {
                 activeDronStatus = 'NULL';
             }
-            console.log('Zona de Recarga: Dron activo:', activeDronStatus);
+            this.depurar('Zona de Recarga: Dron activo:', activeDronStatus);
             
             const porta = this.obtenerEstadoPortadronPropio();
             if (!porta) {
-                console.log('Zona de Recarga: Portadron no encontrado');
+                this.depurar('Zona de Recarga: Portadron no encontrado');
                 return;
             }
             if (this.controlMode !== 'DRON') {
-                console.log('Zona de Recarga: No esta en modo DRON');
+                this.depurar('Zona de Recarga: No esta en modo DRON');
                 return;
             }
             if (!this.activeDron) {
-                console.log('Zona de Recarga: No hay dron activo');
+                this.depurar('Zona de Recarga: No hay dron activo');
                 return;
             }
-            console.log('Zona de Recarga: Todas las verificaciones pasadas, llamando solicitarRecargaDron con ID de porter:', porta.id);
+            this.depurar('Zona de Recarga: Todas las verificaciones pasadas, llamando solicitarRecargaDron con ID de porter:', porta.id);
             this.solicitarRecargaDron(porta.id);
         });
     }
@@ -1196,7 +1196,7 @@ export class Game extends Phaser.Scene {
                 continue;
             }
             
-            // Solo permitir interacción si el dron está ACTIVO (no DESTRUIDO o SIN_BATERIA)
+            // Solo permitir interacciÃ³n si el dron estÃ¡ ACTIVO (no DESTRUIDO o SIN_BATERIA)
             const estadoUpper = String(elemento.estado).toUpperCase();
             if (estadoUpper === 'ACTIVO' || estadoUpper === 'ACTIVE') {
                 return elemento;
@@ -1274,7 +1274,7 @@ export class Game extends Phaser.Scene {
 
     actualizarZonaRecarga() {
         if (!this.rechargeZoneGraphics || !this.rechargeZoneClickable) {
-            console.log('Zona de Recarga: Graficos no inicializados');
+            this.depurar('Zona de Recarga: Graficos no inicializados');
             return;
         }
 
@@ -1290,7 +1290,7 @@ export class Game extends Phaser.Scene {
         const dron = this.obtenerEstadoDronActivo();
 
         if (!porta || !this.esEstadoActivo(porta.estado)) {
-            console.log('Zona de Recarga: Portadron no encontrado o no activo');
+            this.depurar('Zona de Recarga: Portadron no encontrado o no activo');
             this.rechargeZoneGraphics.setVisible(false);
             this.rechargeZoneClickable.disableInteractive();
             if (this.txtRechargeHint) this.txtRechargeHint.setVisible(false);
@@ -1298,18 +1298,18 @@ export class Game extends Phaser.Scene {
         }
 
         if (!dron || !this.esEstadoActivo(dron.estado)) {
-            console.log('Zona de Recarga: Dron no encontrado o no activo');
+            this.depurar('Zona de Recarga: Dron no encontrado o no activo');
             this.rechargeZoneGraphics.setVisible(false);
             this.rechargeZoneClickable.disableInteractive();
             if (this.txtRechargeHint) this.txtRechargeHint.setVisible(false);
             return;
         }
 
-        // Si tenemos un sprite de dron activo que es visible, el dron está desplegado
+        // Si tenemos un sprite de dron activo que es visible, el dron estÃ¡ desplegado
         // NOTA: No chequear coordenada z - representa altitud (0 para drones navales al nivel del mar)
         // En lugar, chequear si el sprite de dron existe y es visible
         if (!this.activeDron || !this.activeDron.visible) {
-            console.log('Zona de Recarga: Sprite de dron no visible - no desplegado');
+            this.depurar('Zona de Recarga: Sprite de dron no visible - no desplegado');
             this.rechargeZoneGraphics.setVisible(false);
             this.rechargeZoneClickable.disableInteractive();
             if (this.txtRechargeHint) this.txtRechargeHint.setVisible(false);
@@ -1326,7 +1326,7 @@ export class Game extends Phaser.Scene {
         const rechargeDistance = 220; // Larger functional range (was 200)
         const inRange = Number.isFinite(distancia) && distancia <= rechargeDistance;
 
-        console.log(`Zona de Recarga: Visible - Porter: (${porta.x}, ${porta.y}), Dron: (${dron.x}, ${dron.y}), Distancia: ${distancia.toFixed(1)}, EnRango: ${inRange}`);
+        this.depurar(`Zona de Recarga: Visible - Porter: (${porta.x}, ${porta.y}), Dron: (${dron.x}, ${dron.y}), Distancia: ${distancia.toFixed(1)}, EnRango: ${inRange}`);
 
         // Dibujar el circulo de zona de recarga - SUTIL Y PEQUENO
         this.rechargeZoneGraphics.clear();
@@ -1365,7 +1365,7 @@ export class Game extends Phaser.Scene {
 
         this.rechargeZoneGraphics.setVisible(true);
 
-        // Actualizar posición de zona clickeable y habilitar input
+        // Actualizar posiciÃ³n de zona clickeable y habilitar input
         this.rechargeZoneClickable.setPosition(porta.x, porta.y);
         this.rechargeZoneClickable.setInteractive({ useHandCursor: true }); // Rehabilitar si estaba deshabilitado
 
@@ -1381,19 +1381,19 @@ export class Game extends Phaser.Scene {
         }
 
         this.resolverEquipoJugador(datosPartida);
-        console.log('Juego: Identidad local -> playerId:', this.playerId, 'nickname:', this.nickname, 'team:', this.playerTeam);
+        this.depurar('Juego: Identidad local -> playerId:', this.playerId, 'nickname:', this.nickname, 'team:', this.playerTeam);
 
         const elementos = this.extraerElementosIniciales(datosPartida);
         const cantPortaAereo = elementos.filter((e) => e.clase === 'PORTADRON' && e.tipoEquipo === 'AEREO').length;
         const cantPortaNaval = elementos.filter((e) => e.clase === 'PORTADRON' && e.tipoEquipo === 'NAVAL').length;
         const cantDronAereo = elementos.filter((e) => e.clase === 'DRON' && e.tipoEquipo === 'AEREO').length;
         const cantDronNaval = elementos.filter((e) => e.clase === 'DRON' && e.tipoEquipo === 'NAVAL').length;
-        console.log('Juego: Portadrones extraidos -> AEREO:', cantPortaAereo, 'NAVAL:', cantPortaNaval);
-        console.log('Juego: Drones extraidos -> AEREO:', cantDronAereo, 'NAVAL:', cantDronNaval);
+        this.depurar('Juego: Portadrones extraidos -> AEREO:', cantPortaAereo, 'NAVAL:', cantPortaNaval);
+        this.depurar('Juego: Drones extraidos -> AEREO:', cantDronAereo, 'NAVAL:', cantDronNaval);
         elementos
             .filter((e) => e.clase === 'PORTADRON')
             .forEach((e) => {
-                console.log('Juego: Portadron:', e.id, 'tipoEquipo:', e.tipoEquipo, 'textura:', this.obtenerTexturaElemento(e));
+                this.depurar('Juego: Portadron:', e.id, 'tipoEquipo:', e.tipoEquipo, 'textura:', this.obtenerTexturaElemento(e));
             });
         this.guardarElementos(elementos);
         this.guardarElementosBackend(elementos);
@@ -1496,7 +1496,7 @@ export class Game extends Phaser.Scene {
         this.titleText = this.add.text(
             this.scale.width / 2,
             45,
-            'Sistema Web de Simulación de\nCombate Aéreo‑Naval con Drones',
+            'Sistema Web de SimulaciÃ³n de\nCombate AÃ©reoâ€‘Naval con Drones',
             {
                 fontSize: '30px',
                 fontStyle: 'bold',
@@ -1594,7 +1594,7 @@ export class Game extends Phaser.Scene {
 
     seleccionarDron(spriteDron) {
         if (!spriteDron) {
-            console.log('Seleccion: Sin sprite provisto');
+            this.depurar('Seleccion: Sin sprite provisto');
             return;
         }
 
@@ -1607,12 +1607,12 @@ export class Game extends Phaser.Scene {
             if (dronEstadoPropio) {
                 const estadoUpper = String(dronEstadoPropio.estado).toUpperCase();
                 if (estadoUpper === 'DESTRUIDO' || estadoUpper === 'DESTROYED' || estadoUpper === 'INACTIVO' || estadoUpper === 'INACTIVE') {
-                    console.log(`Seleccion: No se puede seleccionar dron ${dronId} con estado ${dronEstadoPropio.estado}`);
+                    this.depurar(`Seleccion: No se puede seleccionar dron ${dronId} con estado ${dronEstadoPropio.estado}`);
                     return;
                 }
                 
                 if (!this.esElementoPropio(dronEstadoPropio)) {
-                    console.log(`Seleccion: Dron ${dronId} no pertenece al jugador`);
+                    this.depurar(`Seleccion: Dron ${dronId} no pertenece al jugador`);
                     return;
                 }
             }
@@ -1632,7 +1632,7 @@ export class Game extends Phaser.Scene {
             }
         }
 
-        console.log(`Seleccion: Seleccionando dron ${dronId}`);
+        this.depurar(`Seleccion: Seleccionando dron ${dronId}`);
         this.controlMode = 'DRON';
         this.activeDron = spriteDron;
         this.lastSelectedDronId = dronId;
@@ -1658,7 +1658,7 @@ export class Game extends Phaser.Scene {
         this.dibujarVision();
         this.actualizarHUDDesdeDronActivo();
         
-        // Actualizar txtModo con etiqueta específica de dron
+        // Actualizar txtModo con etiqueta especÃ­fica de dron
         if (this.txtModo) {
             const elementoDron = this.elementosEstado.get(clave);
             let labelText;
@@ -1680,7 +1680,7 @@ export class Game extends Phaser.Scene {
     }
 
     volverAlPortadron() {
-        console.log('Porter: Regresando a modo porter');
+        this.depurar('Porter: Regresando a modo porter');
         this.controlMode = 'PORTADRONES';
         this.activeDron = null;
         
@@ -1697,27 +1697,27 @@ export class Game extends Phaser.Scene {
         if (porterEstado) {
             porterX = Number(porterEstado.x);
             porterY = Number(porterEstado.y);
-            console.log(`Porter: Posicion del porter en backend: (${porterX}, ${porterY})`);
+            this.depurar(`Porter: Posicion del porter en backend: (${porterX}, ${porterY})`);
         }
         
         // Asegurar que this.unit es valido
         if (!this.unit || !this.unit.active) {
-            console.log('Porter: sprite de unidad es invalido, recreando');
+            this.depurar('Porter: sprite de unidad es invalido, recreando');
             this.configurarUnidadSegunEquipo();
         }
         
         // Establecer unidad en la posicion real del mundo del portador (no centro de pantalla)
         if (this.unit && porterX !== null && porterY !== null && Number.isFinite(porterX) && Number.isFinite(porterY)) {
-            console.log(`Portadron: Estableciendo unidad en la posicion real del portadron: (${porterX}, ${porterY})`);
+            this.depurar(`Portadron: Estableciendo unidad en la posicion real del portadron: (${porterX}, ${porterY})`);
             this.unit.setPosition(porterX, porterY);
         } else if (this.unit && (this.unit.x === undefined || this.unit.x === null)) {
-            // Fallback: si no podemos obtener posición del backend, usar centro del mundo (no centro de pantalla)
-            console.warn('Porter: No se pudo obtener posicion del porter del backend, usando centro del mundo como fallback');
+            // Fallback: si no podemos obtener posiciÃ³n del backend, usar centro del mundo (no centro de pantalla)
+            this.depurar('Porter: No se pudo obtener posicion del porter del backend, usando centro del mundo como fallback');
             this.unit.setPosition(5000, 5000); // Centro del mundo basado en limites del mundo
         }
         
         if (this.unit) {
-            console.log(`Porter: Siguiendo unidad en posicion del mundo (${this.unit.x}, ${this.unit.y})`);
+            this.depurar(`Porter: Siguiendo unidad en posicion del mundo (${this.unit.x}, ${this.unit.y})`);
             this.cameras.main.startFollow(this.unit, true, 0.08, 0.08);
             this.actualizarVisionPorObjeto(this.unit);
         }
@@ -1860,7 +1860,7 @@ export class Game extends Phaser.Scene {
             return;
         }
 
-        // Chequear si el elemento está destruido en el backend
+        // Chequear si el elemento estÃ¡ destruido en el backend
         let elementId;
         if (elemento.getData) {
             elementId = elemento.getData('elementId');
@@ -1879,7 +1879,7 @@ export class Game extends Phaser.Scene {
             elementEstado = null;
         }
         if (elementEstado && elementEstado.estado === 'DESTRUIDO') {
-            console.log('Movimiento: No se puede mover elemento destruido ' + elementId);
+            this.depurar('Movimiento: No se puede mover elemento destruido ' + elementId);
             if (this.controlMode === 'DRON') {
                 this.volverAlPortadron();
             }
@@ -1935,7 +1935,7 @@ export class Game extends Phaser.Scene {
 
     rechazarMovimientoPendiente(msg) {
         if (msg) {
-            console.warn('Juego: movimiento fallido', msg.mensaje || msg.Mensaje || msg);
+            this.depurar('Juego: movimiento fallido', msg.mensaje || msg.Mensaje || msg);
         }
         this.pendingMoveRequest = null;
     }
@@ -2027,17 +2027,17 @@ export class Game extends Phaser.Scene {
                     return;
                 }
 
-                // IMPORTANTE: Escalar vida desde backend (backend usa 100 como máximo para todos los elementos)
-                // Escalamos más alto para evitar muerte de un solo golpe
+                // IMPORTANTE: Escalar vida desde backend (backend usa 100 como mÃ¡ximo para todos los elementos)
+                // Escalamos mÃ¡s alto para evitar muerte de un solo golpe
                 let vidaBackendPorta = Number(porta.vida);
                 if (!vidaBackendPorta) {
                     vidaBackendPorta = 0;
                 }
                 let vidaEscaladaPorta;
                 if (tipoEquipo === 'AEREO') {
-                    vidaEscaladaPorta = vidaBackendPorta * 10; // 1000 HP máximo para Portadron Aéreo (antes era * 6)
+                    vidaEscaladaPorta = vidaBackendPorta * 10; // 1000 HP mÃ¡ximo para Portadron AÃ©reo (antes era * 6)
                 } else {
-                    vidaEscaladaPorta = vidaBackendPorta * 8; // 800 HP máximo para Portadron Naval (antes era * 3)
+                    vidaEscaladaPorta = vidaBackendPorta * 8; // 800 HP mÃ¡ximo para Portadron Naval (antes era * 3)
                 }
                 
                 elementos.push({
@@ -2286,15 +2286,15 @@ export class Game extends Phaser.Scene {
     }
 
     obtenerFactorTamanoProyectilPorProgreso(progreso, clase) {
-        // Escalar proyectiles basado en progreso de la animación (0.0 a 1.0), NO en z
+        // Escalar proyectiles basado en progreso de la animaciÃ³n (0.0 a 1.0), NO en z
         // Bombas: crecen al caer (simulando acercamiento)
         // Misiles: se mantienen constantes o crecen ligeramente
         if (clase === 'BOMBA') {
-            // Bomba comienza pequeña y crece al acercarse al suelo
+            // Bomba comienza pequeÃ±a y crece al acercarse al suelo
             const scaleFactor = 0.5 + (progreso * 0.7);
             return Phaser.Math.Clamp(scaleFactor, 0.5, 1.5);
         } else {
-            // Misil se mantiene más constante
+            // Misil se mantiene mÃ¡s constante
             const scaleFactor = 0.8 + (progreso * 0.3);
             return Phaser.Math.Clamp(scaleFactor, 0.8, 1.2);
         }
@@ -2340,7 +2340,7 @@ export class Game extends Phaser.Scene {
         if (elemento.clase === 'PORTADRON') {
             if (this.ownPortadronId !== null && this.ownPortadronId !== undefined) {
                 const isOwn = String(elemento.id) === String(this.ownPortadronId);
-                console.log(`PROPIEDAD: Porter ${elemento.id} verificacion: ${isOwn ? 'PROPIO' : 'ENEMIGO'}`, {
+                this.depurar(`PROPIEDAD: Porter ${elemento.id} verificacion: ${isOwn ? 'PROPIO' : 'ENEMIGO'}`, {
                     elementoId: elemento.id,
                     ownPortadronId: this.ownPortadronId,
                     playerTeam: this.playerTeam,
@@ -2349,16 +2349,16 @@ export class Game extends Phaser.Scene {
                 return isOwn;
             }
             // Si aun no tenemos ownPortadronId, recurrir a chequeo de equipo
-            console.warn(`PROPIEDAD: Porter ${elemento.id} verificado SIN ownPortadronId establecido. Usando comparacion de equipo (no confiable). Equipo elemento: ${elemento.tipoEquipo}, Equipo jugador: ${this.playerTeam}`);
+            this.depurar(`PROPIEDAD: Porter ${elemento.id} verificado SIN ownPortadronId establecido. Usando comparacion de equipo (no confiable). Equipo elemento: ${elemento.tipoEquipo}, Equipo jugador: ${this.playerTeam}`);
             return elemento.tipoEquipo === this.playerTeam;
         }
 
-        // Para drones: DEBE chequear parentPortadronId - esta es la ÚNICA manera confiable
+        // Para drones: DEBE chequear parentPortadronId - esta es la ÃšNICA manera confiable
         if (elemento.clase === 'DRON') {
             if (this.ownPortadronId !== null && this.ownPortadronId !== undefined) {
                 // Identidad de propiedad basada en parentPortadronId comparado con ownPortadronId
                 const isOwnDrone = String(elemento.parentPortadronId) === String(this.ownPortadronId);
-                console.log('Propiedad: Verificacion de dron:', {
+                this.depurar('Propiedad: Verificacion de dron:', {
                     droneId: elemento.id,
                     parentPortadronId: elemento.parentPortadronId,
                     ownPortadronId: this.ownPortadronId,
@@ -2368,7 +2368,7 @@ export class Game extends Phaser.Scene {
                 return isOwnDrone;
             }
             // Si no tenemos ownPortadronId, no podemos determinar propiedad - asumir enemigo por seguridad
-            console.warn('Propiedad: No se puede determinar propiedad del dron - no hay ownPortadronId establecido, asumiendo ENEMIGO');
+            this.depurar('Propiedad: No se puede determinar propiedad del dron - no hay ownPortadronId establecido, asumiendo ENEMIGO');
             return false;
         }
 
@@ -2450,29 +2450,29 @@ export class Game extends Phaser.Scene {
     }
     renderizarElementos() {
         this.elementosEstado.forEach((elemento, id) => {
-            // No esconder drones o portadores destruidos de inmediato para permitir que la animación de destrucción se reproduzca, pero sí esconder cualquier otro elemento no activo
+            // No esconder drones o portadores destruidos de inmediato para permitir que la animaciÃ³n de destrucciÃ³n se reproduzca, pero sÃ­ esconder cualquier otro elemento no activo
             if (!this.esEstadoActivo(elemento.estado)) {
-                // Si es un dron con estado DESTRUIDO, dejar que la animación se reproduzca
+                // Si es un dron con estado DESTRUIDO, dejar que la animaciÃ³n se reproduzca
                 if (elemento.clase === 'DRON' && elemento.estado === 'DESTRUIDO') {
                     // verificarDronesSinBateria maneja la animacion de caida, aqui solo verificamos si ya se esta animando o si el sprite ya no existe lo que indica que la animacion termino
-                    // Pero si la animación no se ha iniciado y el sprite aún existe, ocultamos inmediatamente para evitar mostrar un dron destruido sin animación
+                    // Pero si la animaciÃ³n no se ha iniciado y el sprite aÃºn existe, ocultamos inmediatamente para evitar mostrar un dron destruido sin animaciÃ³n
                     const sprite = this.elementosSprites.get(id);
                     if (!sprite || !sprite.active || this.dronesAnimandoCaida.has(id)) {
-                        // Animación completa o en progreso o sprite desaparecido - seguro para ocultar
+                        // AnimaciÃ³n completa o en progreso o sprite desaparecido - seguro para ocultar
                         if (!this.dronesAnimandoCaida.has(id)) {
-                            console.log(`Limpieza: Ocultando dron DESTRUIDO ${id} sin animacion`);
+                            this.depurar(`Limpieza: Ocultando dron DESTRUIDO ${id} sin animacion`);
                             this.ocultarElemento(id);
                         }
                     }
                     return;
                 }
                 
-                // Si es un portadron con estado DESTRUIDO, dejar que la animación se reproduzca
+                // Si es un portadron con estado DESTRUIDO, dejar que la animaciÃ³n se reproduzca
                 if (elemento.clase === 'PORTADRON' && elemento.estado === 'DESTRUIDO') {
                     const sprite = this.elementosSprites.get(id);
                     if (!sprite || !sprite.active || this.portersAnimandoDestruccion.has(id)) {
                         if (!this.portersAnimandoDestruccion.has(id)) {
-                            console.log(`Limpieza: Ocultando porter DESTRUIDO ${id} sin animacion`);
+                            this.depurar(`Limpieza: Ocultando porter DESTRUIDO ${id} sin animacion`);
                             this.ocultarElemento(id);
                         }
                     }
@@ -2551,12 +2551,12 @@ export class Game extends Phaser.Scene {
 
             const esLocal = this.esElementoPropio(elemento);
             
-            // Hacer interactivo para unidades propias, pero no para enemigos (para evitar confusión al hacer click en enemigos para disparar)
+            // Hacer interactivo para unidades propias, pero no para enemigos (para evitar confusiÃ³n al hacer click en enemigos para disparar)
             sprite.setInteractive({ useHandCursor: true });
             sprite.removeAllListeners('pointerdown');
             
             if (esLocal) {
-                // Unidades propias: comportamiento de selección/control
+                // Unidades propias: comportamiento de selecciÃ³n/control
                 if (elemento.clase === 'DRON') {
                     sprite.on('pointerdown', () => {
                         // Simplemente cambiar para controlar este dron
@@ -2566,12 +2566,12 @@ export class Game extends Phaser.Scene {
                     sprite.on('pointerdown', () => {
                         // En modo dron: hacer clic en el portador no hace nada (usar zona de recarga en su lugar)
                         if (this.controlMode === 'DRON') {
-                            console.log('Clic: Porter clickeado en modo dron - usa tecla R o clic en zona de recarga verde');
+                            this.depurar('Clic: Porter clickeado en modo dron - usa tecla R o clic en zona de recarga verde');
                             return;
                         }
                         // En modo portador: desplegar dron
                         if (this.controlMode === 'PORTADRONES') {
-                            console.log('Clic: Se hizo clic en elemento porter, desplegando dron');
+                            this.depurar('Clic: Se hizo clic en elemento porter, desplegando dron');
                             this.solicitarDesplegarDron();
                             return;
                         }
@@ -2580,7 +2580,7 @@ export class Game extends Phaser.Scene {
                 }
             } else {
                 // Unidades enemigas: mantener interactividad para disparar - manejado por pointerdown global
-                // El manejador global en la línea 262 procesará los clics en las unidades enemigas para disparar
+                // El manejador global en la lÃ­nea 262 procesarÃ¡ los clics en las unidades enemigas para disparar
             }
 
             sprite.setAngle(elemento.angulo);
@@ -2640,7 +2640,7 @@ export class Game extends Phaser.Scene {
                 this.actualizarLifebarPortadron(elemento, sprite, id);
                 this.ocultarBarraBateria(id);
             } else if (elemento.clase === 'DRON') {
-                // Drones batería bar como "health bar" - solo para drones propios
+                // Drones baterÃ­a bar como "health bar" - solo para drones propios
                 this.ocultarLifebar(id);
                 if (this.esElementoPropio(elemento)) {
                     this.actualizarBarraBateriaDron(elemento, sprite, id);
@@ -2738,11 +2738,11 @@ export class Game extends Phaser.Scene {
     }
 
     actualizarLifebarPortadron(elemento, sprite, keyElemento) {
-        // Determina la vida máxima según el tipo de elemento
+        // Determina la vida mÃ¡xima segÃºn el tipo de elemento
         let maxVida = 100; // Por defecto para drones
         if (elemento.clase === 'PORTADRON') {
             if (elemento.tipoEquipo === 'AEREO') {
-                maxVida = 1000; // Portadron Aéreo (antes era 600)
+                maxVida = 1000; // Portadron AÃ©reo (antes era 600)
             } else {
                 maxVida = 800; // Portadron Naval (antes era 300)
             }
@@ -2752,10 +2752,10 @@ export class Game extends Phaser.Scene {
         const vidaClamped = Phaser.Math.Clamp(vida, 0, maxVida);
         const porcentaje = vidaClamped / maxVida;
         
-        // LOG para depuración de health bars, especialmente para portadrones
+        // LOG para depuraciÃ³n de health bars, especialmente para portadrones
         if (elemento.clase === 'PORTADRON') {
             try {
-                console.log(`BARRA DE SALUD: Porter ${elemento.id} barra de salud:`, {
+                this.depurar(`BARRA DE SALUD: Porter ${elemento.id} barra de salud:`, {
                     vida: vida,
                     maxVida: maxVida,
                     porcentaje: (porcentaje * 100).toFixed(1) + '%',
@@ -2799,13 +2799,13 @@ export class Game extends Phaser.Scene {
     }
 
     actualizarBarraBateriaDron(elemento, sprite, keyElemento) {
-        // Los drones muestran la batería como su barra principal de "salud" (mueren de un solo golpe, por lo que la vida no importa)
+        // Los drones muestran la baterÃ­a como su barra principal de "salud" (mueren de un solo golpe, por lo que la vida no importa)
         const maxBateria = 100;
         const bateria = Number(elemento.bateria) || 0;
         const bateriaClamped = Phaser.Math.Clamp(bateria, 0, maxBateria);
         const porcentaje = bateriaClamped / maxBateria;
 
-        // Barra más grande como las barras de salud de los portadrones, centrada sobre el dron
+        // Barra mÃ¡s grande como las barras de salud de los portadrones, centrada sobre el dron
         const width = 50;
         const height = 6;
         const x = sprite.x - (width / 2);
@@ -2843,7 +2843,7 @@ export class Game extends Phaser.Scene {
         
         // DEBUG: Registrar si la actualizacion de realidad llega durante recarga pendiente
         if (this.pendingRechargeRequest) {
-            console.warn(`%cUPDATE: Actualizacion de realidad llego DURANTE recarga pendiente`, 'color: #ff9900; font-weight: bold', {
+            this.depurar(`%cUPDATE: Actualizacion de realidad llego DURANTE recarga pendiente`, 'color: #ff9900; font-weight: bold', {
                 pendingDrone: this.pendingRechargeRequest.dronId,
                 pendingPorter: this.pendingRechargeRequest.portadronId,
                 elementsCount: data.elementos?.length || 0,
@@ -2914,14 +2914,14 @@ export class Game extends Phaser.Scene {
                 //    - DRON: 100 HP (sin cambio)
                 if (clase === 'PORTADRON') {
                     if (tipoEquipo === 'AEREO') {
-                        vidaEscalada = vidaBackend * 10; // 1000 HP máximo para Portadron Aéreo (SOLO DISPLAY)
+                        vidaEscalada = vidaBackend * 10; // 1000 HP mÃ¡ximo para Portadron AÃ©reo (SOLO DISPLAY)
                     } else {
-                        vidaEscalada = vidaBackend * 8; // 800 HP máximo para Portadron Naval (SOLO DISPLAY)
+                        vidaEscalada = vidaBackend * 8; // 800 HP mÃ¡ximo para Portadron Naval (SOLO DISPLAY)
                     }
                     
-                    // DEBUG: Registrar actualizaciones de salud del porter para rastrear daño
+                    // DEBUG: Registrar actualizaciones de salud del porter para rastrear danÌƒo
                     if (vidaEscalada !== vidaAnterior) {
-                        console.log(`PORTER VIDA: Porter ID ${e.id} actualizacion de salud:`, {
+                        this.depurar(`PORTER VIDA: Porter ID ${e.id} actualizacion de salud:`, {
                             vidaAnterior,
                             vidaBackend: vidaBackend,
                             vidaEscalada: vidaEscalada,
@@ -2940,7 +2940,7 @@ export class Game extends Phaser.Scene {
                         }
                     }
                 }
-                // Los drones mantienen la misma escala (100 HP máximo)
+                // Los drones mantienen la misma escala (100 HP mÃ¡ximo)
                 
                 // Para bateria, el backend tambien usa 100 como maximo para todos los drones, asi que no necesitamos escalar, pero si asegurarnos de confiar en el valor del backend si esta presente, ya que el frontend podria no tenerlo actualizado correctamente especialmente despues de desplegar un dron desde un portador
                 // Backend es autoritativo; el drenaje en el frontend es solo para suavizar visualmente entre actualizaciones
@@ -3014,7 +3014,7 @@ export class Game extends Phaser.Scene {
                     tipoMunicion: e.tipoMunicion || existenteBackend.tipoMunicion
                 };
                 
-                // Calcular municionDisponible con lógica explícita
+                // Calcular municionDisponible con lÃ³gica explÃ­cita
                 let municionDisponibleValue;
                 if (e.municionDisponible !== undefined && e.municionDisponible !== null) {
                     municionDisponibleValue = Number(e.municionDisponible);
@@ -3053,9 +3053,9 @@ export class Game extends Phaser.Scene {
                         // Anular el estado DESTRUIDO incorrecto del backend
                         actualizado.estado = 'ACTIVO';
                     } else if (!receivedVidaUpdate) {
-                        console.log(`UPDATE: Porter ${actualizado.id} destruido - sin datos frescos de vida, confiando en DESTRUIDO del backend`);
+                        this.depurar(`UPDATE: Porter ${actualizado.id} destruido - sin datos frescos de vida, confiando en DESTRUIDO del backend`);
                     } else {
-                        console.log(`UPDATE: Porter ${actualizado.id} legitimamente destruido (vida=${vidaEscalada})`);
+                        this.depurar(`UPDATE: Porter ${actualizado.id} legitimamente destruido (vida=${vidaEscalada})`);
                     }
                 }
 
@@ -3155,7 +3155,7 @@ export class Game extends Phaser.Scene {
         const id = Number(e.id);
         const existente = this.proyectilesEstado.get(id) || {};
         
-        // z solo se usa para ordenamiento de visualización, NO para lógica de trayectoria
+        // z solo se usa para ordenamiento de visualizaciÃ³n, NO para lÃ³gica de trayectoria
         let zDisplay;
         if (e.z !== undefined && e.z !== null) {
             zDisplay = Number(e.z);
@@ -3167,7 +3167,7 @@ export class Game extends Phaser.Scene {
             zDisplay = 50;
         }
         
-        // duracion determina cuánto tiempo el proyectil estará en el aire (en milisegundos)
+        // duracion determina cuÃ¡nto tiempo el proyectil estarÃ¡ en el aire (en milisegundos)
         let duracion;
         if (e.duracion !== undefined && e.duracion !== null) {
             duracion = Number(e.duracion);
@@ -3176,7 +3176,7 @@ export class Game extends Phaser.Scene {
         } else if (existente.duracion !== undefined) {
             duracion = existente.duracion;
         } else {
-            // Duración por defecto si backend no la envía
+            // DuraciÃ³n por defecto si backend no la envÃ­a
             if (this.normalizarTipoProyectil(e) === 'BOMBA') {
                 duracion = 1500;
             } else {
@@ -3230,7 +3230,7 @@ export class Game extends Phaser.Scene {
             const currentX = proyectil.startX + (proyectil.targetX - proyectil.startX) * progreso;
             const currentY = proyectil.startY + (proyectil.targetY - proyectil.startY) * progreso;
             
-            // Si el proyectil completó su trayectoria, marcar como destruido
+            // Si el proyectil completÃ³ su trayectoria, marcar como destruido
             if (progreso >= 1.0 && proyectil.estado === 'ACTIVO') {
                 proyectil.estado = 'DESTRUIDO';
                 this.proyectilesEstado.set(id, proyectil);
@@ -3270,14 +3270,14 @@ export class Game extends Phaser.Scene {
             sprite.setPosition(currentX, currentY);
             sprite.setAngle(proyectil.angulo || 0);
 
-            // Usar escalado basado en PROGRESO para simular acercamiento/alejamiento (proyectiles parecen más grandes a medida que se acercan al objetivo)
+            // Usar escalado basado en PROGRESO para simular acercamiento/alejamiento (proyectiles parecen mÃ¡s grandes a medida que se acercan al objetivo)
             const factor = this.obtenerFactorTamanoProyectilPorProgreso(progreso, proyectil.clase);
             sprite.setDisplaySize(anchoBase * factor, altoBase * factor);
             
-            // Display SOLO para ordenamiento visual (altura), NO para lógica
+            // Display SOLO para ordenamiento visual (altura), NO para lÃ³gica
             sprite.setDepth((Number(proyectil.zDisplay) || 50) + 0.8);
             
-            // Chequear si el proyectil alcanzó el destino sin impactar nada
+            // Chequear si el proyectil alcanzÃ³ el destino sin impactar nada
             if (proyectil.estado === 'DESTRUIDO') {
                 // Disparar efecto apropiado
                 if (proyectil.clase === 'BOMBA') {
@@ -3313,13 +3313,13 @@ export class Game extends Phaser.Scene {
     }
 
     showAirExplosionEffect(x, y, z) {
-        // Efecto de explosión cuando misil no le da a nada (explosión aérea)
+        // Efecto de explosiÃ³n cuando misil no le da a nada (explosiÃ³n aÃ©rea)
         const explosion = this.add.sprite(x, y, 'proyectil_bomba');
         explosion.setScale(2.0);
         explosion.setDepth(10000); // Arriba del todo
-        explosion.setTint(0xff8800); // Naranja para explosión aérea
+        explosion.setTint(0xff8800); // Naranja para explosiÃ³n aÃ©rea
         
-        // ANIMACIÓN: Cambiar textura para simular animación de explosión (usando frames de fuego)
+        // ANIMACIÃ“N: Cambiar textura para simular animaciÃ³n de explosiÃ³n (usando frames de fuego)
         let frame = 0;
         const animInterval = setInterval(() => {
             if (frame < 20 && explosion.active) {
@@ -3377,9 +3377,9 @@ export class Game extends Phaser.Scene {
     solicitarLanzarDron() { this.enviarAlSocket({ Tipo: "LANZAR_DRON" }); }
 
     /**
-     * TEMPORARIO: Drenar batería de los drones activos en el frontend
-     * Esto simula el drenaje de batería del backend hasta que GameLoop lo implemente
-     * La batería se drena linealmente durante 60 segundos (100% -> 0%)
+     * TEMPORARIO: Drenar baterÃ­a de los drones activos en el frontend
+     * Esto simula el drenaje de baterÃ­a del backend hasta que GameLoop lo implemente
+     * La baterÃ­a se drena linealmente durante 60 segundos (100% -> 0%)
      */
     aplicarDrenajeTemporalBateria() {
         if (!this.lastBatteryDrainTime) {
@@ -3422,14 +3422,14 @@ export class Game extends Phaser.Scene {
             }
             
             if (bateriaActual <= 0) {
-                return; // Ya vacía, el backend manejará el estado DESTRUIDO
+                return; // Ya vacÃ­a, el backend manejarÃ¡ el estado DESTRUIDO
             }
             
-            // Aplicar drenaje visual (el backend corregirá en la próxima actualización)
+            // Aplicar drenaje visual (el backend corregirÃ¡ en la prÃ³xima actualizaciÃ³n)
             const nuevaBateria = Math.max(0, bateriaActual - drainAmount);
             elemento.bateria = nuevaBateria;
             
-            // Actualizar barra de batería visual inmediatamente
+            // Actualizar barra de baterÃ­a visual inmediatamente
             const sprite = this.elementosSprites.get(clave);
             if (sprite) {
                 this.actualizarBarraBateriaDron(elemento, sprite, clave);
@@ -3485,12 +3485,12 @@ export class Game extends Phaser.Scene {
     }
     
     /**
-     * Crear animación de proyectil cuando el disparo es confirmado
-     * Backend-free: La trayectoria se calcula localmente basada en duración
+     * Crear animaciÃ³n de proyectil cuando el disparo es confirmado
+     * Backend-free: La trayectoria se calcula localmente basada en duraciÃ³n
      */
     crearProyectilTemporal(duracionBackend = null) {
         if (!this.pendingShotRequest) {
-            console.log('Disparo: Sin solicitud de disparo pendiente para animar');
+            this.depurar('Disparo: Sin solicitud de disparo pendiente para animar');
             return;
         }
         
@@ -3504,11 +3504,11 @@ export class Game extends Phaser.Scene {
         }
         
         if (!dronEstado) {
-            console.log('Disparo: No se puede encontrar estado del dron para proyectil');
+            this.depurar('Disparo: No se puede encontrar estado del dron para proyectil');
             return;
         }
         
-        // Determinar tipo de munición
+        // Determinar tipo de municiÃ³n
         let tipoMunicion = 'MISIL';
         if (dronEstado.tipoEquipo === 'AEREO') {
             tipoMunicion = 'BOMBA';
@@ -3520,7 +3520,7 @@ export class Game extends Phaser.Scene {
             tipoMunicion = 'MISIL';
         }
         
-        console.log(`Disparo: Creando proyectil ${tipoMunicion} temporal`);
+        this.depurar(`Disparo: Creando proyectil ${tipoMunicion} temporal`);
         
         // Crear ID temporal para el proyectil
         const proyectilId = Date.now() + Math.floor(Math.random() * 1000);
@@ -3533,8 +3533,8 @@ export class Game extends Phaser.Scene {
     }
     
     /**
-     * Animar bomba cayendo desde la posición del dron hasta el objetivo
-     * Usa solo duración para la animación
+     * Animar bomba cayendo desde la posiciÃ³n del dron hasta el objetivo
+     * Usa solo duraciÃ³n para la animaciÃ³n
      */
     crearAnimacionBombaTemporal(proyectilId, dronEstado, duracionBackend = null) {
         const startX = Number(dronEstado.x);
@@ -3545,7 +3545,7 @@ export class Game extends Phaser.Scene {
         const targetX = this.pendingShotRequest?.clickX || startX;
         const targetY = this.pendingShotRequest?.clickY || startY;
         
-        // Usar duración del backend si está disponible, sino usar default
+        // Usar duraciÃ³n del backend si estÃ¡ disponible, sino usar default
         const duracion = duracionBackend || 1500; // Bombas caen en 1.5 segundos por defecto
         
         const proyectilEstado = {
@@ -3565,12 +3565,12 @@ export class Game extends Phaser.Scene {
         
         this.proyectilesEstado.set(proyectilId, proyectilEstado);
         
-        console.log(`Disparo: Bomba creada desde (${startX}, ${startY}) hacia (${targetX}, ${targetY}), duracion ${duracion}ms`);
+        this.depurar(`Disparo: Bomba creada desde (${startX}, ${startY}) hacia (${targetX}, ${targetY}), duracion ${duracion}ms`);
         
-        // La renderización y escalado son manejados por renderizarProyectiles()
-        // que calcula posición basada en tiempo/duración
+        // La renderizaciÃ³n y escalado son manejados por renderizarProyectiles()
+        // que calcula posiciÃ³n basada en tiempo/duraciÃ³n
         
-        // Programar explosión al final
+        // Programar explosiÃ³n al final
         setTimeout(() => {
             if (this.proyectilesEstado.has(proyectilId)) {
                 const finalProyectil = this.proyectilesEstado.get(proyectilId);
@@ -3581,14 +3581,14 @@ export class Game extends Phaser.Scene {
                     sprite.destroy();
                     this.proyectilesSprites.delete(proyectilId);
                 }
-                console.log('Disparo: Explosion de bomba en el suelo');
+                this.depurar('Disparo: Explosion de bomba en el suelo');
             }
         }, duracion);
     }
     
     /**
-     * Animar misil viajando desde el dron en la dirección de su ángulo
-     * Usa solo duración para la animación
+     * Animar misil viajando desde el dron en la direcciÃ³n de su Ã¡ngulo
+     * Usa solo duraciÃ³n para la animaciÃ³n
      */
     crearAnimacionMisilTemporal(proyectilId, dronEstado, duracionBackend = null) {
         const startX = Number(dronEstado.x);
@@ -3596,10 +3596,10 @@ export class Game extends Phaser.Scene {
         const startZ = Number(dronEstado.z);
         const angulo = Number(dronEstado.angulo);
         
-        // Usar duración del backend si está disponible, sino usar default
+        // Usar duraciÃ³n del backend si estÃ¡ disponible, sino usar default
         const duracion = duracionBackend || 3000; // Misiles vuelan por 3 segundos por defecto
         
-        // Calcular dirección de viaje desde el ángulo
+        // Calcular direcciÃ³n de viaje desde el Ã¡ngulo
         const radianes = Phaser.Math.DegToRad(angulo);
         const velocidad = 300;
         const distanciaRecorrida = velocidad * (duracion / 1000);
@@ -3623,12 +3623,12 @@ export class Game extends Phaser.Scene {
         
         this.proyectilesEstado.set(proyectilId, proyectilEstado);
         
-        console.log(`Disparo: Misil lanzado en angulo ${angulo} desde (${startX}, ${startY}) hacia (${targetX}, ${targetY}), duracion ${duracion}ms`);
+        this.depurar(`Disparo: Misil lanzado en angulo ${angulo} desde (${startX}, ${startY}) hacia (${targetX}, ${targetY}), duracion ${duracion}ms`);
         
-        // La renderización y escalado ahora son manejados por renderizarProyectiles()
-        // que calcula posición basada en tiempo/duración
+        // La renderizaciÃ³n y escalado ahora son manejados por renderizarProyectiles()
+        // que calcula posiciÃ³n basada en tiempo/duraciÃ³n
         
-        // Programar explosión al final
+        // Programar explosiÃ³n al final
         setTimeout(() => {
             if (this.proyectilesEstado.has(proyectilId)) {
                 const finalProyectil = this.proyectilesEstado.get(proyectilId);
@@ -3639,13 +3639,13 @@ export class Game extends Phaser.Scene {
                     sprite.destroy();
                     this.proyectilesSprites.delete(proyectilId);
                 }
-                console.log('Disparo: Misil exploto despues de 3 segundos');
+                this.depurar('Disparo: Misil exploto despues de 3 segundos');
             }
         }, duracion);
     }
     
     /**
-     * Crear efecto de partículas de explosión
+     * Crear efecto de partÃ­culas de explosiÃ³n
      */
     crearExplosionTemporal(x, y, radio) {
         const explosion = this.add.particles(x, y, 'proyectil_bomba', {
@@ -3659,7 +3659,7 @@ export class Game extends Phaser.Scene {
             angle: { min: 0, max: 360 }
         });
         
-        // Círculo para mostrar brevemente el radio de la explosión
+        // CÃ­rculo para mostrar brevemente el radio de la explosiÃ³n
         const circulo = this.add.circle(x, y, radio, 0xff6600, 0.3);
         circulo.setDepth(100);
         
@@ -3675,17 +3675,17 @@ export class Game extends Phaser.Scene {
     }
 
     solicitarDesplegarDron() {
-        // Arreglo para evitar múltiples clicks rápidos que envíen varias solicitudes de despliegue
+        // Arreglo para evitar mÃºltiples clicks rÃ¡pidos que envÃ­en varias solicitudes de despliegue
         const now = Date.now();
         if (now - this.lastDeploymentTime < 500) {
-            console.log("Solicitud de despliegue demasiado pronto, ignorando...");
+            this.depurar("Solicitud de despliegue demasiado pronto, ignorando...");
             return;
         }
         
         const enviado = this.enviarAlSocket({ tipo: "DESPLEGAR_DRON" });
         if (enviado) {
             this.lastDeploymentTime = now;
-            console.log("Solicitando desplegar siguiente dron...");
+            this.depurar("Solicitando desplegar siguiente dron...");
         }
     }
 
@@ -3695,14 +3695,14 @@ export class Game extends Phaser.Scene {
     actualizarListaDronesActivos() {
         this.dronesActivosOrdenados = [];
         
-        console.log(`Ciclo: === Actualizando lista de drones activos ===`);
-        console.log(`Ciclo: elementosSprites size: ${this.elementosSprites.size}`);
-        console.log(`Ciclo: elementosEstado size: ${this.elementosEstado.size}`);
+        this.depurar(`Ciclo: === Actualizando lista de drones activos ===`);
+        this.depurar(`Ciclo: elementosSprites size: ${this.elementosSprites.size}`);
+        this.depurar(`Ciclo: elementosEstado size: ${this.elementosEstado.size}`);
         
         this.elementosSprites.forEach((sprite, clave) => {
             const elemento = this.elementosEstado.get(clave);
             if (!elemento) {
-                console.log(`Ciclo: Omitido clave=${clave}: sin elemento en elementosEstado`);
+                this.depurar(`Ciclo: Omitido clave=${clave}: sin elemento en elementosEstado`);
                 return;
             }
             
@@ -3712,11 +3712,11 @@ export class Game extends Phaser.Scene {
             
             const esPropio = this.esElementoPropio(elemento);
             if (!esPropio) {
-                console.log(`Ciclo: Omitido dron ID=${elemento.id}: no pertenece al jugador`);
+                this.depurar(`Ciclo: Omitido dron ID=${elemento.id}: no pertenece al jugador`);
                 return;
             }
             
-            // Solo drones que están como ACTIVO, explícitamente excluir DESTRUIDO
+            // Solo drones que estÃ¡n como ACTIVO, explÃ­citamente excluir DESTRUIDO
             const estadoUpper = String(elemento.estado).toUpperCase();
             if (estadoUpper === 'ACTIVO' || estadoUpper === 'ACTIVE') {
                 this.dronesActivosOrdenados.push({
@@ -3724,18 +3724,18 @@ export class Game extends Phaser.Scene {
                     sprite: sprite,
                     elemento: elemento
                 });
-                console.log(`Ciclo: Agregado dron activo: ID=${elemento.id}, estado=${elemento.estado}, tipo=${elemento.tipoElemento}, pos=(${elemento.x},${elemento.y})`);
+                this.depurar(`Ciclo: Agregado dron activo: ID=${elemento.id}, estado=${elemento.estado}, tipo=${elemento.tipoElemento}, pos=(${elemento.x},${elemento.y})`);
             } else {
-                console.log(`Ciclo: Omitido dron ID=${elemento.id}: estado=${elemento.estado} (no ACTIVO)`);
+                this.depurar(`Ciclo: Omitido dron ID=${elemento.id}: estado=${elemento.estado} (no ACTIVO)`);
             }
         });
         
         // Ordenar por ID para cycling consistente
         this.dronesActivosOrdenados.sort((a, b) => Number(a.id) - Number(b.id));
-        console.log(`Ciclo: === Total drones activos: ${this.dronesActivosOrdenados.length} ===`);
-        console.log(`Ciclo: IDs: [${this.dronesActivosOrdenados.map(d => d.id).join(', ')}]`);
+        this.depurar(`Ciclo: === Total drones activos: ${this.dronesActivosOrdenados.length} ===`);
+        this.depurar(`Ciclo: IDs: [${this.dronesActivosOrdenados.map(d => d.id).join(', ')}]`);
         
-        // También actualizar el contador de drones en el HUD
+        // TambiÃ©n actualizar el contador de drones en el HUD
         this.actualizarContadorDrones();
     }
 
@@ -3754,7 +3754,7 @@ export class Game extends Phaser.Scene {
             }
             
             totalDrones++;
-            // Contar todos los drones que NO están destruidos como vivos (incluye INACTIVO y ACTIVO)
+            // Contar todos los drones que NO estÃ¡n destruidos como vivos (incluye INACTIVO y ACTIVO)
             const estadoUpper = String(elemento.estado).toUpperCase();
             if (estadoUpper !== 'DESTRUIDO' && estadoUpper !== 'DESTROYED') {
                 aliveDrones++;
@@ -3781,42 +3781,42 @@ export class Game extends Phaser.Scene {
     ciclarAlPrimerDron() {
         this.actualizarListaDronesActivos();
         
-        console.log(`Ciclo: Intentando ciclar al primer dron. Disponibles: ${this.dronesActivosOrdenados.length}`);
+        this.depurar(`Ciclo: Intentando ciclar al primer dron. Disponibles: ${this.dronesActivosOrdenados.length}`);
         
         if (this.dronesActivosOrdenados.length === 0) {
-            console.log('Ciclo: Sin drones activos disponibles');
+            this.depurar('Ciclo: Sin drones activos disponibles');
             return false;
         }
         
         const primerDron = this.dronesActivosOrdenados[0];
-        console.log(`Ciclo: Seleccionando primer dron: ${primerDron.id}`);
+        this.depurar(`Ciclo: Seleccionando primer dron: ${primerDron.id}`);
         this.seleccionarDron(primerDron.sprite);
         this.currentDronIndex = 0;
         return true;
     }
 
     /**
-     * Cicla al último dron activo (el más recientemente desplegado)
+     * Cicla al Ãºltimo dron activo (el mÃ¡s recientemente desplegado)
      */
     ciclarAlUltimoDron() {
         this.actualizarListaDronesActivos();
         
-        console.log(`Ciclo: Intentando ciclar al ultimo (mas reciente) dron. Disponibles: ${this.dronesActivosOrdenados.length}`);
+        this.depurar(`Ciclo: Intentando ciclar al ultimo (mas reciente) dron. Disponibles: ${this.dronesActivosOrdenados.length}`);
         
         if (this.dronesActivosOrdenados.length === 0) {
-            console.log('Ciclo: Sin drones activos disponibles');
+            this.depurar('Ciclo: Sin drones activos disponibles');
             return false;
         }
         
         const ultimoDron = this.dronesActivosOrdenados[this.dronesActivosOrdenados.length - 1];
-        console.log(`Ciclo: Seleccionando ultimo dron: ${ultimoDron.id}`);
+        this.depurar(`Ciclo: Seleccionando ultimo dron: ${ultimoDron.id}`);
         this.seleccionarDron(ultimoDron.sprite);
         this.currentDronIndex = this.dronesActivosOrdenados.length - 1;
         return true;
     }
 
     /**
-     * Cicla al siguiente dron activo, o retorna false si no hay más
+     * Cicla al siguiente dron activo, o retorna false si no hay mÃ¡s
      */
     ciclarAlSiguienteDron() {
         this.actualizarListaDronesActivos();
@@ -3825,7 +3825,7 @@ export class Game extends Phaser.Scene {
             return false;
         }
         
-        // Encontrar índice actual basado en activeDron
+        // Encontrar Ã­ndice actual basado en activeDron
         if (this.activeDron) {
             const dronIdActual = this.activeDron.getData('elementId') || this.activeDron.id;
             const indiceActual = this.dronesActivosOrdenados.findIndex(d => String(d.id) === String(dronIdActual));
@@ -3839,7 +3839,7 @@ export class Game extends Phaser.Scene {
         const siguienteIndice = this.currentDronIndex + 1;
         
         if (siguienteIndice >= this.dronesActivosOrdenados.length) {
-            return false; // No hay más drones, volver al portadron
+            return false; // No hay mÃ¡s drones, volver al portadron
         }
         
         const siguienteDron = this.dronesActivosOrdenados[siguienteIndice];
@@ -3849,17 +3849,17 @@ export class Game extends Phaser.Scene {
     }
 
     /**
-     * Muestra animación de caída de dron (cuando batería llega a 0)
+     * Muestra animaciÃ³n de caÃ­da de dron (cuando baterÃ­a llega a 0)
      */
     mostrarAnimacionCaidaDron(sprite, tipoDron, clave) {
         if (!sprite) return;
         
-        console.log(`Dron cayendo: ${sprite.getData('elementId')}, tipo: ${tipoDron}`);
+        this.depurar(`Dron cayendo: ${sprite.getData('elementId')}, tipo: ${tipoDron}`);
         
         // Desactivar interactividad
         sprite.disableInteractive();
         
-        // Animación de caída: rotación + movimiento hacia abajo + fade out
+        // AnimaciÃ³n de caÃ­da: rotaciÃ³n + movimiento hacia abajo + fade out
         let duracionCaida;
         if (tipoDron === 'AEREO') {
             duracionCaida = 2000;
@@ -3867,7 +3867,7 @@ export class Game extends Phaser.Scene {
             duracionCaida = 1500;
         }
         
-        // Efecto de humo/fuego si está disponible
+        // Efecto de humo/fuego si estÃ¡ disponible
         const efectoCaida = this.add.particles(sprite.x, sprite.y, 'proyectil_bomba', {
             speed: { min: 50, max: 100 },
             scale: { start: 0.3, end: 0 },
@@ -3877,10 +3877,10 @@ export class Game extends Phaser.Scene {
             frequency: 50
         });
         
-        // Animación de caída
+        // AnimaciÃ³n de caÃ­da
         let angleChange;
         if (tipoDron === 'AEREO') {
-            angleChange = '+=720'; // Más rotación para aéreos
+            angleChange = '+=720'; // MÃ¡s rotaciÃ³n para aÃ©reos
         } else {
             angleChange = '+=360';
         }
@@ -3904,25 +3904,25 @@ export class Game extends Phaser.Scene {
                 if (clave) {
                     this.dronesAnimandoCaida.delete(clave);
                 }
-                this.mostrarMensajeTemporal('Dron destruido por falta de batería', 2000, '#ff6666');
+                this.mostrarMensajeTemporal('Dron destruido por falta de baterÃ­a', 2000, '#ff6666');
                 
                 // Si era el dron activo, volver al portadron
                 const dronId = sprite.getData('elementId');
                 const activeDronId = this.activeDron?.getData('elementId');
                 
-                console.log(`Muerte: Dron ${dronId} destruido. Dron activo: ${activeDronId}, controlMode: ${this.controlMode}`);
+                this.depurar(`Muerte: Dron ${dronId} destruido. Dron activo: ${activeDronId}, controlMode: ${this.controlMode}`);
                 
                 if (this.controlMode === 'DRON' && (this.activeDron === sprite || dronId === activeDronId)) {
-                    console.log('Muerte: Dron activo murio, regresando al porter');
+                    this.depurar('Muerte: Dron activo murio, regresando al porter');
                     this.volverAlPortadron();
                 }
                 
                 // Actualizar lista de drones activos
                 this.actualizarListaDronesActivos();
                 
-                // Si no hay más drones activos y todavía estamos en modo DRON, forzar regreso al portadrones
+                // Si no hay mÃ¡s drones activos y todavÃ­a estamos en modo DRON, forzar regreso al portadrones
                 if (this.controlMode === 'DRON' && this.dronesActivosOrdenados.length === 0) {
-                    console.log('Muerte: Sin mas drones activos, forzando regreso al porter');
+                    this.depurar('Muerte: Sin mas drones activos, forzando regreso al porter');
                     this.volverAlPortadron();
                 }
             }
@@ -3930,12 +3930,12 @@ export class Game extends Phaser.Scene {
     }
 
 
-     // Muestra animación de destrucción de portadrones (caída + explosiones)
+     // Muestra animaciÃ³n de destrucciÃ³n de portadrones (caÃ­da + explosiones)
 
     mostrarAnimacionDestruccionPorter(sprite, tipoPorter, clave) {
         if (!sprite) return;
         
-        console.log(`Destruccion: Porter destruido: ${sprite.getData('elementId')}, tipo: ${tipoPorter}`);
+        this.depurar(`Destruccion: Porter destruido: ${sprite.getData('elementId')}, tipo: ${tipoPorter}`);
         
         // Desactivar interactividad
         sprite.disableInteractive();
@@ -3975,11 +3975,11 @@ export class Game extends Phaser.Scene {
             repeat: 5
         });
         
-        // Crear escena de destrucción en vista lateral (centrada en la pantalla)
+        // Crear escena de destrucciÃ³n en vista lateral (centrada en la pantalla)
         const destructionContainer = this.add.container(this.scale.width / 2, this.scale.height / 2);
         destructionContainer.setScrollFactor(0);
         destructionContainer.setDepth(15001);
-        destructionContainer.setScale(4.0); // Hacer más grande para mayor impacto visual
+        destructionContainer.setScale(4.0); // Hacer mÃ¡s grande para mayor impacto visual
         
         // Crear silueta en vista lateral del portadrones
         let porterColor;
@@ -3992,7 +3992,7 @@ export class Game extends Phaser.Scene {
         porterSilhouette.setAngle(-90); // Vista lateral
         destructionContainer.add(porterSilhouette);
         
-        // Crear múltiples sprites de explosión alrededor del portadrones
+        // Crear mÃºltiples sprites de explosiÃ³n alrededor del portadrones
         for (let i = 0; i < 5; i++) {
             const explosion = this.add.sprite(
                 (Math.random() - 0.5) * 80,
@@ -4003,7 +4003,7 @@ export class Game extends Phaser.Scene {
             explosion.setScale(1.5);
             destructionContainer.add(explosion);
             
-            // Animar explosión a través de los fotogramas de fuego
+            // Animar explosiÃ³n a travÃ©s de los fotogramas de fuego
             let frame = 0;
             const animInterval = setInterval(() => {
                 if (frame < 20 && explosion.active) {
@@ -4018,7 +4018,7 @@ export class Game extends Phaser.Scene {
         const duracionDestruccion = 3000;
         
         if (tipoPorter === 'AEREO') {
-            // AEREO: Animación de caída desde el cielo con giro
+            // AEREO: AnimaciÃ³n de caÃ­da desde el cielo con giro
             this.tweens.add({
                 targets: porterSilhouette,
                 angle: '+=720', // Giro mientras cae
@@ -4028,7 +4028,7 @@ export class Game extends Phaser.Scene {
                 ease: 'Cubic.easeIn'
             });
             
-            // Añadir rastro de humo mientras cae
+            // AÃ±adir rastro de humo mientras cae
             const smoke = this.add.particles(0, -50, 'proyectil_bomba', {
                 speed: { min: 20, max: 50 },
                 scale: { start: 0.8, end: 0.2 },
@@ -4041,10 +4041,10 @@ export class Game extends Phaser.Scene {
             destructionContainer.add(smoke);
             
         } else {
-            // NAVAL: Animación de hundimiento en el agua con inclinación
+            // NAVAL: AnimaciÃ³n de hundimiento en el agua con inclinaciÃ³n
             this.tweens.add({
                 targets: porterSilhouette,
-                angle: '+=90', // Inclinación hacia un lado
+                angle: '+=90', // InclinaciÃ³n hacia un lado
                 y: 200,
                 scaleY: 0.3, // Comprimir mientras se hunde
                 alpha: 0,
@@ -4052,7 +4052,7 @@ export class Game extends Phaser.Scene {
                 ease: 'Sine.easeIn'
             });
             
-            // Añadir partículas de salpicadura de agua
+            // AÃ±adir partÃ­culas de salpicadura de agua
             const splash = this.add.particles(0, 100, 'proyectil_bomba', {
                 speed: { min: 100, max: 200 },
                 scale: { start: 1.0, end: 0.3 },
@@ -4066,12 +4066,12 @@ export class Game extends Phaser.Scene {
             splash.explode();
         }
         
-        // Chequear si el portadrones destruido es el propio para mostrar mensaje específico
+        // Chequear si el portadrones destruido es el propio para mostrar mensaje especÃ­fico
         const porterId = sprite.getData('elementId');
         const ownPorter = this.obtenerEstadoPortadronPropio();
         const isOwnPorter = ownPorter && porterId === ownPorter.id;
         
-        // Limpiar después de la animación
+        // Limpiar despuÃ©s de la animaciÃ³n
         setTimeout(() => {
             sprite.destroy();
             destructionContainer.destroy();
@@ -4082,11 +4082,11 @@ export class Game extends Phaser.Scene {
             }
             
             const mensaje = tipoPorter === 'AEREO' 
-                ? '¡Portadrones aéreo destruido!' 
-                : '¡Portadrones naval hundido!';
+                ? 'Â¡Portadrones aÃ©reo destruido!' 
+                : 'Â¡Portadrones naval hundido!';
             this.mostrarMensajeTemporal(mensaje, 2500, '#ff4444');
             
-            // Verificar condición de fin de juego
+            // Verificar condiciÃ³n de fin de juego
             if (!this.gameOverTriggered) {
                 this.checkGameOverCondition();
             }
@@ -4094,7 +4094,7 @@ export class Game extends Phaser.Scene {
     }
 
     /**
-     * Verifica y procesa drones que se quedaron sin batería
+     * Verifica y procesa drones que se quedaron sin baterÃ­a
      */
     verificarDronesSinBateria() {
         this.elementosSprites.forEach((sprite, clave) => {
@@ -4111,11 +4111,11 @@ export class Game extends Phaser.Scene {
                 }
                 
                 if (this.dronesAnimandoCaida.has(clave)) {
-                    // Animación ya en progreso
+                    // AnimaciÃ³n ya en progreso
                     return;
                 }
                 
-                console.log(`Muerte: Detectado dron destruido: ${clave} (ID: ${elemento.id}), iniciando animacion de caida`);
+                this.depurar(`Muerte: Detectado dron destruido: ${clave} (ID: ${elemento.id}), iniciando animacion de caida`);
                 this.dronesAnimandoCaida.add(clave);
                 let tipoDron;
                 if (elemento.tipoEquipo) {
@@ -4134,11 +4134,11 @@ export class Game extends Phaser.Scene {
                 }
                 
                 if (this.portersAnimandoDestruccion.has(clave)) {
-                    // Animación ya en progreso
+                    // AnimaciÃ³n ya en progreso
                     return;
                 }
                 
-                // Chequear vida antes de destrucción
+                // Chequear vida antes de destrucciÃ³n
                 const vida = Number(elemento.vida) || 0;
                 let tipoPorter;
                 if (elemento.tipoEquipo) {
@@ -4168,7 +4168,7 @@ export class Game extends Phaser.Scene {
                 // Solo animar destruccion si vida realmente llego a 0 o menos, para evitar bugs de backend que marquen DESTRUIDO prematuramente
                 if (vida <= 0) {
                     console.error(`%cDestruccion: PORTER ${elemento.id} DESTRUCCION CONFIRMADA (vida=${vida})`, 'color: #ff0000; font-size: 12px; font-weight: bold');
-                    console.log(`Destruccion: Iniciando animacion de destruccion para porter ${clave}`);
+                    this.depurar(`Destruccion: Iniciando animacion de destruccion para porter ${clave}`);
                     this.portersAnimandoDestruccion.add(clave);
                     this.mostrarAnimacionDestruccionPorter(sprite, tipoPorter, clave);
                 } else {
@@ -4181,7 +4181,7 @@ export class Game extends Phaser.Scene {
 
     /**
      * Verifica si el juego ha terminado - AMBOS portadrones Y todos los drones de un equipo destruidos
-     * Un jugador gana SOLO cuando el portadrones enemigo Y todos los drones enemigos están destruidos
+     * Un jugador gana SOLO cuando el portadrones enemigo Y todos los drones enemigos estÃ¡n destruidos
      */
     checkGameOverCondition() {
         if (this.gameOverTriggered) {
@@ -4214,29 +4214,29 @@ export class Game extends Phaser.Scene {
             } else if (elemento.clase === 'DRON') {
                 if (isOwn) {
                     ownTotalDrones++;
-                    // Un dron está vivo, solo si batería > 0
-                    // Un dron está muerto si DESTRUIDO O (INACTIVO con batería <= 0)
+                    // Un dron estÃ¡ vivo, solo si baterÃ­a > 0
+                    // Un dron estÃ¡ muerto si DESTRUIDO O (INACTIVO con baterÃ­a <= 0)
                     if (elemento.estado === 'ACTIVO' && (elemento.bateria === undefined || elemento.bateria > 0)) {
                         ownAliveDrones++;
                     } else {
-                        // Contar como destruido: estado DESTRUIDO O muerto por batería
+                        // Contar como destruido: estado DESTRUIDO O muerto por baterÃ­a
                         ownDestroyedDrones++;
                     }
                 } else {
                     enemyTotalDrones++;
-                    // Un dron está vivo, solo si batería > 0
-                    // Un dron está muerto si DESTRUIDO O (INACTIVO con batería <= 0)
+                    // Un dron estÃ¡ vivo, solo si baterÃ­a > 0
+                    // Un dron estÃ¡ muerto si DESTRUIDO O (INACTIVO con baterÃ­a <= 0)
                     if (elemento.estado === 'ACTIVO' && (elemento.bateria === undefined || elemento.bateria > 0)) {
                         enemyAliveDrones++;
                     } else {
-                        // Contar como destruido: estado DESTRUIDO O muerto por batería
+                        // Contar como destruido: estado DESTRUIDO O muerto por baterÃ­a
                         enemyDestroyedDrones++;
                     }
                 }
             }
         });
         
-        console.log('FinDeJuego: Verificacion:', {
+        this.depurar('FinDeJuego: Verificacion:', {
             ownPorterAlive,
             ownAliveDrones,
             ownDestroyedDrones,
@@ -4248,12 +4248,12 @@ export class Game extends Phaser.Scene {
         });
         
         // Un equipo es derrotado SOLO cuando se cumplen AMBAS condiciones:
-        // 1. El portador está destruido
-        // 2. TODOS los drones están muertos (DESTRUIDO o sin batería)
+        // 1. El portador estÃ¡ destruido
+        // 2. TODOS los drones estÃ¡n muertos (DESTRUIDO o sin baterÃ­a)
         const ownDefeated = !ownPorterAlive && ownDestroyedDrones === ownTotalDrones && ownTotalDrones > 0;
         const enemyDefeated = !enemyPorterAlive && enemyDestroyedDrones === enemyTotalDrones && enemyTotalDrones > 0;
         
-        console.log('FinDeJuego: Verificacion de derrota:', {
+        this.depurar('FinDeJuego: Verificacion de derrota:', {
             ownDefeated: ownDefeated,
             ownConditions: {
                 porterDead: !ownPorterAlive,
@@ -4270,23 +4270,23 @@ export class Game extends Phaser.Scene {
         
         // Verificar condiciones de fin de juego
         if (ownDefeated && enemyDefeated) {
-            // Ambos equipos destruidos simultáneamente - EMPATE
+            // Ambos equipos destruidos simultÃ¡neamente - EMPATE
             this.gameOverTriggered = true;
-            console.log('FinDeJuego: Destruccion mutua - EMPATE');
+            this.depurar('FinDeJuego: Destruccion mutua - EMPATE');
             setTimeout(() => {
                 this.transitionToGameOver('tie');
             }, 2000);
         } else if (ownDefeated) {
             // Perdimos
             this.gameOverTriggered = true;
-            console.log('FinDeJuego: Equipo propio derrotado - DERROTA');
+            this.depurar('FinDeJuego: Equipo propio derrotado - DERROTA');
             setTimeout(() => {
                 this.transitionToGameOver('loss');
             }, 2000);
         } else if (enemyDefeated) {
             // Ganamos
             this.gameOverTriggered = true;
-            console.log('FinDeJuego: Equipo enemigo derrotado - VICTORIA');
+            this.depurar('FinDeJuego: Equipo enemigo derrotado - VICTORIA');
             setTimeout(() => {
                 this.transitionToGameOver('win');
             }, 2000);
@@ -4294,7 +4294,7 @@ export class Game extends Phaser.Scene {
     }
 
     transitionToGameOver(result) {
-        console.log('FinDeJuego: Transicionando a la escena GameOver, resultado:', result);
+        this.depurar('FinDeJuego: Transicionando a la escena GameOver, resultado:', result);
         
         // Limpiar
         if (this.socket) {
@@ -4314,7 +4314,7 @@ export class Game extends Phaser.Scene {
         } else {
             activeDronStatus = 'null';
         }
-        console.log('Disparo: emitirDisparo llamado', {
+        this.depurar('Disparo: emitirDisparo llamado', {
             controlMode: this.controlMode,
             activeDron: activeDronStatus,
             activeDronActive: this.activeDron?.active,
@@ -4323,17 +4323,17 @@ export class Game extends Phaser.Scene {
 
         // Verificaciones de seguridad para el dron activo
         if (!this.activeDron || !this.activeDron.active) {
-            console.log('Disparo: No hay un dron activo valido desde el cual disparar');
+            this.depurar('Disparo: No hay un dron activo valido desde el cual disparar');
             return;
         }
         
         const dronId = this.activeDron?.getData('elementId') || this.activeDron?.id;
         if (!dronId) {
-            console.log('Disparo: El dron activo no tiene ID');
+            this.depurar('Disparo: El dron activo no tiene ID');
             return;
         }
         
-        // Verificar si el dron está destruido en el estado del backend
+        // Verificar si el dron estÃ¡ destruido en el estado del backend
         const clave = this.buscarClaveBackendExistentePorId(dronId);
         let dronEstado;
         if (clave) {
@@ -4342,7 +4342,7 @@ export class Game extends Phaser.Scene {
             dronEstado = null;
         }
         
-        console.log('Disparo: Verificacion del estado del dron:', {
+        this.depurar('Disparo: Verificacion del estado del dron:', {
             dronId,
             clave,
             estado: dronEstado?.estado,
@@ -4352,17 +4352,17 @@ export class Game extends Phaser.Scene {
         });
         
         if (dronEstado && dronEstado.estado === 'DESTRUIDO') {
-            console.log('Disparo: No se puede disparar desde un dron destruido');
+            this.depurar('Disparo: No se puede disparar desde un dron destruido');
             this.volverAlPortadron();
             return;
         }
 
         if (this.pendingShotRequest) {
-            console.log('Disparo: Disparo ya pendiente, ignorando...');
+            this.depurar('Disparo: Disparo ya pendiente, ignorando...');
             return;
         }
 
-        console.log(`Disparo: Intentando disparar desde el dron ${dronId}`);
+        this.depurar(`Disparo: Intentando disparar desde el dron ${dronId}`);
 
         this.pendingShotRequest = {
             dronId: Number(dronId),
@@ -4376,10 +4376,10 @@ export class Game extends Phaser.Scene {
         });
 
         if (!enviado) {
-            console.log('Disparo: No se pudo enviar la solicitud de disparo');
+            this.depurar('Disparo: No se pudo enviar la solicitud de disparo');
             this.pendingShotRequest = null;
         } else {
-            console.log('Disparo: Solicitud de disparo enviada con exito');
+            this.depurar('Disparo: Solicitud de disparo enviada con exito');
         }
     }
 
@@ -4392,7 +4392,7 @@ export class Game extends Phaser.Scene {
 
     rechazarDisparoPendiente(msg) {
         if (msg) {
-            console.warn('Juego: Disparo fallido', msg.mensaje || msg.Mensaje || msg);
+            this.depurar('Juego: Disparo fallido', msg.mensaje || msg.Mensaje || msg);
         }
         this.pendingShotRequest = null;
     }
@@ -4403,12 +4403,12 @@ export class Game extends Phaser.Scene {
             return;
         }
 
-        // Calcular tiempo restante en segundos (60 segundos totales para batería)
+        // Calcular tiempo restante en segundos (60 segundos totales para baterÃ­a)
         const bateriaPorcentaje = Number(dron.bateria) || 0;
         const segundosRestantes = Math.floor((bateriaPorcentaje / 100) * 60);
         const bateriaTexto = `${this.formatearPorcentaje(dron.bateria)} (${segundosRestantes}s)`;
 
-        // Pasar valor numérico de vida para que el HUD pueda manejar casos de vida > 100 o vida desconocida
+        // Pasar valor numÃ©rico de vida para que el HUD pueda manejar casos de vida > 100 o vida desconocida
         this.actualizarHUD({
             vida: Number(dron.vida) || 0,
             vidaMax: 100, // Los drones siempre tienen 100 HP maximo
@@ -4416,10 +4416,10 @@ export class Game extends Phaser.Scene {
             municion: this.formatearCantidad(dron.municionDisponible)
         });
 
-        // Cambiar color de batería según nivel
+        // Cambiar color de baterÃ­a segÃºn nivel
         if (this.txtBateria) {
             if (bateriaPorcentaje <= 20) {
-                this.txtBateria.setColor('#ff3333'); // Rojo crítico
+                this.txtBateria.setColor('#ff3333'); // Rojo crÃ­tico
             } else if (bateriaPorcentaje <= 40) {
                 this.txtBateria.setColor('#ffaa00'); // Naranja advertencia
             } else {
@@ -4431,23 +4431,23 @@ export class Game extends Phaser.Scene {
     actualizarHUDDesdePortadronActivo(spritePortadron) {
         const portaId = spritePortadron?.getData?.('elementId') || spritePortadron?.id || this.ownPortadronId;
         if (portaId === undefined || portaId === null) {
-            console.warn('HUD: ID de Portadron no encontrado');
+            this.depurar('HUD: ID de Portadron no encontrado');
             return;
         }
 
         const clave = this.buscarClaveBackendExistentePorId(portaId);
         if (!clave) {
-            console.warn('HUD: No se encontro clave backend para porterId:', portaId);
+            this.depurar('HUD: No se encontro clave backend para porterId:', portaId);
             return;
         }
 
         const porta = this.elementosBackendEstado.get(clave);
         if (!porta || porta.clase !== 'PORTADRON') {
-            console.warn('HUD: Portadron no encontrado en el estado del backend o clase incorrecta:', porta);
+            this.depurar('HUD: Portadron no encontrado en el estado del backend o clase incorrecta:', porta);
             return;
         }
 
-        // Determinar la salud máxima basado en el tipo de portador
+        // Determinar la salud mÃ¡xima basado en el tipo de portador
         const tipoPorter = String(porta.tipoEquipo || this.playerTeam || 'NAVAL').toUpperCase();
         let vidaMax;
         if (tipoPorter === 'AEREO') {
@@ -4457,7 +4457,7 @@ export class Game extends Phaser.Scene {
         }
 
         const vidaValue = Number(porta.vida);
-        console.log('HUD: Actualizacion de salud del portador:', {
+        this.depurar('HUD: Actualizacion de salud del portador:', {
             portaId,
             clave,
             vidaRaw: porta.vida,
@@ -4467,7 +4467,7 @@ export class Game extends Phaser.Scene {
             estado: porta.estado
         });
 
-        // Si vida es explícitamente 0 o un número válido, úsalo; si es undefined/null/NaN, verifica elementosEstado o usa vidaMax
+        // Si vida es explÃ­citamente 0 o un nÃºmero vÃ¡lido, Ãºsalo; si es undefined/null/NaN, verifica elementosEstado o usa vidaMax
         let vidaFinal;
         if (Number.isFinite(vidaValue)) {
             vidaFinal = vidaValue;
@@ -4476,11 +4476,11 @@ export class Game extends Phaser.Scene {
             const estadoElemento = this.elementosEstado.get(clave);
             if (estadoElemento && Number.isFinite(Number(estadoElemento.vida))) {
                 vidaFinal = Number(estadoElemento.vida);
-                console.log('HUD: Usando vida de elementosEstado:', vidaFinal);
+                this.depurar('HUD: Usando vida de elementosEstado:', vidaFinal);
             } else {
                 // Usar vida completa si no se encuentra
                 vidaFinal = vidaMax;
-                console.warn('HUD: Vida no encontrada, usando vidaMax por defecto');
+                this.depurar('HUD: Vida no encontrada, usando vidaMax por defecto');
             }
         }
         
@@ -4561,11 +4561,11 @@ export class Game extends Phaser.Scene {
     }
 
     solicitarRecargarDronesDesdePorter(portadronId, drones) {
-        console.log(`Recarga: Modo porter: recargando ${drones.length} dron(es) cerca del porter ${portadronId}`);
+        this.depurar(`Recarga: Modo porter: recargando ${drones.length} dron(es) cerca del porter ${portadronId}`);
         
         // Mandar recarga individual para cada dron cercano
         drones.forEach(droneInfo => {
-            console.log(`Recarga: Enviando recarga para dron ${droneInfo.id} (distancia: ${droneInfo.distancia.toFixed(1)}px, bateria: ${droneInfo.bateria}%)`);
+            this.depurar(`Recarga: Enviando recarga para dron ${droneInfo.id} (distancia: ${droneInfo.distancia.toFixed(1)}px, bateria: ${droneInfo.bateria}%)`);
             
             this.enviarAlSocket({
                 tipo: 'RECARGAR',
@@ -4579,11 +4579,11 @@ export class Game extends Phaser.Scene {
     }
 
     solicitarRecargaDron(portadronId) {
-        console.log(`Recarga: ========== SOLICITUD DE RECARGA INICIADA ==========`);
-        console.log(`Recarga: Porter ID: ${portadronId}, controlMode: ${this.controlMode}`);
+        this.depurar(`Recarga: ========== SOLICITUD DE RECARGA INICIADA ==========`);
+        this.depurar(`Recarga: Porter ID: ${portadronId}, controlMode: ${this.controlMode}`);
         
         if (this.pendingRechargeRequest) {
-            console.log('Recarga: BLOQUEADO: Solicitud ya pendiente');
+            this.depurar('Recarga: BLOQUEADO: Solicitud ya pendiente');
             return;
         }
 
@@ -4608,20 +4608,20 @@ export class Game extends Phaser.Scene {
         } else {
             activeDronStatus = 'NULL';
         }
-        console.log('Recarga: Obtenido estados:', {
+        this.depurar('Recarga: Obtenido estados:', {
             dron: dronInfo,
             porta: portaInfo,
             activeDron: activeDronStatus
         });
         
         if (!dron || !porta) {
-            console.log('Recarga: RECHAZADO: dron o porta no encontrado');
+            this.depurar('Recarga: RECHAZADO: dron o porta no encontrado');
             this.mostrarMensajeTemporal('No se pudo validar recarga', 1500, '#ffd6d6');
             return;
         }
 
         if (!this.esEstadoActivo(dron.estado) || !this.esEstadoActivo(porta.estado)) {
-            console.log('Recarga: RECHAZADO: estado invalido', {dronEstado: dron.estado, portaEstado: porta.estado});
+            this.depurar('Recarga: RECHAZADO: estado invalido', {dronEstado: dron.estado, portaEstado: porta.estado});
             this.mostrarMensajeTemporal('No se puede recargar en este estado', 1500, '#ffd6d6');
             return;
         }
@@ -4629,26 +4629,26 @@ export class Game extends Phaser.Scene {
         const dx = Number(dron.x) - Number(porta.x);
         const dy = Number(dron.y) - Number(porta.y);
         const distancia = Math.sqrt((dx * dx) + (dy * dy));
-        console.log(`Recarga: Distancia: ${distancia.toFixed(2)}px (limite: 220px)`);
+        this.depurar(`Recarga: Distancia: ${distancia.toFixed(2)}px (limite: 220px)`);
         
-        // Aumentado a 220px para un juego más indulgente - el sprite del porter es 180x80, esto asegura que "cerca del porter" funcione
+        // Aumentado a 220px para un juego mÃ¡s indulgente - el sprite del porter es 180x80, esto asegura que "cerca del porter" funcione
         if (!Number.isFinite(distancia) || distancia > 220) {
-            console.log(`Recarga: RECHAZADO: distancia demasiado lejana (${distancia.toFixed(2)} > 220)`);
-            this.mostrarMensajeTemporal('Acercá el dron al portadron para recargar', 1600, '#ffe8b0');
+            this.depurar(`Recarga: RECHAZADO: distancia demasiado lejana (${distancia.toFixed(2)} > 220)`);
+            this.mostrarMensajeTemporal('AcercÃ¡ el dron al portadron para recargar', 1600, '#ffe8b0');
             return;
         }
 
         const dronId = this.activeDron?.getData('elementId') || this.activeDron?.id;
         if (dronId === undefined || dronId === null) {
-            console.log('Recarga: RECHAZADO: dronId es null/undefined');
+            this.depurar('Recarga: RECHAZADO: dronId es null/undefined');
             return;
         }
 
-        console.log(`Recarga: VALIDACION PASADA: Enviando solicitud de recarga para dron ${dronId} desde portadron ${portadronId}`);
-        console.log(`Recarga: Detalles de solicitud: { tipo: SOLICITANDO_RECARGAR, IdDron: ${dronId}, IdPortadron: ${portadronId} }`);
+        this.depurar(`Recarga: VALIDACION PASADA: Enviando solicitud de recarga para dron ${dronId} desde portadron ${portadronId}`);
+        this.depurar(`Recarga: Detalles de solicitud: { tipo: SOLICITANDO_RECARGAR, IdDron: ${dronId}, IdPortadron: ${portadronId} }`);
         
         // REGISTRAR SALUD DEL PORTER ANTES DE LA SOLICITUD DE RECARGA
-        console.log(`%cRecarga: SALUD DEL PORTER ANTES DE LA SOLICITUD DE RECARGA:`, 'color: #ff9900; font-weight: bold', {
+        this.depurar(`%cRecarga: SALUD DEL PORTER ANTES DE LA SOLICITUD DE RECARGA:`, 'color: #ff9900; font-weight: bold', {
             porterId: portadronId,
             vidaFrontend: porta.vida,
             vidaBackend: 'ver logs de PORTER VIDA',
@@ -4663,7 +4663,7 @@ export class Game extends Phaser.Scene {
         });
 
         if (enviado) {
-            console.log(`Recarga: Solicitud enviada exitosamente, esperando respuesta del backend...`);
+            this.depurar(`Recarga: Solicitud enviada exitosamente, esperando respuesta del backend...`);
             this.pendingRechargeRequest = {
                 dronId: Number(dronId),
                 portadronId: Number(portadronId)
@@ -4674,13 +4674,13 @@ export class Game extends Phaser.Scene {
     }
 
     confirmarRecargaPendiente(msg) {
-        console.log(`%cRecarga: RECARGADO_EXITOSO confirmado a las ${new Date().toLocaleTimeString()}`, 'color: #00ff00; font-size: 14px; font-weight: bold');
-        console.log('Recarga: Backend confirmo - restaurando dron: bateria=100, salud=100, municion=12');
+        this.depurar(`%cRecarga: RECARGADO_EXITOSO confirmado a las ${new Date().toLocaleTimeString()}`, 'color: #00ff00; font-size: 14px; font-weight: bold');
+        this.depurar('Recarga: Backend confirmo - restaurando dron: bateria=100, salud=100, municion=12');
         
         // Registrar salud del porter DESPUES de recarga exitosa
         const porta = this.obtenerEstadoPortadronPropio();
         if (porta) {
-            console.log(`%cRecarga: Salud del porter DESPUES de recarga exitosa:`, 'color: #00ff00; font-weight: bold', {
+            this.depurar(`%cRecarga: Salud del porter DESPUES de recarga exitosa:`, 'color: #00ff00; font-weight: bold', {
                 porterId: porta.id,
                 vida: porta.vida,
                 estado: porta.estado,
@@ -4690,10 +4690,10 @@ export class Game extends Phaser.Scene {
         
         this.pendingRechargeRequest = null;
         
-        // Resetear el temporizador de drenaje de batería para evitar caída inmediata después de recargar
+        // Resetear el temporizador de drenaje de baterÃ­a para evitar caÃ­da inmediata despuÃ©s de recargar
         this.lastBatteryDrainTime = Date.now();
         
-        // Actualizar el estado del dron activo a batería 100%, vida 100%, munición 12
+        // Actualizar el estado del dron activo a baterÃ­a 100%, vida 100%, municiÃ³n 12
         if (this.activeDron) {
             const dronId = this.activeDron.getData('elementId') || this.activeDron.id;
             if (dronId) {
@@ -4703,9 +4703,9 @@ export class Game extends Phaser.Scene {
                     const elemento = this.elementosEstado.get(clave);
                     if (elemento) {
                         elemento.bateria = 100;
-                        elemento.vida = 100;  // También restaurar la salud
+                        elemento.vida = 100;  // TambiÃ©n restaurar la salud
                         elemento.municionDisponible = 12;
-                        console.log(`Recarga: Actualizado dron ${dronId} - bateria: 100%, salud: 100%, municion: 12`);
+                        this.depurar(`Recarga: Actualizado dron ${dronId} - bateria: 100%, salud: 100%, municion: 12`);
                     }
                 }
                 
@@ -4715,7 +4715,7 @@ export class Game extends Phaser.Scene {
                     const backendElemento = this.elementosBackendEstado.get(claveBackend);
                     if (backendElemento) {
                         backendElemento.bateria = 100;
-                        backendElemento.vida = 100;  // También restaurar la salud
+                        backendElemento.vida = 100;  // TambiÃ©n restaurar la salud
                         backendElemento.municionDisponible = 12;
                     }
                 }
@@ -4860,14 +4860,14 @@ export class Game extends Phaser.Scene {
         this.txtModo = this.add.text(20, 127, `CONTROL ${this.controlMode}`, estiloPrincipal).setScrollFactor(0).setDepth(9500);
         this.txtDrones = this.add.text(20, 159, 'DRONES: 0/0', estiloPrincipal).setScrollFactor(0).setDepth(9500);
         this.txtVida = this.add.text(20, this.scale.height - 92, 'VIDA: ---', estiloSecundario).setScrollFactor(0).setDepth(9500);
-        this.txtBateria = this.add.text(20, this.scale.height - 62, 'BATERÍA: ---', estiloSecundario).setScrollFactor(0).setDepth(9500);
-        this.txtMunicion = this.add.text(20, this.scale.height - 32, 'MUNICIÓN: ---', estiloSecundario).setScrollFactor(0).setDepth(9500);
+        this.txtBateria = this.add.text(20, this.scale.height - 62, 'BATERÃA: ---', estiloSecundario).setScrollFactor(0).setDepth(9500);
+        this.txtMunicion = this.add.text(20, this.scale.height - 32, 'MUNICIÃ“N: ---', estiloSecundario).setScrollFactor(0).setDepth(9500);
         
-        // Texto de indicación de recarga - solo visible cuando se controla un dron y está en rango
+        // Texto de indicaciÃ³n de recarga - solo visible cuando se controla un dron y estÃ¡ en rango
         this.txtRechargeHint = this.add.text(
             this.scale.width / 2, 
             this.scale.height - 180, 
-            '🔋 ZONA DE RECARGA - Presiona [R] o haz clic aquí', 
+            'ðŸ”‹ ZONA DE RECARGA - Presiona [R] o haz clic aquÃ­', 
             {
                 font: 'bold 20px Arial',
                 fill: '#00ff00',
@@ -4900,9 +4900,9 @@ export class Game extends Phaser.Scene {
         if (this.txtVida) {
             this.txtVida.setText(`VIDA: ${vidaActual}/${vidaMax} (${vidaPorcentaje}%)`);
             
-            // Codificación de color basada en el porcentaje de vida
+            // CodificaciÃ³n de color basada en el porcentaje de vida
             if (vidaPorcentaje <= 20) {
-                this.txtVida.setColor('#ff3333'); // Rojo crítico
+                this.txtVida.setColor('#ff3333'); // Rojo crÃ­tico
             } else if (vidaPorcentaje <= 50) {
                 this.txtVida.setColor('#ffaa00'); // Naranja de advertencia
             } else {
@@ -4910,8 +4910,8 @@ export class Game extends Phaser.Scene {
             }
         }
         
-        if (this.txtBateria) this.txtBateria.setText(`BATERÍA: ${datosUnidad.bateria}`);
-        if (this.txtMunicion) this.txtMunicion.setText(`MUNICIÓN: ${datosUnidad.municion}`);
+        if (this.txtBateria) this.txtBateria.setText(`BATERÃA: ${datosUnidad.bateria}`);
+        if (this.txtMunicion) this.txtMunicion.setText(`MUNICIÃ“N: ${datosUnidad.municion}`);
         if (this.txtModo) this.txtModo.setText(`CONTROL ${this.controlMode}`);
     }
 

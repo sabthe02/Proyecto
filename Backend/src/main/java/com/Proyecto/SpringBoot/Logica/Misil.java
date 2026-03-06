@@ -10,7 +10,7 @@ public class Misil extends Municion {
     public Misil(int id, Jugador jugador) {
         super(id, jugador);
         velocidad = 1;
-        distancia = 1;
+        distancia = 60F;
     }
 
     public Misil(int id, 
@@ -24,8 +24,8 @@ public class Misil extends Municion {
                 float distancia, 
                 Jugador jugador) {
         super(id, posicionX, posicionY, posicionZ, angulo, vida, estado, jugador);
-        this.velocidad = velocidad;
-        this.distancia = distancia;
+        this.velocidad = 1;
+        this.distancia = 60F;
     }
 
     public int getVelocidad() {
@@ -48,9 +48,22 @@ public class Misil extends Municion {
         if (intencion == null) {
             return;
         }
-        this.setPosicionX(intencion.getNuevaPosX());
-        this.setPosicionY(intencion.getNuevaPosY());
-        this.setAngulo(intencion.getNuevoAngulo());
+        double rad = Math.toRadians(this.angulo);
+        float avance = this.velocidad;
+
+        intencion.setNuevaPosX(this.getPosicionX() + (float) (avance * Math.cos(rad)));
+        intencion.setNuevaPosY(this.getPosicionY() + (float) (avance * Math.sin(rad)));
+        
+        if (this.distancia<=0) {
+            this.setEstado(EstadoElemento.INACTIVO);
+        } 
+
+    }
+
+    @Override
+    public void recibeImpacto(Evento_Movimiento intencion) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'recibeImpacto'");
     }
     
 

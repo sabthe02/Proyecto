@@ -6,6 +6,8 @@ public class Bomba extends Municion {
 
     int peso;
     float radioExplosion;
+    private float gravedad = 0.5f;
+    private float velocidadInicio = 0;
 
     public Bomba(int id, Jugador jugador) {
         super(id, jugador);
@@ -44,10 +46,22 @@ public class Bomba extends Municion {
         this.radioExplosion = radioExplosion;
     }
 
-    @Override
-    public void moverse(Evento_Movimiento intencion) {
-        // TODO Auto-generated method stub
+    public void reiniciarVelocidadInicio() {
+        this.velocidadInicio = 0;
     }
 
+    @Override
+    public void moverse(Evento_Movimiento intencion) {
+        velocidadInicio = velocidadInicio + gravedad;
+        Bomba bomba = (Bomba) intencion.getElemento();
+        bomba.setPosicionZ(bomba.getPosicionZ() - velocidadInicio);        
+        
+    }
+
+    @Override
+    public void recibeImpacto(Evento_Movimiento intencion) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'recibeImpacto'");
+    }
 
 }

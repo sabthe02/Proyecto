@@ -11,6 +11,7 @@ public abstract class Elemento {
     Integer angulo;
     Integer vida;
     Jugador jugador;
+    public static final float MAX_ALTURA = 100;
 
     EstadoElemento estado;
 
@@ -18,7 +19,7 @@ public abstract class Elemento {
         id = 0;
         posicionX = 0f;
         posicionY = 0f;
-        posicionZ = 0f;
+        posicionZ = MAX_ALTURA;
         angulo = 0;
         vida = 100;
         estado = EstadoElemento.ACTIVO;
@@ -30,7 +31,7 @@ public abstract class Elemento {
         this.jugador = jugador;
         posicionX = 0f;
         posicionY = 0f;
-        posicionZ = 0f;
+        posicionZ = MAX_ALTURA;
         angulo = 0;
         vida = 100;
         estado = EstadoElemento.ACTIVO;
@@ -49,7 +50,7 @@ public abstract class Elemento {
         this.posicionY = posicionY2;
         this.posicionZ = posicionZ;
         this.angulo = angulo;
-        this.vida = vida;
+        this.vida = 100;
         this.estado = estado;
         this.jugador = jugador;
     }
@@ -114,6 +115,12 @@ public abstract class Elemento {
         this.jugador = jugador;
     }
 
+    public float getMAX_ALTURA() {
+        return MAX_ALTURA;
+    }
+
     public abstract void moverse(Evento_Movimiento intencion); 
+
+    public abstract void recibeImpacto(Evento_Movimiento intencion); 
 
 }

@@ -15,6 +15,7 @@ public class SesionJuego extends GameLoop {
     private List<Evento> accionesPendientesEnviar;
     private List<Evento> accionesPendientesProcesar;
     private Mapa mapa;
+    private String ganadorID;
 
     private iFachada fachada;
 
@@ -57,14 +58,15 @@ public class SesionJuego extends GameLoop {
             TipoElemento tipoJugador = obtenerTipoElementoJugador(jugador);
 
             if (tipoJugador == TipoElemento.AEREO) {
-                PortaDron p = new PortaDron(elementosEnJuego.size(), 0f, 0f, 0f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0,
+                PortaDron p = new PortaDron(elementosEnJuego.size(), 0f, 0f, 99f, 0, 100, EstadoElemento.ACTIVO, 0, 0,
+                        0,
                         TipoElemento.AEREO, jugador);
                 elementosEnJuego.put(p.getId(), p);
                 elementosJugadores.put(jugador, p);
 
                 int j = 0;
                 while (j < 12) {
-                    Dron d = new Dron(elementosEnJuego.size(), 0f, 0f, 0f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0,
+                    Dron d = new Dron(elementosEnJuego.size(), 0f, 0f, 100f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0,
                             TipoElemento.AEREO, jugador);
                     elementosEnJuego.put(d.getId(), d);
                     d.cargarMunicionInicial(elementosEnJuego);
@@ -79,8 +81,8 @@ public class SesionJuego extends GameLoop {
                 elementosJugadores.put(jugador, p);
 
                 int j = 0;
-                while (j < 12) {
-                    Dron d = new Dron(elementosEnJuego.size(), 0f, 0f, 0f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0,
+                while (j < 6) {
+                    Dron d = new Dron(elementosEnJuego.size(), 0f, 0f, 1f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0,
                             TipoElemento.NAVAL, jugador);
                     elementosEnJuego.put(d.getId(), d);
                     d.cargarMunicionInicial(elementosEnJuego);
@@ -148,15 +150,7 @@ public class SesionJuego extends GameLoop {
             case "Evento_Movimiento":
                 Evento_Movimiento eventoMovimiento = (Evento_Movimiento) intencion;
                 Dron dron = (Dron) elementosEnJuego.get(intencion.getIdElemento());
-
-                if (dron == null) {
-                    return;
-                }
-
-                if (dron.getEstado() != EstadoElemento.ACTIVO || dron.getBateria() <= 0 || dron.getVida() <= 0) {
-                    // Que vamos a retornar cunado el dron no se puede mover? Por ahora solo
-                    // retorno,
-                    // pero habría que avisarle al cliente que el movimiento no se pudo realizar.
+                if (dron.getEstado() != EstadoElemento.ACTIVO || dron.getBateria() <= 0 || dron.getVida() <= 0 ) {
                     return;
                 }
                 eventoMovimiento.habilitar();
@@ -164,10 +158,6 @@ public class SesionJuego extends GameLoop {
             case "Evento_Disparo":
                 Evento_Disparo eventoDisparo = (Evento_Disparo) intencion;
                 Dron dronDisparador = (Dron) elementosEnJuego.get(intencion.getIdElemento());
-
-                if (dronDisparador == null) {
-                    return;
-                }
                 if (dronDisparador.getEstado() != EstadoElemento.ACTIVO ||
                         dronDisparador.getBateria() <= 0 ||
                         dronDisparador.getVida() <= 0 ||
@@ -192,6 +182,15 @@ public class SesionJuego extends GameLoop {
                 }
                 eventoRecarga.habilitar();
                 break;
+            case "Evento_DesplegarDron":
+                Evento_DesplegarDron eventoDesplegarDron = (Evento_DesplegarDron) intencion;
+                PortaDron portaDron = (PortaDron) elementosEnJuego.get(intencion.getIdElemento());
+                if (portaDron == null || portaDron.getEstado() != EstadoElemento.ACTIVO
+                        || portaDron.cantidadDronesDisponibles() <= 0) {
+                    return;
+                }
+                eventoDesplegarDron.habilitar();
+                break;
 
             default:
                 System.out.println("Acción desconocida: " + intencion.getClass().getSimpleName());
@@ -199,9 +198,6 @@ public class SesionJuego extends GameLoop {
     }
 
     private void update(Evento accion) {
-        if (!accion.estaHabilitado()) {
-            return;
-        }
         switch (accion.getClass().getSimpleName()) {
             case "Evento_Movimiento":
                 if (accion.estaHabilitado()) {
@@ -209,6 +205,7 @@ public class SesionJuego extends GameLoop {
                     Dron dron = (Dron) elementosEnJuego.get(accion.getIdElemento());
                     dron.moverse(eventoMovimiento);
                 }
+                this.accionesPendientesEnviar.add(accion);
                 break;
             case "Evento_Disparo":
                 if (accion.estaHabilitado()) {
@@ -223,23 +220,74 @@ public class SesionJuego extends GameLoop {
                     processInput(eventoMovimientoMunicion);
                     accion.deshabilitar();
                 }
+                this.accionesPendientesEnviar.add(accion);
                 break;
             case "Evento_Recarga":
                 if (accion.estaHabilitado()) {
                     Evento_Recarga eventoRecarga = (Evento_Recarga) accion;
                     Dron dronRecarga = (Dron) elementosEnJuego.get(accion.getIdElemento());
+                    eventoRecarga.comenzarCarga(dronRecarga);
                     if (dronRecarga.getBateria() < dronRecarga.getMAX_BATERIA()) {
                         dronRecarga.recargar(eventoRecarga);
+                    } else if (dronRecarga.cantidadMunicionesDisponibles() < 1
+                            && dronRecarga.getTipo() == TipoElemento.AEREO) {
+                        dronRecarga.recargaMunicion(eventoRecarga);
+                    } else if (dronRecarga.cantidadMunicionesDisponibles() < 2
+                            && dronRecarga.getTipo() == TipoElemento.NAVAL) {
+                        dronRecarga.recargaMunicion(eventoRecarga);
                     }
                 }
-
+                this.accionesPendientesEnviar.add(accion);
+                break;
+            case "Evento_DesplegarDron":
+                if (accion.estaHabilitado()) {
+                    Evento_DesplegarDron eventoDesplegarDron = (Evento_DesplegarDron) accion;
+                    PortaDron portaDron = (PortaDron) elementosEnJuego.get(accion.getIdElemento());
+                    portaDron.getEstado().equals(EstadoElemento.INACTIVO);
+                    Dron dronDesplegado = portaDron.desplegarDron(eventoDesplegarDron);
+                    if (dronDesplegado != null) {
+                        elementosEnJuego.put(dronDesplegado.getId(), dronDesplegado);
+                        dronDesplegado.descargaBateria();
+                    }
+                }
+                this.accionesPendientesEnviar.add(accion);
                 break;
 
             default:
                 break;
         }
-        throw new UnsupportedOperationException("Unimplemented method 'update'");
+        if (this.finalizarSesion()) {
+                
+        }
 
+    }
+
+    public boolean finalizarSesion() {
+        boolean finalizo = false;
+        for (PortaDron portaDron : elementosJugadores.values()) {
+            if (portaDron.getEstado() == EstadoElemento.DESTRUIDO
+                    && portaDron.cantidadDronesDestruidos() <= portaDron.drones.size()) {
+                finalizo = true;
+            }
+        }
+        if (finalizo) {
+            for (Jugador jugador : elementosJugadores.keySet()) {
+                PortaDron portaDron = elementosJugadores.get(jugador);
+                if (portaDron.getEstado() != EstadoElemento.DESTRUIDO) {
+                    setGanador(jugador.getId());
+                    break;
+                }
+            }
+        }
+        return true;
+    }
+
+    private void setGanador(String idJugadorGanador) {
+        this.ganadorID = idJugadorGanador;
+    }
+
+    private String getGanador() {
+        return this.ganadorID;
     }
 
     /// Agregado para que no dé más error, si no no puedo probar front

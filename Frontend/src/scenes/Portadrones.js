@@ -1,20 +1,19 @@
-
-export class Portadrones extends Phaser.GameObjects.Container {
-    constructor(scene, x, y, data) {
-        super(scene, x, y);
+export class PortaDron extends Phaser.GameObjects.Container {
+    constructor(scene, datos) {
+        
+        super(scene, datos.posicionX, datos.posicionY);
+        
         this.scene = scene;
-        this.id = data.id;
-        this.tipoEquipo = data.tipoEquipo;
+        this.id = datos.id;
+        this.tipoEquipo = datos.tipo; 
 
-  
         const config = this.obtenerConfiguracion();
         
-       
         this.sprite = scene.add.sprite(0, 0, config.textura);
         this.sprite.setScale(config.escala);
         this.add(this.sprite);
 
-      
+
         this.labelNombre = scene.add.text(0, config.offsetY - 20, `${this.tipoEquipo} [ID:${this.id}]`, {
             fontSize: '16px',
             fill: '#ffffff',
@@ -25,22 +24,21 @@ export class Portadrones extends Phaser.GameObjects.Container {
 
         this.labelHangar = scene.add.text(0, 60, `HANGAR: 0`, {
             fontSize: '14px',
-            fill: config.colorHangar
+            fill: config.colorHangar,
+            fontStyle: 'bold'
         }).setOrigin(0.5);
         this.add(this.labelHangar);
 
-       
-        this.barras = scene.add.graphics();
-        this.add(this.barras);
+        // Gráficos para barras de Vida
+        this.barrasUI = scene.add.graphics();
+        this.add(this.barrasUI);
 
-      
+        //Efectos
         this.configurarEfectos(config);
-
 
         scene.add.existing(this);
     }
 
- 
     obtenerConfiguracion() {
         if (this.tipoEquipo === 'AEREO') {
             return {
@@ -63,47 +61,49 @@ export class Portadrones extends Phaser.GameObjects.Container {
 
     configurarEfectos(config) {
         if (config.tieneSombra) {
-            // Si es aéreo, le ponemos una sombra en el suelo para dar sensación de altura
             this.sombra = this.scene.add.ellipse(10, 10, 100, 50, 0x000000, 0.3);
             this.addAt(this.sombra, 0); 
         }
     }
 
- 
-    actualizar(data) {
-       
+  
+    actualizarDesdeServidor(datos) {
+      
         this.scene.tweens.add({
             targets: this,
-            x: data.x,
-            y: data.y,
-            angulp: data.angulo,
-            duracion: 100 
+            x: datos.posicionX || datos.x,
+            y: datos.posicionY || datos.y,
+            angle: datos.angulo,
+            duration: 100 
         });
 
-        
-        this.labelHangar.setText(`HANGAR: ${data.dronesEnHangar || 0}`);
-        this.dibujarBarras(data.vida, data.escudo);
+        if (datos.listaDrones) {
+            this.labelHangar.setText('HANGAR: ${datos.listaDrones.length}');
+        }
+
+        this.dibujarBarras(datos.vida);
     }
 
-    dibujarBarras(vida, escudo) {
-        this.barras.clear();
+    dibujarBarras(vida) {
+        this.barrasUI.clear();
         const ancho = 120;
         const alto = 10;
         const x = -60;
         const y = -65;
 
-       // BARRA DE VIDA 
-        this.barras.fillStyle(0xff0000);
-        this.barras.fillRect(x, y, ancho, alto);
-        this.barras.fillStyle(0x00ff00);
-        this.barras.fillRect(x, y, (vida / 100) * ancho, alto);
+       
+        this.barrasUI.fillStyle(0xff0000);
+        this.barrasUI.fillRect(x, y, ancho, alto);
 
-   
+       
+        const anchoVida = (vida / 100) * ancho;
+        this.barrasUI.fillStyle(0x00ff00);
+        this.barrasUI.fillRect(x, y, anchoVida, alto);
     }
 
-    destruir() {
-      
-        console.log(`Portadrones ${this.id} fuera de combate.`);
+    morir() {
+        console.log(' PortaDron ${this.id} destruido.');
+
         this.destroy();
     }
 }

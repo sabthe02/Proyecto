@@ -1,53 +1,81 @@
+
 export class InputManager {
     constructor(scene, network) {
         this.scene = scene;
         this.network = network; 
+        
+        this.idElementoSeleccionado = null;
 
-     
         this.keys = scene.input.keyboard.addKeys({
-            up: 'W', down: 'S', left: 'A', right: 'D',
-            upArrow: 'UP', downArrow: 'DOWN', leftArrow: 'LEFT', rightArrow: 'RIGHT',
-            space: 'SPACE'
+            arriba: 'W', abajo: 'S', izquierda: 'A', derecha: 'D',
+            flechaArriba: 'UP', flechaAbajo: 'DOWN', flechaIzquierda: 'LEFT', flechaDerecha: 'RIGHT',
+            espacio: 'SPACE',
+            recargar: 'R'
         });
 
-        this.mouse = scene.input.activePointer;
+        this.raton = scene.input.activePointer;
+    }
+
+
+    seleccionarElemento(id) {
+        this.idElementoSeleccionado = id;
+        console.log(`Controlando elemento ID: ${id}`);
     }
 
     update() {
+        if (!this.idElementoSeleccionado) return;
+
         let vx = 0;
         let vy = 0;
 
-        // Lógica de movimiento 
-        if (this.keys.up.isDown || this.keys.upArrow.isDown) vy = -1;
-        if (this.keys.down.isDown || this.keys.downArrow.isDown) vy = 1;
-        if (this.keys.left.isDown || this.keys.leftArrow.isDown) vx = -1;
-        if (this.keys.right.isDown || this.keys.rightArrow.isDown) vx = 1;
+        if (this.keys.arriba.isDown || this.keys.flechaArriba.isDown) vy = -1;
+        if (this.keys.abajo.isDown || this.keys.flechaAbajo.isDown) vy = 1;
+        if (this.keys.izquierda.isDown || this.keys.flechaIzquierda.isDown) vx = -1;
+        if (this.keys.derecha.isDown || this.keys.flechaDerecha.isDown) vx = 1;
 
-        // Solo enviamos datos si hay movimiento o acción
         if (vx !== 0 || vy !== 0) {
             this.procesarMovimiento(vx, vy);
         }
 
-        // Lógica de disparo
-        if (Phaser.Input.Keyboard.JustDown(this.keys.space) || this.mouse.isDown) {
+        if (Phaser.Input.Keyboard.JustDown(this.keys.espacio) || this.raton.leftButtonDown()) {
             this.procesarDisparo();
+        }
+
+        if (Phaser.Input.Keyboard.JustDown(this.keys.recargar)) {
+            this.procesarRecarga();
         }
     }
 
     procesarMovimiento(vx, vy) {
-        const angulo = Math.atan2(vy, vx) * (180 / Math.PI);
+        const unidad = this.scene.entities.getUnidad(this.idElementoSeleccionado);
+        if (!unidad) return;
 
-        this.network.send('MOVER', {
-            vx: vx,
-            vy: vy,
-            angulo: angulo
+        const velocidad = 5; 
+        const nuevaX = unidad.x + (vx * velocidad);
+        const nuevaY = unidad.y + (vy * velocidad);
+        const angulo = Math.floor(Math.atan2(vy, vx) * (180 / Math.PI));
+
+     
+        this.network.send('MOVER_ELEMENTO', {
+            idElemento: this.idElementoSeleccionado,
+            PosicionX: nuevaX,
+            PosicionY: nuevaY,
+            PosicionZ: 0, 
+            Angulo: angulo
         });
     }
 
     procesarDisparo() {
+       
         this.network.send('DISPARAR', {
-            targetX: this.mouse.worldX,
-            targetY: this.mouse.worldY
+            IdDron: this.idElementoSeleccionado
+        });
+    }
+
+    procesarRecarga() {
+
+        this.network.send('RECARGAR', {
+            IdDron: this.idElementoSeleccionado
         });
     }
 }

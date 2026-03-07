@@ -1,3 +1,5 @@
+import { NetworkManager } from './NetworkManager.js';
+
 export class GameChoice extends Phaser.Scene {
 
     constructor() {
@@ -89,68 +91,39 @@ export class GameChoice extends Phaser.Scene {
             window.location.reload(); // Falta!!!
         });
 
-        // WebSocket - usa la conexion global creada en Greeting.js para evitar reconexiones innecesarias
-        this.socket = window.gameSocket;
+        // Initialize NetworkManager (creates/reuses WebSocket connection)
+        this.network = new NetworkManager(this);
+        this.socket = this.network.socket;
         this.pendingLobbyRequest = false;
 
-        this.socket.onopen = () => {
-            console.log('[GameChoice] WebSocket conectado');
-        };
+        // Escucha mensajes del NetworkManager para manejar eventos relacionados con la partida y el lobby
+        this.events.on('PARTIDA_INICIADA', (data) => {
+            console.log('¡PARTIDA INICIADA! datos:', data);
+            const extras = {
+                playerId: sessionStorage.getItem('playerId') || '',
+                nickname: sessionStorage.getItem('nickname') || 'Player',
+                partidaInicial: data.datos
+            };
+            this.scene.start('Game', extras);
+        });
 
-        this.socket.onerror = (err) => {
-            console.error('[GameChoice] WebSocket error', err);
-        };
-
-        this.socket.onclose = (ev) => {
-            console.warn('[GameChoice] WebSocket cerrado', ev);
-        };
-
-        this.socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            console.log('[GameChoice] WS onmessage:', data);
-            
-            let tipo = '';
-            if (data.tipo) {
-                tipo = String(data.tipo);
+        this.events.on('PASAR_LOBBY_EXITOSO', (data) => {
+            console.log('Paso al lobby exitosamente:', data);
+            if (this.statusText) {
+                this.statusText.setText('Entrando al lobby...');
             }
+            this.errorText.setText('');
+            this.pendingLobbyRequest = false;
+            this.scene.start('Lobby');
+        });
 
-            // Manejar comienzo del juego cuando PASAR_LOBBY_EXITOSO)
-            if (tipo === 'PARTIDA_INICIADA') {
-                console.log('¡PARTIDA INICIADA! datos:', data);
-                // al comenzar partida arrancamos el escenario de juego
-                // pasamos al menos el apodo/ equipo local si están disponibles
-                // en este prototipo sólo utilizamos el apodo almacenado y un
-                // equipo por defecto; el servidor todavía no decide el bando local
-                const extras = {
-                    playerId: sessionStorage.getItem('playerId') || '',
-                    nickname: sessionStorage.getItem('nickname') || 'Player',
-                    partidaInicial: data.datos
-                };
-                this.scene.start('Game', extras);
-                return;
-            }
-
-            // Handle lobby response
-            if (tipo === 'PASAR_LOBBY_EXITOSO') {
-                console.log('Paso al lobby exitosamente:', data);
-                if (this.statusText) {
-                    this.statusText.setText('Entrando al lobby...');
-                }
-                this.errorText.setText('');
-                this.pendingLobbyRequest = false;
-                this.scene.start('Lobby');
-                return;
-            }
-
-            if (tipo === 'PASAR_LOBBY_FALLIDO') {
-                console.error('Error al pasar al lobby:', data);
-                const msg = data.mensaje || 'Error al pasar al lobby';
-                this.errorText.setText(msg);
-                this.pendingLobbyRequest = false;
-                lobbyBtn.disabled = false;
-                return;
-            }
-        };
+        this.events.on('PASAR_LOBBY_FALLIDO', (data) => {
+            console.error('Error al pasar al lobby:', data);
+            const msg = data.mensaje || 'Error al pasar al lobby';
+            this.errorText.setText(msg);
+            this.pendingLobbyRequest = false;
+            lobbyBtn.disabled = false;
+        });
 
         // Si se pasa al lobby, se manda mensaje al servidor para avisar que el jugador quiere entrar al lobby (y el servidor responde con PASAR_LOBBY_EXITOSO o PASAR_LOBBY_FALLIDO)
         lobbyBtn.addEventListener('click', () => {
@@ -161,18 +134,20 @@ export class GameChoice extends Phaser.Scene {
             lobbyBtn.disabled = true;
             this.errorText.setText('');
 
-            const mensaje = {
-                tipo: 'PASAR_LOBBY'
-            };
-
-            if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-                console.log('[GameChoice] Enviando PASAR_LOBBY');
-                this.socket.send(JSON.stringify(mensaje));
-            } else {
+            // Usar NetworkManager
+            if (!this.network) {
+                this.network = new NetworkManager(this);
+            }
+            
+            const enviado = this.network.pasarLobby();
+            
+            if (!enviado) {
                 console.warn('[GameChoice] Socket no esta abierto');
                 this.errorText.setText('Error: conexion no disponible');
                 this.pendingLobbyRequest = false;
                 lobbyBtn.disabled = false;
+            } else {
+                console.log('[GameChoice] PASAR_LOBBY enviado');
             }
         });
     }

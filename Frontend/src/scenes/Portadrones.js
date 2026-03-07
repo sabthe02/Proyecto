@@ -5,8 +5,18 @@ export class Portadrones extends Phaser.GameObjects.Container {
         this.scene = scene;
         this.id = data.id;
         this.tipoEquipo = data.tipoEquipo;
+        
+        // Ownership: Quién controla este portadrón (soportar ambos campos)
+        this.idJugador = data.idJugador || data.jugadorId || null;
+        this.jugadorId = this.idJugador; // Alias para compatibilidad
+        
+        // Backend usa escala de game ticks (e.g., 1000 = 100%)
+        // Rastreamos el max valor para calcular porcentajes
+        this.vidaMax = null; // Se detecta dinámicamente
+        
+        // Sistema de capas (depth) - portadrones más abajo que drones
+        this.setDepth(200 + (data.z || 0));
 
-  
         const config = this.obtenerConfiguracion();
         
        
@@ -23,7 +33,7 @@ export class Portadrones extends Phaser.GameObjects.Container {
         }).setOrigin(0.5);
         this.add(this.labelNombre);
 
-        this.labelHangar = scene.add.text(0, 60, `HANGAR: 0`, {
+        this.labelHangar = scene.add.text(0, 60, `DRONES EN PORTADRONES: 0`, {
             fontSize: '14px',
             fill: config.colorHangar
         }).setOrigin(0.5);
@@ -45,16 +55,16 @@ export class Portadrones extends Phaser.GameObjects.Container {
         if (this.tipoEquipo === 'AEREO') {
             return {
                 textura: 'portadrones_aereo',
-                escala: 1.8,
-                offsetY: -80,
+                escala: 0.2,
+                offsetY: -15,
                 colorHangar: '#00ccff',
                 tieneSombra: true
             };
         } else {
             return {
                 textura: 'portadrones_naval',
-                escala: 1.5,
-                offsetY: -70,
+                escala: 0.15,
+                offsetY: -10,
                 colorHangar: '#00ffaa',
                 tieneSombra: false
             };
@@ -70,40 +80,142 @@ export class Portadrones extends Phaser.GameObjects.Container {
     }
 
  
-    actualizar(data) {
-       
+    actualizarDesdeServidor(data) {
+        // Actualizar ownership si cambia (raro pero posible)
+        if (data.idJugador !== undefined || data.jugadorId !== undefined) {
+            this.idJugador = data.idJugador || data.jugadorId || this.idJugador;
+            this.jugadorId = this.idJugador;
+        }
+        
+        // Actualizar profundidad según altitud
+        this.setDepth(200 + (data.z || 0));
+        
         this.scene.tweens.add({
             targets: this,
             x: data.x,
             y: data.y,
-            angulp: data.angulo,
-            duracion: 100 
+            angle: data.angulo,
+            duration: 100 
         });
 
         
-        this.labelHangar.setText(`HANGAR: ${data.dronesEnHangar || 0}`);
-        this.dibujarBarras(data.vida, data.escudo);
+        // Backend envía listaDrones array - mostrar su tamaño
+        const dronesCount = data.listaDrones ? data.listaDrones.length : 0;
+        this.labelHangar.setText(`DRONES EN PORTADRONES: ${dronesCount}`);
+        this.dibujarBarras(data.vida);
     }
 
-    dibujarBarras(vida, escudo) {
+    dibujarBarras(vida) {
         this.barras.clear();
+        
+        // Backend usa escala de game ticks (e.g., 1000 = 100%)
+        // Detectamos el max valor y calculamos porcentaje relativo
+        if (this.vidaMax === null || vida > this.vidaMax) {
+            this.vidaMax = vida;
+        }
+        
+        // Calcular porcentaje basado en la escala del backend
+        const vidaPorcentaje = this.vidaMax > 0 ? Math.max(0, vida / this.vidaMax) : 0;
+        
         const ancho = 120;
         const alto = 10;
         const x = -60;
         const y = -65;
 
-       // BARRA DE VIDA 
-        this.barras.fillStyle(0xff0000);
+        // BARRA DE VIDA 
+        this.barras.fillStyle(0xff0000); // Fondo rojo
         this.barras.fillRect(x, y, ancho, alto);
-        this.barras.fillStyle(0x00ff00);
-        this.barras.fillRect(x, y, (vida / 100) * ancho, alto);
-
-   
+        this.barras.fillStyle(0x00ff00); // Vida verde (proporcional a escala del backend)
+        this.barras.fillRect(x, y, vidaPorcentaje * ancho, alto);
     }
 
     destruir() {
-      
         console.log(`Portadrones ${this.id} fuera de combate.`);
+
+        // Crear explosión más grande para el portadrones
+        const explosion = this.scene.add.sprite(this.x, this.y, 'proyectil_bomba');
+        explosion.setScale(3.0); // Más grande que la explosión de dron
+        explosion.setTint(0xff3300); // Rojo/naranja intenso
+        explosion.setDepth(10000); // Encima de todo
+
+        // Animar la explosión con los frames de fuego
+        let frame = 0;
+        const explosionTimer = this.scene.time.addEvent({
+            delay: 50,
+            repeat: 19,
+            callback: () => {
+                if (frame < 20 && explosion.active) {
+                    explosion.setTexture('fire' + String(frame).padStart(2, '0'));
+                    frame++;
+                } else {
+                    if (explosion.active) {
+                        explosion.destroy();
+                    }
+                }
+            }
+        });
+
+        // Tween de desvanecimiento con más duración
+        this.scene.tweens.add({
+            targets: explosion,
+            alpha: 0,
+            scale: 4.0,
+            duration: 1500,
+            onComplete: () => {
+                if (explosion.active) {
+                    explosion.destroy();
+                }
+            }
+        });
+
+        // Destruir el portadrones
         this.destroy();
+    }
+
+    mostrarDano(cantidad) {
+        // Flash red tint
+        this.setTint(0xff0000);
+        this.scene.time.delayedCall(200, () => {
+            this.clearTint();
+        });
+        
+        // Spawn damage text
+        const damageText = this.scene.add.text(this.x, this.y - 60, `-${cantidad}`, {
+            fontSize: '32px',
+            color: '#ff0000',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 5
+        }).setOrigin(0.5).setDepth(200);
+        
+        // Animate damage text floating up
+        this.scene.tweens.add({
+            targets: damageText,
+            y: damageText.y - 70,
+            alpha: 0,
+            duration: 1200,
+            onComplete: () => damageText.destroy()
+        });
+        
+        // Show explosion effect (larger for portadrones)
+        const explosion = this.scene.add.sprite(this.x, this.y, 'fire00')
+            .setScale(1.5)
+            .setDepth(150)
+            .setAlpha(0.8);
+        
+        this.scene.tweens.add({
+            targets: explosion,
+            alpha: 0,
+            scale: 3.0,
+            duration: 800,
+            onComplete: () => explosion.destroy()
+        });
+        
+        // Screen shake effect for large damage
+        if (cantidad >= 50) {
+            this.scene.cameras.main.shake(300, 0.005);
+        }
+        
+        console.log(`[Portadron ${this.id}] Mostrando daño: ${cantidad}`);
     }
 }

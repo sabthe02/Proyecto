@@ -89,7 +89,7 @@ public class Fachada implements iFachada {
             nuevaSesion.iniciarSesion();
         }
     }
-// Sabine: puse esto porque no me estaba andando el matcheo de los equipoos
+
     private void asegurarEquiposOpuestos(List<Jugador> jugadoresParaSesion) {
         if (jugadoresParaSesion == null || jugadoresParaSesion.size() < 2) {
             return;
@@ -103,15 +103,19 @@ public class Fachada implements iFachada {
 
         String team1 = normalizarTeam(jugador1.getTeam());
         String team2 = normalizarTeam(jugador2.getTeam());
+        
+        System.out.println("asegurarEquiposOpuestos - Antes: Jugador1=" + jugador1.getNickName() + " team=" + team1 + ", Jugador2=" + jugador2.getNickName() + " team=" + team2);
 
         if (("AEREO".equals(team1) && "NAVAL".equals(team2)) || ("NAVAL".equals(team1) && "AEREO".equals(team2))) {
+            System.out.println("Equipos ya son opuestos, no se requiere normalizacion");
             return;
         }
 
         jugador1.setTeam("AEREO");
         jugador2.setTeam("NAVAL");
-        System.out.println("Equipos normalizados para sesion: " + jugador1.getNickName() + "=AEREO, " + jugador2.getNickName() + "=NAVAL");
+        System.out.println("Equipos normalizados - Despues: " + jugador1.getNickName() + "=AEREO, " + jugador2.getNickName() + "=NAVAL");
     }
+
 
     private String normalizarTeam(String team) {
         if (team == null) {
@@ -170,11 +174,7 @@ public class Fachada implements iFachada {
 
     public boolean accion_mover(Jugador jugador, int idElemento, float x, float y, float z, int angulo) throws AccionInvalidaException {
         String sesionId = jugadorEnSesion.get(jugador.getId());
-// Sabine metio mano acá para poder testear el Frontend, antes no se validaba que 
-// el jugador estuviera en una sesion activa, lo cual hacia que no se aplicaran los movimientos. 
-// Ahora se valida que el jugador tenga una sesion activa y que el elemento a mover exista en 
-// la sesion. Si alguna de estas condiciones no se cumple, se lanza una AccionInvalidaException 
-// con un mensaje descriptivo del error. SI algo está mal, corregir por favor!
+
         if(sesionId == null) {
             throw new AccionInvalidaException("El jugador no esta en una sesion activa.");
         }
@@ -196,9 +196,11 @@ public class Fachada implements iFachada {
 
         System.out.println("Movimiento aplicado en servidor -> sesion=" + sesionId + " idElemento=" + idElemento + " x=" + x + " y=" + y + " z=" + z + " angulo=" + angulo);
 
-        Evento_Movimiento evento = new Evento_Movimiento(elemento, x, y, angulo);
+        // Enviar estado completo del juego (todos los elementos) para que todos los jugadores vean todo
         List<Evento> acciones = new java.util.ArrayList<>();
-        acciones.add(evento);
+        sesion.getElementosEnJuego().forEach((id, elem) -> {
+            acciones.add(new Evento_Movimiento(elem, elem.getPosicionX(), elem.getPosicionY(), elem.getAngulo()));
+        });
 
         List<Jugador> jugadoresSesion = new java.util.ArrayList<>();
         sesion.getElementosJugadores().forEach((jugadorSesion, portaDron) -> {
@@ -210,16 +212,69 @@ public class Fachada implements iFachada {
         return actualizado;
     }
 
+    // Accion para desplegar un dron desde el portadron
+    public boolean accion_desplegar(Jugador jugador, int idPortaDron) throws AccionInvalidaException {
+        String sesionId = jugadorEnSesion.get(jugador.getId());
+
+        if (sesionId == null) {
+            throw new AccionInvalidaException("El jugador no esta en una sesion activa.");
+        }
+
+        SesionJuego sesion = sesionesActivas.get(sesionId);
+        if (sesion == null) {
+            throw new AccionInvalidaException("La sesion de juego no existe.");
+        }
+
+        // Obtener el portadron
+        Elemento elemento = sesion.getElementosEnJuego().get(idPortaDron);
+        if (!(elemento instanceof PortaDron)) {
+            throw new AccionInvalidaException("El elemento no es un portadron valido.");
+        }
+
+        PortaDron portaDron = (PortaDron) elemento;
+        if (portaDron.getJugador() == null || !portaDron.getJugador().getId().equals(jugador.getId())) {
+            throw new AccionInvalidaException("El portadron no pertenece al jugador.");
+        }
+
+        // Verificar que hay drones disponibles
+        int dronesDisponibles = portaDron.cantidadDronesDisponibles();
+        if (dronesDisponibles <= 0) {
+            return false;
+        }
+
+        // Desplegar el dron
+        Evento_DesplegarDron eventoDesplegar = new Evento_DesplegarDron(portaDron);
+        Dron dronDesplegado = portaDron.desplegarDron(eventoDesplegar);
+
+        if (dronDesplegado == null) {
+            return false;
+        }
+
+        System.out.println("Dron desplegado -> sesion=" + sesionId + " idPortaDron=" + idPortaDron + " idDron=" + dronDesplegado.getId());
+
+        // Enviar actualizacion a todos los jugadores
+        List<Evento> acciones = new java.util.ArrayList<>();
+        sesion.getElementosEnJuego().forEach((id, elem) -> {
+            acciones.add(new Evento_Movimiento(elem, elem.getPosicionX(), elem.getPosicionY(), elem.getAngulo()));
+        });
+
+        List<Jugador> jugadoresSesion = new java.util.ArrayList<>();
+        sesion.getElementosJugadores().forEach((jugadorSesion, portaDronSesion) -> {
+            jugadoresSesion.add(jugadorSesion);
+        });
+
+        boolean actualizado = EnviarActualizaciones(jugadoresSesion, acciones);
+        System.out.println("ACTUALIZAR_PARTIDA enviado tras despliegue=" + actualizado + " jugadores=" + jugadoresSesion.size() + " acciones=" + acciones.size());
+        return actualizado;
+    }
+
     public boolean accion_disparar(Jugador jugador, int idElemento) throws AccionInvalidaException {
         String sesionId = jugadorEnSesion.get(jugador.getId());
 
         if(sesionId == null) {
             throw new AccionInvalidaException("El jugador no esta en una sesion activa.");
         }
-//Sabine metio mano acá para poder testear el Frontend.
-// Antes no se validaba que el jugador estuviera en una sesion activa, 
-// lo cual hacia que no se aplicaran los disparos. Hay que cambiar el Thread.sleep(30) que esta mas abajo por un timer 
-// Es una simulación esto, luego reemplazar con encolarlo y sea la sesion la que se encargue de procesar el movimiento y el disparo.
+
         SesionJuego sesion = sesionesActivas.get(sesionId);
         if (sesion == null) {
             throw new AccionInvalidaException("La sesion de juego no existe.");
@@ -270,10 +325,32 @@ public class Fachada implements iFachada {
         if (municionDisponible instanceof Bomba) {
             Bomba bomba = (Bomba) municionDisponible;
             new Thread(() -> {
-                try {
-                    Thread.sleep(400);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
+                long tiempoInicio = System.currentTimeMillis();
+                // inventé esto porque no vi nada hecho, por fa borrar si no aplica
+                long duracionCaidaMs = 3000;
+
+                while (System.currentTimeMillis() - tiempoInicio < duracionCaidaMs && bomba.getEstado() == EstadoElemento.ACTIVO) {
+                    float progreso = (System.currentTimeMillis() - tiempoInicio) / (float) duracionCaidaMs;
+                    bomba.setPosicionZ(bomba.MAX_ALTURA * (1 - progreso));
+
+                    Elemento objetivo = buscarObjetivoImpactado(bomba, sesion, 50f);
+                    if (objetivo != null) {
+                        aplicarDano(objetivo, bomba, jugadoresSesion);
+                        List<Evento> finBomba = new java.util.ArrayList<>();
+                        finBomba.add(new Evento_Disparo(bomba));
+                        EnviarActualizaciones(jugadoresSesion, finBomba);
+                        return;
+                    }
+
+                    List<Evento> tickAcciones = new java.util.ArrayList<>();
+                    tickAcciones.add(new Evento_Disparo(bomba));
+                    EnviarActualizaciones(jugadoresSesion, tickAcciones);
+
+                    try {
+                        Thread.sleep(30);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
                 }
 
                 bomba.setEstado(EstadoElemento.DESTRUIDO);
@@ -310,6 +387,15 @@ public class Fachada implements iFachada {
 
                     misil.setPosicionX(inicioX);
                     misil.setPosicionY(inicioY);
+                    // misil.setPosicionZ se mantiene igual porque el misil vuela a la altura del dron que lo disparó
+                    Elemento objetivo = buscarObjetivoImpactado(misil, sesion, 40f);
+                    if (objetivo != null) {
+                        aplicarDano(objetivo, misil, jugadoresSesion);
+                        List<Evento> finMisil = new java.util.ArrayList<>();
+                        finMisil.add(new Evento_Disparo(misil));
+                        EnviarActualizaciones(jugadoresSesion, finMisil);
+                        return;
+                    }
 
                     List<Evento> tickAcciones = new java.util.ArrayList<>();
                     tickAcciones.add(new Evento_Disparo(misil));
@@ -319,7 +405,7 @@ public class Fachada implements iFachada {
                         Thread.sleep(30);
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
-                        break;
+                        return;
                     }
                 }
 
@@ -357,7 +443,7 @@ public class Fachada implements iFachada {
 
     @Override
     public boolean EnviarInicioPartida(List<PortaDron> portaDrones, Mapa mapa) {
-        //Sabine metió mano acá, si algo está mal, por fa corregir.
+
         EscenarioInicialDTO escenarioInicial = new EscenarioInicialDTO();
 
         for (PortaDron portaDron : portaDrones) {
@@ -407,7 +493,115 @@ public class Fachada implements iFachada {
 
     @Override
     public void EnviarFinPartida(String ganador) {
-        return handler.enviarFinPartida(ganador);
+        // Implementar enviar fin partida cuando iHandler lo soporte
+    }
+
+    private boolean detectarColision(Municion proyectil, Elemento objetivo, float radioColision) {
+        //hecho esto porque no vi nada hecho, por fa borrar si no aplica
+        if (objetivo == null) {
+            return false;
+        }
+        if (proyectil == null) {
+            return false;
+        }
+        if (objetivo.getEstado() != EstadoElemento.ACTIVO) {
+            return false;
+        }
+
+        float dx = proyectil.getPosicionX() - objetivo.getPosicionX();
+        float dy = proyectil.getPosicionY() - objetivo.getPosicionY();
+        float distancia = (float) Math.sqrt(dx * dx + dy * dy);
+
+        return distancia <= radioColision;
+    }
+
+    private void aplicarDano(Elemento objetivo, Municion proyectil, List<Jugador> jugadoresSesion) {
+        if (objetivo == null) {
+            return;
+        }
+        if (proyectil == null) {
+            return;
+        }
+
+        int danoInfligido = 0;
+        String claseProyectil = "";
+
+        if (proyectil instanceof Misil) {
+            danoInfligido = 50;
+            claseProyectil = "MISIL";
+        }
+        if (proyectil instanceof Bomba) {
+            danoInfligido = 100;
+            claseProyectil = "BOMBA";
+        }
+
+        int vidaActual = objetivo.getVida();
+        int vidaNueva = vidaActual - danoInfligido;
+        if (vidaNueva < 0) {
+            vidaNueva = 0;
+        }
+
+        objetivo.setVida(vidaNueva);
+
+        boolean estaDestruido = false;
+        if (vidaNueva <= 0) {
+            estaDestruido = true;
+            objetivo.setEstado(EstadoElemento.DESTRUIDO);
+        }
+
+        proyectil.setEstado(EstadoElemento.DESTRUIDO);
+
+        Evento_AplicarDano eventoDano = new Evento_AplicarDano(objetivo, danoInfligido, vidaNueva, estaDestruido, claseProyectil);
+        List<Evento> eventos = new java.util.ArrayList<>();
+        eventos.add(eventoDano);
+        EnviarActualizaciones(jugadoresSesion, eventos);
+
+        System.out.println("Daño aplicado: objetivo=" + objetivo.getId() + " vida=" + vidaNueva + "/" + vidaActual + " destruido=" + estaDestruido);
+    }
+
+    private Elemento buscarObjetivoImpactado(Municion proyectil, SesionJuego sesion, float radioColision) {
+        if (proyectil == null) {
+            return null;
+        }
+        if (sesion == null) {
+            return null;
+        }
+
+        Jugador disparador = proyectil.getJugador();
+        if (disparador == null) {
+            return null;
+        }
+
+        Map<Integer, Elemento> elementos = sesion.getElementosEnJuego();
+        Elemento objetivoEncontrado = null;
+
+        for (Elemento elemento : elementos.values()) {
+            if (elemento == null) {
+                continue;
+            }
+            if (elemento.getId() == proyectil.getId()) {
+                continue;
+            }
+            if (elemento instanceof Municion) {
+                continue;
+            }
+
+            Jugador propietario = elemento.getJugador();
+            if (propietario == null) {
+                continue;
+            }
+            if (propietario.getId().equals(disparador.getId())) {
+                continue;
+            }
+
+            boolean hayColision = detectarColision(proyectil, elemento, radioColision);
+            if (hayColision) {
+                objetivoEncontrado = elemento;
+                return objetivoEncontrado;
+            }
+        }
+
+        return objetivoEncontrado;
     }
 
 }

@@ -59,20 +59,24 @@ public class PortaDron extends Elemento {
         this.setAngulo(intencion.getNuevoAngulo());
     }
 
+    // Desplegar un dron desde el portadron
+    // Busca el primer dron INACTIVO y lo activa
     public Dron desplegarDron(Evento_DesplegarDron eventoDesplegarDron) {
-        boolean puedeDesplegar = false;
-        Dron dron = null;
-        int i = 0;
-        while (!puedeDesplegar || drones.size() <= i) {
-            if (((PortaDron) drones).getDron(i).getEstado() == EstadoElemento.INACTIVO) {
-                dron = ((PortaDron) drones).getDron(i);
+        Dron dronDesplegado = null;
+        
+        // Buscar el primer dron inactivo disponible
+        for (int i = 0; i < drones.size(); i++) {
+            Dron dron = drones.get(i);
+            if (dron.getEstado() == EstadoElemento.INACTIVO) {
+                // Activar el dron y desplegarlo
                 dron.setEstado(EstadoElemento.ACTIVO);
-                puedeDesplegar = true;
+                dronDesplegado = dron;
+                // Salir del bucle una vez encontrado
+                i = drones.size();
             }
-            i++;
-
         }
-        return dron;
+        
+        return dronDesplegado;
     }
 
     public int cantidadDronesDestruidos() {

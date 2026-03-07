@@ -32,7 +32,7 @@ public class SesionJuego extends GameLoop {
         accionesPendientesProcesar = new java.util.ArrayList<Evento>();
     }
 
-    // Sabine: traté de corregirla, chequear que esté bien, por fa.
+  
     private PortaDron crearPortaDronParaJugador(Jugador jugador) {
         TipoElemento tipoJugador = obtenerTipoElementoJugador(jugador);
         return new PortaDron(0, 0f, 0f, 0f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0, tipoJugador, jugador);
@@ -55,10 +55,12 @@ public class SesionJuego extends GameLoop {
         // Recorro la lista de jugadores y les creo los portadrones y drones.
         for (int h = 0; h < elementosJugadores.size(); h++) {
             Jugador jugador = (Jugador) elementosJugadores.keySet().toArray()[h];
+            System.out.println("iniciarSesion - Jugador: " + jugador.getNickName() + ", Team: " + jugador.getTeam());
             TipoElemento tipoJugador = obtenerTipoElementoJugador(jugador);
+            System.out.println("Tipo asignado: " + tipoJugador);
 
             if (tipoJugador == TipoElemento.AEREO) {
-                PortaDron p = new PortaDron(elementosEnJuego.size(), 0f, 0f, 99f, 0, 100, EstadoElemento.ACTIVO, 0, 0,
+                PortaDron p = new PortaDron(elementosEnJuego.size(), 500f, 500f, 99f, 0, 100, EstadoElemento.ACTIVO, 0, 0,
                         0,
                         TipoElemento.AEREO, jugador);
                 elementosEnJuego.put(p.getId(), p);
@@ -66,7 +68,15 @@ public class SesionJuego extends GameLoop {
 
                 int j = 0;
                 while (j < 12) {
-                    Dron d = new Dron(elementosEnJuego.size(), 0f, 0f, 100f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0,
+                    // Posicionar drones en círculo alrededor del portadrón AEREO
+                    float angulo = (float)(j * 2 * Math.PI / 12);
+                    float radioCirculo = 200f;
+                    float dronX = 500f + (float)(Math.cos(angulo) * radioCirculo);
+                    float dronY = 500f + (float)(Math.sin(angulo) * radioCirculo);
+                    
+                    // Drones deben comenzar inactivos (dentro del portadron)
+                    // Se despliegan con la accion DESPLEGAR
+                    Dron d = new Dron(elementosEnJuego.size(), dronX, dronY, 100f, 0, 100, EstadoElemento.INACTIVO, 0, 0, 0,
                             TipoElemento.AEREO, jugador);
                     elementosEnJuego.put(d.getId(), d);
                     d.cargarMunicionInicial(elementosEnJuego);
@@ -75,14 +85,22 @@ public class SesionJuego extends GameLoop {
                     j++;
                 }
             } else {
-                PortaDron p = new PortaDron(elementosEnJuego.size(), 0f, 0f, 0f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0,
+                PortaDron p = new PortaDron(elementosEnJuego.size(), 3500f, 3500f, 0f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0,
                         TipoElemento.NAVAL, jugador);
                 elementosEnJuego.put(p.getId(), p);
                 elementosJugadores.put(jugador, p);
 
                 int j = 0;
                 while (j < 6) {
-                    Dron d = new Dron(elementosEnJuego.size(), 0f, 0f, 1f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0,
+                    // Posicionar drones en círculo alrededor del portadrón NAVAL
+                    float angulo = (float)(j * 2 * Math.PI / 6);
+                    float radioCirculo = 200f;
+                    float dronX = 3500f + (float)(Math.cos(angulo) * radioCirculo);
+                    float dronY = 3500f + (float)(Math.sin(angulo) * radioCirculo);
+                    
+                    // Drones deben comenzar inactivos (dentro del portadron)
+                    // Se despliegan con la accion DESPLEGAR
+                    Dron d = new Dron(elementosEnJuego.size(), dronX, dronY, 1f, 0, 100, EstadoElemento.INACTIVO, 0, 0, 0,
                             TipoElemento.NAVAL, jugador);
                     elementosEnJuego.put(d.getId(), d);
                     d.cargarMunicionInicial(elementosEnJuego);
@@ -99,6 +117,28 @@ public class SesionJuego extends GameLoop {
         });
 
         fachada.EnviarInicioPartida(portaDrones, mapa);
+        
+        // Enviar estado inicial del juego (elementos creados)
+        List<Jugador> jugadores = new java.util.ArrayList<>(elementosJugadores.keySet());
+        List<Evento> estadoInicial = new java.util.ArrayList<>();
+        
+        System.out.println("=== ESTADO INICIAL DEL JUEGO ===");
+        System.out.println("Total elementos en juego: " + elementosEnJuego.size());
+        
+        // Crear eventos de movimiento para todos los elementos creados
+        elementosEnJuego.forEach((id, elemento) -> {
+            System.out.println("  - Elemento id=" + id + " clase=" + elemento.getClass().getSimpleName() + 
+                             " tipo=" + (elemento instanceof PortaDron ? ((PortaDron)elemento).getTipo() : 
+                                        elemento instanceof Dron ? ((Dron)elemento).getTipo() : "N/A") +
+                             " pos=(" + elemento.getPosicionX() + "," + elemento.getPosicionY() + "," + elemento.getPosicionZ() + ")" +
+                             " estado=" + elemento.getEstado());
+            estadoInicial.add(new Evento_Movimiento(elemento, elemento.getPosicionX(), elemento.getPosicionY(), elemento.getAngulo()));
+        });
+        
+        System.out.println("Enviando ACTUALIZAR_PARTIDA con " + estadoInicial.size() + " eventos");
+        boolean enviado = fachada.EnviarActualizaciones(jugadores, estadoInicial);
+        System.out.println("ACTUALIZAR_PARTIDA enviado=" + enviado);
+        
         // startGameLoop();
     }
 
@@ -202,7 +242,7 @@ public class SesionJuego extends GameLoop {
             case "Evento_Movimiento":
                 if (accion.estaHabilitado()) {
                     Evento_Movimiento eventoMovimiento = (Evento_Movimiento) accion;
-                    Dron dron = (Dron) elementosEnJuego.get(accion.getIdElemento());
+                    Dron dron = (Dron) elementosEnJuego.get(accion.getIdElemento());// Y si se mueve el portadrones??
                     dron.moverse(eventoMovimiento);
                 }
                 this.accionesPendientesEnviar.add(accion);
@@ -290,17 +330,10 @@ public class SesionJuego extends GameLoop {
         return this.ganadorID;
     }
 
-    /// Agregado para que no dé más error, si no no puedo probar front
-    @Override
-    protected void update(long tiempoTranscurrido) {
-        // TODO Auto-generated method stub
-
-    }
-
     @Override
     protected void update(long deltaTime) {
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'update'");
+        
     }
 
 }

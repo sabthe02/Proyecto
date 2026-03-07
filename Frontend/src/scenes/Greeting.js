@@ -1,3 +1,5 @@
+import { NetworkManager } from './NetworkManager.js';
+
 export class Greeting extends Phaser.Scene {
 
     constructor() {
@@ -204,91 +206,81 @@ export class Greeting extends Phaser.Scene {
         }).setScrollFactor(0);
 
 
-        if (!window.gameSocket) {
-            window.gameSocket = new WebSocket("ws://localhost:8080/ws");
-        }
-        this.socket = window.gameSocket;
+        // Inicializar NetworkManager
+        this.network = new NetworkManager(this);
+        this.socket = this.network.socket;
 
-        this.socket.onopen = () => {
-            console.log("WebSocket conectado");
-        };
-
-        this.socket.onerror = (err) => {
-            console.error('WebSocket error', err);
-        };
-
-        this.socket.onclose = (ev) => {
-            console.warn('WebSocket cerrado', ev);
-        };
-
-
-        this.socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-
-            console.log('Web Socket al mandar mensaje:', data);
+        // Listen to events emitted by NetworkManager instead of overwriting socket handlers
+        this.events.on('JUGADOR_CREADO', (data) => {
+            console.log('Registro exitoso:', data);
             this.pendingRegistration = false;
-
-            let tipo = '';
-            if (data.tipo) {
-                tipo = String(data.tipo);
+            if (data.nickname) {
+                sessionStorage.setItem('nickname', data.nickname);
             }
-
-            // Solo navegar a GameChoice si el mensaje indica un registro/login exitoso o paso exitoso al lobby
-            if (tipo === 'JUGADOR_CREADO' || tipo === 'LOGIN_EXITOSO' || tipo === 'PASAR_LOBBY_EXITOSO') {
-                console.log('Registro/login exitoso:', data);
-                // guardar el nombre localmente para poder recuperarlo más adelante
-                if (data.nickname) {
-                    sessionStorage.setItem('nickname', data.nickname);
-                }
-                if (data.id) {
-                    sessionStorage.setItem('playerId', data.id);
-                }
-                if (this.statusText) 
-                    {
-                        this.statusText.setText('Registro OK — entrando');
-                    }
-                this.scene.start('GameChoice');
-                return;
+            if (data.id) {
+                sessionStorage.setItem('playerId', data.id);
             }
-
-            // Manejar errores de registro/login y otros errores relacionados
-            if (tipo === 'REGISTRO_FALLIDO' || tipo.endsWith('_FALLIDO') || tipo === 'ERROR') {
-                console.error('Registro fallido desde servidor:', data);
-                const msg = data.mensaje || 'Registro fallido';
-          
-                try {
-                    if (this.formContainer && this.formContainer.node) {
-                        const domErr = this.formContainer.node.querySelector('#error-msg');
-                        if (domErr) {
-                            domErr.textContent = msg;
-                        }
-                        const inputEl = this.formContainer.node.querySelector('#nickname');
-                        if (inputEl) {
-                            inputEl.style.borderColor = '#ff6b6b';
-                            inputEl.style.boxShadow = '0 0 6px rgba(255,107,107,0.6)';
-                        }
-                    }
-                } catch (e) { 
-                    console.warn('No se pudo establecer el mensaje de error DOM:', e); 
-                }
-
-                if (this.statusText) {
-                    this.statusText.setText('Error al registrar');
-                }
-
-                if (this.registroBtn) {
-                    this.registroBtn.disabled = false;
-                }
-                if (this.loginBtn) {
-                    this.loginBtn.disabled = false;
-                }
-
-                return;
+            if (this.statusText) {
+                this.statusText.setText('Registro OK — entrando');
             }
+            this.scene.start('GameChoice');
+        });
 
-            // Mensajes no manejados específicamente
-            console.log('Mensaje no manejado por Greeting:', tipo, data);
-        };
+        this.events.on('LOGIN_EXITOSO', (data) => {
+            console.log('Login exitoso:', data);
+            this.pendingRegistration = false;
+            if (data.nickname) {
+                sessionStorage.setItem('nickname', data.nickname);
+            }
+            if (data.id) {
+                sessionStorage.setItem('playerId', data.id);
+            }
+            if (this.statusText) {
+                this.statusText.setText('Login OK — entrando');
+            }
+            this.scene.start('GameChoice');
+        });
+
+        this.events.on('REGISTRO_FALLIDO', (data) => {
+            console.error('Registro fallido:', data);
+            this.handleError(data.mensaje || 'Registro fallido');
+        });
+
+        this.events.on('LOGIN_FALLIDO', (data) => {
+            console.error('Login fallido:', data);
+            this.handleError(data.mensaje || 'Login fallido');
+        });
+    }
+
+    handleError(mensaje) {
+        this.pendingRegistration = false;
+        
+        try {
+            if (this.formContainer && this.formContainer.node) {
+                const domErr = this.formContainer.node.querySelector('#error-msg');
+                if (domErr) {
+                    domErr.textContent = mensaje;
+                }
+                const inputEl = this.formContainer.node.querySelector('#nickname');
+                if (inputEl) {
+                    inputEl.style.borderColor = '#ff6b6b';
+                    inputEl.style.boxShadow = '0 0 6px rgba(255,107,107,0.6)';
+                }
+            }
+        } catch (e) { 
+            console.warn('No se pudo establecer el mensaje de error DOM:', e); 
+        }
+
+        if (this.statusText) {
+            this.statusText.setText('Error: ' + mensaje);
+        }
+
+        if (this.registroBtn) {
+            this.registroBtn.disabled = false;
+        }
+        if (this.loginBtn) {
+            this.loginBtn.disabled = false;
+        }
     }
 
      update() {
@@ -298,28 +290,25 @@ export class Greeting extends Phaser.Scene {
     irAGameChoice(tipo = 'REGISTRAR_JUGADOR') {
         const nickname = this.nicknameInput.value;
 
-        const mensaje = {
-            tipo: tipo,
-            nickname: nickname
-        };
-
-        console.log('irAGameChoice():', mensaje, 'socketState=', this.socket && this.socket.readyState);
+        console.log('irAGameChoice():', tipo, 'nickname=', nickname, 'socketState=', this.socket && this.socket.readyState);
 
         this.pendingRegistration = true;
 
-        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-            console.log('Socket abierto — enviando mensaje');
-            this.socket.send(JSON.stringify(mensaje));
-        } else if (this.socket) {
+        // Usar NetworkManager para enviar mensajes
+        const enviado = tipo === 'REGISTRAR_JUGADOR' 
+            ? this.network.registrarJugador(nickname, 'AEREO')
+            : this.network.loginJugador(nickname);
+        
+        if (!enviado && this.socket) {
             console.log('Socket no abierto — enviar al abrir');
             this.socket.addEventListener('open', () => {
                 console.log('Socket abrio — enviando mensaje');
-                this.socket.send(JSON.stringify(mensaje));
-            }, 
-            { once: 
-                true });
-        } else {
-            console.warn('WebSocket no inicializado');
+                if (tipo === 'REGISTRAR_JUGADOR') {
+                    this.network.registrarJugador(nickname, 'AEREO');
+                } else {
+                    this.network.loginJugador(nickname);
+                }
+            }, { once: true });
         }
     }
 }

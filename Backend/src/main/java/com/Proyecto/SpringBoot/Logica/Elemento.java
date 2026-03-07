@@ -1,6 +1,7 @@
 package com.Proyecto.SpringBoot.Logica;
 
 import com.Proyecto.SpringBoot.Modelos.Jugador;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public abstract class Elemento {
 
@@ -107,12 +108,20 @@ public abstract class Elemento {
         this.estado = estado;
     }
 
+    @JsonIgnore // para que el campo jugador no se incluya en la serialización JSON
     public Jugador getJugador() {
         return jugador;
     }
 
     public void setJugador(Jugador jugador) {
         this.jugador = jugador;
+    }
+    
+    public String getIdJugador() {
+        if (jugador != null) {
+            return jugador.getId(); // Para que se serialice el ID del jugador en lugar del objeto completo
+        }
+        return null;
     }
 
     public float getMAX_ALTURA() {

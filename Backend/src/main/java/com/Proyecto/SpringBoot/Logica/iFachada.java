@@ -7,4 +7,5 @@ import com.Proyecto.SpringBoot.Modelos.Jugador;
 public interface iFachada {
     boolean EnviarActualizaciones(List<Jugador> jugadores, List<Evento> acciones);
     boolean EnviarInicioPartida(List<PortaDron> portaDrones, Mapa mapa);
+    void EnviarFinPartida(String ganador);
 }

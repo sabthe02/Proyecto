@@ -27,7 +27,7 @@ public class DronTest {
                             j1);
         assertEquals(EstadoElemento.ACTIVO, dron.getEstado());
         assertEquals(TipoElemento.AEREO, dron.getTipo());
-        assertEquals(50, dron.getBateria());
+        assertEquals(1000, dron.getBateria());
         assertEquals(10, dron.getPosicionX());
         assertEquals(20, dron.getPosicionY());
         assertEquals(30, dron.getPosicionZ());
@@ -55,7 +55,7 @@ public class DronTest {
                             j1);
         assertEquals(EstadoElemento.ACTIVO, dron.getEstado());
         assertEquals(TipoElemento.NAVAL, dron.getTipo());
-        assertEquals(50, dron.getBateria());
+        assertEquals(1000, dron.getBateria());
         assertEquals(10, dron.getPosicionX());
         assertEquals(20, dron.getPosicionY());
         assertEquals(30, dron.getPosicionZ());

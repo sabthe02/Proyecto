@@ -7,26 +7,24 @@ import com.Proyecto.SpringBoot.Modelos.Jugador;
 public class PortaDron extends Elemento {
 
     List<Dron> drones;
-    TipoElemento tipo;    
+    TipoElemento tipo;
 
-
-    public PortaDron(int id, 
-                    Float posicionX, 
-                    Float posicionY, 
-                    float posicionZ, 
-                    Integer angulo, 
-                    Integer vida,
-                    EstadoElemento estado, 
-                    int cantidadMiniciones, 
-                    int cantidadUsada, 
-                    int bateria, 
-                    TipoElemento tipo, 
-                    Jugador jugador) {
-        super(id, posicionX, posicionY, posicionZ, angulo, vida, estado,    jugador);
+    public PortaDron(int id,
+            Float posicionX,
+            Float posicionY,
+            float posicionZ,
+            Integer angulo,
+            Integer vida,
+            EstadoElemento estado,
+            int cantidadMiniciones,
+            int cantidadUsada,
+            int bateria,
+            TipoElemento tipo,
+            Jugador jugador) {
+        super(id, posicionX, posicionY, posicionZ, angulo, vida, estado, jugador);
         drones = new java.util.ArrayList<Dron>();
         this.tipo = tipo;
     }
-
 
     public void AgregarDron(Dron dron) {
         drones.add(dron);
@@ -48,7 +46,59 @@ public class PortaDron extends Elemento {
         this.drones = drones;
     }
 
-    
+    public Dron getDron(int coor) {
+        return this.drones.get(coor);
+    }
+
+    public void moverse(Evento_Movimiento intencion) {
+        if (intencion == null) {
+            return;
+        }
+        this.setPosicionX(intencion.getNuevaPosX());
+        this.setPosicionY(intencion.getNuevaPosY());
+        this.setAngulo(intencion.getNuevoAngulo());
+    }
+
+    public Dron desplegarDron(Evento_DesplegarDron eventoDesplegarDron) {
+        boolean puedeDesplegar = false;
+        Dron dron = null;
+        int i = 0;
+        while (!puedeDesplegar || drones.size() <= i) {
+            if (((PortaDron) drones).getDron(i).getEstado() == EstadoElemento.INACTIVO) {
+                dron = ((PortaDron) drones).getDron(i);
+                dron.setEstado(EstadoElemento.ACTIVO);
+                puedeDesplegar = true;
+            }
+            i++;
+
+        }
+        return dron;
+    }
+
+    public int cantidadDronesDestruidos() {
+        int i = 0;
+        for (Dron dron : drones) {
+            if (dron.getEstado() == EstadoElemento.DESTRUIDO) {
+                i++;
+            }
+        }
+        return i;
+    }
+
+    public int cantidadDronesDisponibles() {
+        int i = 0;
+        for (Dron dron : drones) {
+            if (dron.getEstado() == EstadoElemento.INACTIVO) {
+                i++;
+            }
+        }
+        return i;
+    }
+
+    @Override
+    public void recibeImpacto(Evento_Movimiento intencion) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'recibeImpacto'");
+    }
+
 }
-
-

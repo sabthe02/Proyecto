@@ -10,23 +10,26 @@ public class Dron extends Elemento {
     int bateria;
     List<Municion> municiones;
     TipoElemento tipo;
+    public static final int MAX_BATERIA = 1000;
+    private int recargaPorTick = 1;
+    private long comenzandoCarga = 0;
 
-    public Dron(int id, 
-                Float posicionX, 
-                Float posicionY, 
-                float posicionZ, 
-                Integer angulo, 
-                Integer vida,
-                EstadoElemento estado, 
-                int cantidadMiniciones, 
-                int cantidadUsada, 
-                int bateria, 
-                TipoElemento tipo, 
-                Jugador jugador) {
+    public Dron(int id,
+            Float posicionX,
+            Float posicionY,
+            float posicionZ,
+            Integer angulo,
+            Integer vida,
+            EstadoElemento estado,
+            int cantidadMiniciones,
+            int cantidadUsada,
+            int bateria,
+            TipoElemento tipo,
+            Jugador jugador) {
         super(id, posicionX, posicionY, posicionZ, angulo, vida, estado, jugador);
 
         municiones = new java.util.ArrayList<Municion>();
-        this.bateria = bateria;
+        this.bateria = MAX_BATERIA;
         this.tipo = tipo;
 
     }
@@ -114,8 +117,121 @@ public class Dron extends Elemento {
         return bateria;
     }
 
+    public int getMAX_BATERIA() {
+        return MAX_BATERIA;
+    }
+
     public List<Municion> getMuniciones() {
         return municiones;
+    }
+
+    public void moverse(Evento_Movimiento intencion) {
+        Dron dron = (Dron) intencion.getElemento();
+        dron.setEstado(EstadoElemento.ACTIVO);
+        this.setPosicionX(intencion.getNuevaPosX());
+        this.setPosicionY(intencion.getNuevaPosY());
+        this.setAngulo(intencion.getNuevoAngulo());
+    }
+
+    public void consumirBateriaPorMovimiento() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'consumirBateriaPorMovimiento'");
+    }
+
+    public Elemento disparar(Evento_Disparo intencion) {
+
+        if (this.getTipo() == TipoElemento.AEREO) {
+
+            if(this.cantidadMunicionesDisponibles() <= 0) {
+                this.municiones.get(0).setUsada(true);
+                return this.municiones.get(0);
+            }
+
+        } else if (this.getTipo() == TipoElemento.NAVAL) {
+            
+            for (Municion municion : municiones) {
+                if (!municion.isUsada()) {
+                    municion.setUsada(true);
+                    return municion;
+                }
+            }
+            
+        }
+        return null;
+    }
+
+    private int generarId() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'generarId'");
+    }
+
+    public void recargar(Evento_Recarga intencion) {
+        if (this.estado != EstadoElemento.CARGANDO)
+            return;
+
+        this.bateria = Math.min(this.bateria + recargaPorTick, MAX_BATERIA);
+
+        if (this.bateria >= MAX_BATERIA) {
+            this.estado = EstadoElemento.INACTIVO;
+            intencion.deshabilitar();
+        }
+
+    }
+
+    public void descargaBateria() {
+        if (this.estado != EstadoElemento.ACTIVO)
+            return;
+
+        this.bateria = Math.min(this.bateria - recargaPorTick, 0);
+
+        if (this.bateria <= 0) {
+            this.estado = EstadoElemento.DESTRUIDO;
+        }
+
+    }
+
+    public void recargaMunicion(Evento_Recarga eventoRecarga) {
+        if (this.estado != EstadoElemento.CARGANDO)
+            return;
+        this.setComenzandoCarga(this.getComenzandoCarga() + 1);
+        if (this.getComenzandoCarga() >= 1000) {
+            for (Municion municion : municiones) {
+                if (municion.isUsada()) {
+                    municion.setUsada(false);
+                    if (municion instanceof Bomba) {
+                        ((Bomba) municion).reiniciarVelocidadInicio();
+                        ((Bomba) municion).setPosicionZ(Bomba.MAX_ALTURA);
+                        ((Bomba) municion).setEstado(EstadoElemento.INACTIVO);
+                    }
+                }
+            }
+            this.setComenzandoCarga(0); 
+            eventoRecarga.finalizarCarga();
+            eventoRecarga.deshabilitar();
+
+        }
+    }
+
+    public EstadoElemento getEstado() {
+        return estado;
+    }
+
+    public void setEstado(EstadoElemento estado) {
+        this.estado = estado;
+    }   
+
+    @Override
+    public void recibeImpacto(Evento_Movimiento intencion) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'recibeImpacto'");
+    }
+
+    public long getComenzandoCarga() {
+        return comenzandoCarga;
+    }
+
+    public void setComenzandoCarga(long comenzandoCarga) {
+        this.comenzandoCarga = comenzandoCarga;
     }
 
 }

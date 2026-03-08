@@ -15,10 +15,9 @@ int id;
     int angulo;
     int vida;
     String estado;
-
     int bateria;
-
     String tipo = "Aereo";
+    String clase = "DRON";
     String tipoMunicion = "BOMBA";
     int municionDisponible;
 
@@ -165,5 +164,10 @@ int id;
     public void setListaBombas(List<BombaDTO> listaBombas) {
         this.listaBombas = listaBombas;
     }
+
+    
+
+      public String getClase()
+        {return clase;}
 
 }

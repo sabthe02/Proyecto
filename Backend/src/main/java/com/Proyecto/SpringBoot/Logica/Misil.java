@@ -14,16 +14,16 @@ public class Misil extends Municion {
         distancia = 60F;
     }
 
-    public Misil(int id,
-            Float posicionX,
-            Float posicionY,
-            float posicionZ,
-            Integer angulo,
-            Integer vida,
-            EstadoElemento estado,
-            int velocidad,
-            float distancia,
-            EntidadJugador jugador) {
+    public Misil(int id, 
+                Float posicionX, 
+                Float posicionY, 
+                float posicionZ, 
+                Integer angulo, 
+                Integer vida,
+                EstadoElemento estado, 
+                int velocidad, 
+                float distancia, 
+                EntidadJugador jugador) {
         super(id, posicionX, posicionY, posicionZ, angulo, vida, estado, jugador);
         this.velocidad = 1;
         this.distancia = 60F;

@@ -84,6 +84,8 @@ public abstract class Elemento {
         return estado;
     }
 
+
+
     public void setPosicionX(Float posicionX) {
         this.posicionX = posicionX;
     }
@@ -108,7 +110,6 @@ public abstract class Elemento {
         this.estado = estado;
     }
 
-    @JsonIgnore // para que el campo jugador no se incluya en la serialización JSON
     public EntidadJugador getJugador() {
         return jugador;
     }
@@ -127,6 +128,8 @@ public abstract class Elemento {
     public float getMAX_ALTURA() {
         return MAX_ALTURA;
     }
+
+   
 
     public abstract void moverse(Evento_Movimiento intencion); 
 

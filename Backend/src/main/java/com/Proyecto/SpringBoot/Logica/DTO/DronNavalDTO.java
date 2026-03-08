@@ -16,9 +16,8 @@ public class DronNavalDTO {
     int angulo;
     int vida;
     String estado;
-
+    String clase = "DRON";
     int bateria;
-
     String tipo = "Naval";
     String tipoMunicion = "MISIL";
     int municionDisponible;
@@ -166,6 +165,10 @@ public class DronNavalDTO {
 
     public void setListaMisiles(List<MisilDTO> listaMisiles) {
         this.listaMisiles = listaMisiles;
+    }
+
+    public String getClase() {
+        return clase;
     }
 
 }

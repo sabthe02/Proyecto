@@ -11,6 +11,7 @@ public class BombaDTO {
 
     float radioExplosion;
     boolean usada;
+    String clase = "BOMBA";
 
     public BombaDTO() {
         }
@@ -111,4 +112,7 @@ public class BombaDTO {
             this.usada = usada;
         }
 
+
+        public String getClase()
+        {return clase;}
 }

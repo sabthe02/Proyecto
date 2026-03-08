@@ -14,7 +14,7 @@ public class MisilDTO {
     int velocidad;
     boolean usada;
 
-    public MisilDTO(int id, float x, float y, float z, int angulo, int vida, String estado, float alcance) {
+    public MisilDTO(int id, float x, float y, float z, int angulo, int vida, String estado, int velocidad, float alcance) {
         this.id = id;
         this.x = x;
         this.y = y;
@@ -23,7 +23,7 @@ public class MisilDTO {
         this.vida = vida;
         this.estado = estado;
         this.alcance = alcance;
-        this.velocidad = 0;
+        this.velocidad = velocidad;
         this.usada = false;
     }
 

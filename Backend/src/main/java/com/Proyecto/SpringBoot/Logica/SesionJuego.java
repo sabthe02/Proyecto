@@ -1,32 +1,31 @@
 package com.Proyecto.SpringBoot.Logica;
 
-import java.util.Dictionary;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import javax.sound.sampled.Port;
-
-import com.Proyecto.SpringBoot.Modelos.Jugador;
+import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
+import com.Proyecto.SpringBoot.Logica.Excepciones.PartidaException;
 
 public class SesionJuego extends GameLoop {
 
     private String idSesion;
-    private Map<Jugador, PortaDron> elementosJugadores;
+    private Map<EntidadJugador, PortaDron> elementosJugadores;
     private Map<Integer, Elemento> elementosEnJuego;
     private List<Evento> accionesPendientesEnviar;
     private List<Evento> accionesPendientesProcesar;
+    private List<EntidadJugador> jugadores;
     private Mapa mapa;
     private String ganadorID;
 
-    private iFachada fachada;
+    private iPartidaService notificadorPartida;
 
-    public SesionJuego(String idSesion, List<Jugador> jugadores, iFachada fachada) {
+    public SesionJuego(String idSesion, List<EntidadJugador> jugadores, iPartidaService notificadorPartida) {
         this.mapa = new Mapa();
         this.idSesion = idSesion;
-        this.fachada = fachada;
-        this.elementosJugadores = new java.util.Hashtable<Jugador, PortaDron>();
-        for (Jugador jugador : jugadores) {
+        this.notificadorPartida = notificadorPartida;
+        this.elementosJugadores = new java.util.Hashtable<EntidadJugador, PortaDron>();
+        this.jugadores = jugadores;
+        for (EntidadJugador jugador : jugadores) {
             this.elementosJugadores.put(jugador, crearPortaDronParaJugador(jugador));
         }
         elementosEnJuego = new java.util.Hashtable<Integer, Elemento>();
@@ -34,12 +33,12 @@ public class SesionJuego extends GameLoop {
         accionesPendientesProcesar = new java.util.ArrayList<Evento>();
     }
 
-    private PortaDron crearPortaDronParaJugador(Jugador jugador) {
+    private PortaDron crearPortaDronParaJugador(EntidadJugador jugador) {
         TipoElemento tipoJugador = obtenerTipoElementoJugador(jugador);
         return new PortaDron(0, 0f, 0f, 0f, 0, 100, EstadoElemento.ACTIVO, 0, 0, 0, tipoJugador, jugador);
     }
 
-    private TipoElemento obtenerTipoElementoJugador(Jugador jugador) {
+    private TipoElemento obtenerTipoElementoJugador(EntidadJugador jugador) {
         if (jugador == null || jugador.getTeam() == null) {
             return TipoElemento.NAVAL;
         }
@@ -55,7 +54,7 @@ public class SesionJuego extends GameLoop {
     public void iniciarSesion() {
         // Recorro la lista de jugadores y les creo los portadrones y drones.
         for (int h = 0; h < elementosJugadores.size(); h++) {
-            Jugador jugador = (Jugador) elementosJugadores.keySet().toArray()[h];
+            EntidadJugador jugador = (EntidadJugador) elementosJugadores.keySet().toArray()[h];
             System.out.println("iniciarSesion - Jugador: " + jugador.getNickName() + ", Team: " + jugador.getTeam());
             TipoElemento tipoJugador = obtenerTipoElementoJugador(jugador);
             System.out.println("Tipo asignado: " + tipoJugador);
@@ -121,10 +120,10 @@ public class SesionJuego extends GameLoop {
             portaDrones.add(portaDron);
         });
 
-        fachada.EnviarInicioPartida(portaDrones, mapa);
+        notificadorPartida.EnviarInicioPartida(portaDrones, mapa);
 
         // Enviar estado inicial del juego (elementos creados)
-        List<Jugador> jugadores = new java.util.ArrayList<>(elementosJugadores.keySet());
+        List<EntidadJugador> jugadores = new java.util.ArrayList<>(elementosJugadores.keySet());
         List<Evento> estadoInicial = new java.util.ArrayList<>();
 
         System.out.println("=== ESTADO INICIAL DEL JUEGO ===");
@@ -145,7 +144,7 @@ public class SesionJuego extends GameLoop {
         });
 
         System.out.println("Enviando ACTUALIZAR_PARTIDA con " + estadoInicial.size() + " eventos");
-        boolean enviado = fachada.EnviarActualizaciones(jugadores, estadoInicial);
+        boolean enviado = notificadorPartida.EnviarActualizaciones(jugadores, estadoInicial);
         System.out.println("ACTUALIZAR_PARTIDA enviado=" + enviado);
 
         // startGameLoop();
@@ -155,7 +154,7 @@ public class SesionJuego extends GameLoop {
         return idSesion;
     }
 
-    public Map<Jugador, PortaDron> getElementosJugadores() {
+    public Map<EntidadJugador, PortaDron> getElementosJugadores() {
         return elementosJugadores;
     }
 
@@ -169,6 +168,18 @@ public class SesionJuego extends GameLoop {
 
     public List<Evento> getAccionesPendientesProcesar() {
         return accionesPendientesProcesar;
+    }
+
+    public Elemento getElemento(int idElemento) throws PartidaException
+    {
+        Elemento el = elementosEnJuego.get(idElemento);
+
+        if(el == null)
+        {
+            throw new PartidaException("El elemento " + idElemento + " no existe en la partida.");
+        }
+
+        return el;
     }
 
     @Override
@@ -191,6 +202,13 @@ public class SesionJuego extends GameLoop {
     public boolean agregarEvento(Evento ev) {
         accionesPendientesProcesar.add(ev);
         return true;
+    }
+
+    @Override
+    protected void render()
+    {
+        notificadorPartida.EnviarActualizaciones(jugadores, accionesPendientesEnviar);
+        accionesPendientesEnviar.clear();
     }
 
     @Override
@@ -343,7 +361,7 @@ public class SesionJuego extends GameLoop {
             }
         }
         if (finalizo) {
-            for (Jugador jugador : elementosJugadores.keySet()) {
+            for (EntidadJugador jugador : elementosJugadores.keySet()) {
                 PortaDron portaDron = elementosJugadores.get(jugador);
                 if (portaDron.getEstado() != EstadoElemento.DESTRUIDO) {
                     setGanador(jugador.getId());

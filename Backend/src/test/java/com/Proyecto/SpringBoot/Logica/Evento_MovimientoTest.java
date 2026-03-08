@@ -4,13 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-import com.Proyecto.SpringBoot.Modelos.Jugador;
+import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 
 public class Evento_MovimientoTest {
     
     @Test
     void constructor_seteaCampos() {
-        Jugador j1 = new Jugador("1", "Nacho", "ACTIVO");
+        EntidadJugador j1 = new EntidadJugador("1", "Nacho", "ACTIVO");
         Dron elemento = new Dron(1, 
                             10f, 
                             20f,
@@ -32,7 +32,7 @@ public class Evento_MovimientoTest {
 
     @Test
     void setNuevaPosX_cambiaValor() {
-        Jugador j2 = new Jugador("2", "Nacho02", "ACTIVO");
+        EntidadJugador j2 = new EntidadJugador("2", "Nacho02", "ACTIVO");
         Dron elemento = new Dron(1, 
                             10f, 
                             20f,
@@ -52,7 +52,7 @@ public class Evento_MovimientoTest {
 
     @Test
     void setNuevaPosY_cambiaValor() {
-        Jugador j3 = new Jugador("3", "Nacho03", "ACTIVO");
+        EntidadJugador j3 = new EntidadJugador("3", "Nacho03", "ACTIVO");
         Dron elemento = new Dron(1, 
                             10f, 
                             20f,
@@ -72,7 +72,7 @@ public class Evento_MovimientoTest {
 
     @Test
     void setAngulo_cambiaValor() {
-        Jugador j4 = new Jugador("4", "Nacho04", "ACTIVO");
+        EntidadJugador j4 = new EntidadJugador("4", "Nacho04", "ACTIVO");
         Dron elemento = new Dron(1, 
                             10f, 
                             20f,
@@ -92,7 +92,7 @@ public class Evento_MovimientoTest {
 
     @Test
     void eventoMovimiento_aplicaMovimiento() {
-        Jugador j5 = new Jugador("5", "Nacho05", "ACTIVO");
+        EntidadJugador j5 = new EntidadJugador("5", "Nacho05", "ACTIVO");
         Dron elemento = new Dron(1, 
                             10f, 
                             20f,

@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-import com.Proyecto.SpringBoot.Modelos.Jugador;
+import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 
 public class Evento_RecibeImpactoTest {
     
@@ -16,7 +16,7 @@ public class Evento_RecibeImpactoTest {
 
     @Test
     public void testConstructor_conParametros() {
-        Jugador j1 = new Jugador("001", "Nacho", "ACTIVO");
+        EntidadJugador j1 = new EntidadJugador("001", "Nacho", "ACTIVO");
         Dron elemento = new Dron(1, 
                             10f, 
                             20f,
@@ -35,7 +35,7 @@ public class Evento_RecibeImpactoTest {
 
     @Test
     public void testSetIdElementoEmisor() {
-        Jugador j2 = new Jugador("002", "Nacho02", "ACTIVO");
+        EntidadJugador j2 = new EntidadJugador("002", "Nacho02", "ACTIVO");
         Dron elemento = new Dron(1, 
                             10f, 
                             20f,

@@ -5,13 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import org.junit.jupiter.api.Test;
 
-import com.Proyecto.SpringBoot.Modelos.Jugador;
+import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 
 public class MunicionTest {
     
     @Test
     void constructor_seteaCamposAereo() {
-        Jugador j1 = new Jugador("01", "Nacho", "ACTIVO");
+        EntidadJugador j1 = new EntidadJugador("01", "Nacho", "ACTIVO");
         Bomba bomba = new Bomba(1, j1);
         assertEquals(1, bomba.getId());
         assertEquals(100, bomba.getPeso());
@@ -20,7 +20,7 @@ public class MunicionTest {
     }
 
     void constructor_seteaCamposNaval() {
-        Jugador j1 = new Jugador("01", "Nacho", "ACTIVO");
+        EntidadJugador j1 = new EntidadJugador("01", "Nacho", "ACTIVO");
         Misil misil = new Misil(1, j1);
         assertEquals(1, misil.getId());
         assertEquals(1, misil.getVelocidad());
@@ -30,7 +30,7 @@ public class MunicionTest {
 
     @Test
     void setUsada_cambiaEstadoAereo() {
-        Jugador j2 = new Jugador("002", "Nacho02", "ACTIVO");
+        EntidadJugador j2 = new EntidadJugador("002", "Nacho02", "ACTIVO");
         Bomba bomba = new Bomba(1, j2);
         bomba.setUsada(true);
         assertEquals(true, bomba.isUsada());
@@ -38,7 +38,7 @@ public class MunicionTest {
 
     @Test
     void setUsada_cambiaEstadoNaval() {
-        Jugador j2 = new Jugador("002", "Nacho02", "ACTIVO");
+        EntidadJugador j2 = new EntidadJugador("002", "Nacho02", "ACTIVO");
         Misil misil = new Misil(1, j2);
         misil.setUsada(true);
         assertEquals(true, misil.isUsada());
@@ -46,7 +46,7 @@ public class MunicionTest {
 
     @Test
     void setPeso_cambioPeso() {
-        Jugador j3 = new Jugador("003", "Nacho03", "ACTIVO");
+        EntidadJugador j3 = new EntidadJugador("003", "Nacho03", "ACTIVO");
         Bomba bomba = new Bomba(1, j3);
         bomba.setPeso(150);
         assertEquals(150, bomba.getPeso());
@@ -54,7 +54,7 @@ public class MunicionTest {
 
     @Test
     void setRadioExplosion_cambioRadio() {
-        Jugador j4 = new Jugador("004", "Nacho04", "ACTIVO");
+        EntidadJugador j4 = new EntidadJugador("004", "Nacho04", "ACTIVO");
         Bomba bomba = new Bomba(1, j4);
         bomba.setRadioExplosion(10f);
         assertEquals(10f, bomba.getRadioExplosion());
@@ -62,7 +62,7 @@ public class MunicionTest {
 
     @Test
     void setVelocidad_cambioVelocidad() {
-        Jugador j5 = new Jugador("005", "Nacho05", "ACTIVO");
+        EntidadJugador j5 = new EntidadJugador("005", "Nacho05", "ACTIVO");
         Misil misil = new Misil(1, j5);
         misil.setVelocidad(5);
         assertEquals(5, misil.getVelocidad());
@@ -70,7 +70,7 @@ public class MunicionTest {
 
     @Test
     void setDistancia_cambioDistancia() {
-        Jugador j6 = new Jugador("006", "Nacho06", "ACTIVO");
+        EntidadJugador j6 = new EntidadJugador("006", "Nacho06", "ACTIVO");
         Misil misil = new Misil(1, j6);
         misil.setDistancia(10f);
         assertEquals(10f, misil.getDistancia());

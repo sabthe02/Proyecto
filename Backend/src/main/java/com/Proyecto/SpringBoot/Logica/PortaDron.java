@@ -2,7 +2,7 @@ package com.Proyecto.SpringBoot.Logica;
 
 import java.util.List;
 
-import com.Proyecto.SpringBoot.Modelos.Jugador;
+import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 
 public class PortaDron extends Elemento {
 
@@ -20,7 +20,7 @@ public class PortaDron extends Elemento {
             int cantidadUsada,
             int bateria,
             TipoElemento tipo,
-            Jugador jugador) {
+            EntidadJugador jugador) {
         super(id, posicionX, posicionY, posicionZ, angulo, vida, estado, jugador);
         drones = new java.util.ArrayList<Dron>();
         this.tipo = tipo;

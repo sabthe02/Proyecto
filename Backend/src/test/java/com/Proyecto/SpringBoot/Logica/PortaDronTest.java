@@ -4,13 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-import com.Proyecto.SpringBoot.Modelos.Jugador;
+import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 
 public class PortaDronTest {
 
     @Test
     public void testConstructor() {
-        Jugador j1 = new Jugador("001", "Nacho", "ACTIVO");
+        EntidadJugador j1 = new EntidadJugador("001", "Nacho", "ACTIVO");
         PortaDron portaDron = new PortaDron(001,
                 10f,
                 20f,
@@ -37,7 +37,7 @@ public class PortaDronTest {
 
     @Test
     public void testAgregarDron() {
-        Jugador j1 = new Jugador("001", "Nacho", "ACTIVO");
+        EntidadJugador j1 = new EntidadJugador("001", "Nacho", "ACTIVO");
         PortaDron portaDron = new PortaDron(001,
                 10f,
                 20f,
@@ -69,7 +69,7 @@ public class PortaDronTest {
 
     @Test
     public void testSetTipo() {
-        Jugador j1 = new Jugador("001", "Nacho", "ACTIVO");
+        EntidadJugador j1 = new EntidadJugador("001", "Nacho", "ACTIVO");
         PortaDron portaDron = new PortaDron(001,
                 10f,
                 20f,
@@ -88,7 +88,7 @@ public class PortaDronTest {
 
     @Test
     public void testRecibeImpactoAereo() {
-        Jugador j1 = new Jugador("001", "Nacho", "ACTIVO");
+        EntidadJugador j1 = new EntidadJugador("001", "Nacho", "ACTIVO");
         PortaDron portaDron = new PortaDron(001,
                 10f,
                 20f,
@@ -117,7 +117,7 @@ public class PortaDronTest {
 
     @Test
     public void testRecibeImpactoNaval() {
-        Jugador j1 = new Jugador("001", "Nacho", "ACTIVO");
+        EntidadJugador j1 = new EntidadJugador("001", "Nacho", "ACTIVO");
         PortaDron portaDron = new PortaDron(001,
                 10f,
                 20f,
@@ -146,7 +146,7 @@ public class PortaDronTest {
 
     @Test
     public void testcantidadDronesDestruidosYDisponibles() {
-        Jugador j1 = new Jugador("001", "Nacho", "ACTIVO");
+        EntidadJugador j1 = new EntidadJugador("001", "Nacho", "ACTIVO");
         PortaDron portaDron = new PortaDron(001,
                 10f,
                 20f,
@@ -220,7 +220,7 @@ public class PortaDronTest {
 
     @Test
     public void testMoverPortaDron() {
-        Jugador j1 = new Jugador("001", "Nacho", "ACTIVO");
+        EntidadJugador j1 = new EntidadJugador("001", "Nacho", "ACTIVO");
         PortaDron portaDron = new PortaDron(001,
                 10f,
                 20f,

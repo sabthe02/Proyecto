@@ -1,6 +1,6 @@
 package com.Proyecto.SpringBoot.Logica;
 
-import com.Proyecto.SpringBoot.Modelos.Jugador;
+import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 
 public class Misil extends Municion {
 
@@ -8,7 +8,7 @@ public class Misil extends Municion {
     float distancia;
     private float DIS_MAX = 60f;
 
-    public Misil(int id, Jugador jugador) {
+    public Misil(int id, EntidadJugador jugador) {
         super(id, jugador);
         velocidad = 1;
         distancia = 60F;
@@ -23,7 +23,7 @@ public class Misil extends Municion {
             EstadoElemento estado,
             int velocidad,
             float distancia,
-            Jugador jugador) {
+            EntidadJugador jugador) {
         super(id, posicionX, posicionY, posicionZ, angulo, vida, estado, jugador);
         this.velocidad = 1;
         this.distancia = 60F;

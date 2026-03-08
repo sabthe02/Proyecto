@@ -1,13 +1,16 @@
 package com.Proyecto.SpringBoot.Modelos;
 
 import org.junit.jupiter.api.Test;
+
+import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class JugadorTest {
     
     @Test
     void constructor_seteaCampos() {
-        Jugador jugador = new Jugador("id-1", "Nacho", "Aereo");
+        EntidadJugador jugador = new EntidadJugador("id-1", "Nacho", "Aereo");
         assertEquals("id-1", jugador.getId());
         assertEquals("Nacho", jugador.getNickName());
         assertEquals("Aereo", jugador.getTeam());
@@ -15,7 +18,7 @@ public class JugadorTest {
     
     @Test
     void setters_actualizanCampos() {
-        Jugador jugador = new Jugador();
+        EntidadJugador jugador = new EntidadJugador();
         jugador.setId("id-2");
         jugador.setNickName("Santi");
         jugador.setTeam("Naval");
@@ -27,7 +30,7 @@ public class JugadorTest {
 
     @Test
     void constructor_conParametros_seteaCampos() {
-        Jugador jugador = new Jugador("id-3", "Lucho", "Terrestre");
+        EntidadJugador jugador = new EntidadJugador("id-3", "Lucho", "Terrestre");
         assertEquals("id-3", jugador.getId());
         assertEquals("Lucho", jugador.getNickName());
         assertEquals("Terrestre", jugador.getTeam());
@@ -35,7 +38,7 @@ public class JugadorTest {
 
     @Test
     void constructor_porDefecto_seteaCamposVacios() {
-        Jugador jugador = new Jugador();
+        EntidadJugador jugador = new EntidadJugador();
         assertEquals(null, jugador.getId());
         assertEquals(null, jugador.getNickName());
         assertEquals(null, jugador.getTeam());

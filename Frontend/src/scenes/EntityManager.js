@@ -1,6 +1,7 @@
+import { Projectile } from './Projectile.js';
 import { Drone } from './Drone.js';
 import { Portadrones } from './Portadrones.js';
-import { Projectile } from './Projectile.js';
+
 
 export class EntityManager {
     constructor(scene) {

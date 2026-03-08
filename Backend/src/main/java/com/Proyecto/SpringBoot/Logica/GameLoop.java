@@ -51,10 +51,7 @@ public abstract class GameLoop {
 
     protected abstract void processInput(Evento accion);
 
-    protected void render() {
-        // var position = controller.getBulletPosition();
-        // logger.info("Current bullet position: " + position);
-    }
+    protected abstract void render();
 
     protected void processGameLoop() {
 

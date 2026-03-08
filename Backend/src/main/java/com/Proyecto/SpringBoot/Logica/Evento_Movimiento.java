@@ -32,6 +32,11 @@ public class Evento_Movimiento extends Evento {
         return nuevaPosY;
     }
 
+    public float getNuevaPosZ() {
+        return Elemento.MAX_ALTURA;
+    }
+
+    
     public void setNuevaPosY(float nuevaPosY) {
         this.nuevaPosY = nuevaPosY;
     }

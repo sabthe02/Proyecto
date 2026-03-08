@@ -6,6 +6,7 @@ public class Misil extends Municion {
 
     int velocidad;
     float distancia;
+    private float DIS_MAX = 60f;
 
     public Misil(int id, Jugador jugador) {
         super(id, jugador);
@@ -13,16 +14,16 @@ public class Misil extends Municion {
         distancia = 60F;
     }
 
-    public Misil(int id, 
-                Float posicionX, 
-                Float posicionY, 
-                float posicionZ, 
-                Integer angulo, 
-                Integer vida,
-                EstadoElemento estado, 
-                int velocidad, 
-                float distancia, 
-                Jugador jugador) {
+    public Misil(int id,
+            Float posicionX,
+            Float posicionY,
+            float posicionZ,
+            Integer angulo,
+            Integer vida,
+            EstadoElemento estado,
+            int velocidad,
+            float distancia,
+            Jugador jugador) {
         super(id, posicionX, posicionY, posicionZ, angulo, vida, estado, jugador);
         this.velocidad = 1;
         this.distancia = 60F;
@@ -45,18 +46,15 @@ public class Misil extends Municion {
     }
 
     public void moverse(Evento_Movimiento intencion) {
-        if (intencion == null) {
-            return;
-        }
-        double rad = Math.toRadians(this.angulo);
-        float avance = this.velocidad;
 
-        intencion.setNuevaPosX(this.getPosicionX() + (float) (avance * Math.cos(rad)));
-        intencion.setNuevaPosY(this.getPosicionY() + (float) (avance * Math.sin(rad)));
-        
-        if (this.distancia<=0) {
+        Misil misil = (Misil) intencion.getElemento();
+        this.posicionX = misil.posicionX;
+        this.posicionY = misil.posicionY;
+        this.posicionZ = misil.posicionZ;
+        this.distancia = this.distancia - velocidad;
+        if (this.distancia <= 0) {
             this.setEstado(EstadoElemento.INACTIVO);
-        } 
+        }
 
     }
 
@@ -65,6 +63,33 @@ public class Misil extends Municion {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'recibeImpacto'");
     }
-    
+
+    @Override
+    protected TipoElemento getTipo() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getTipo'");
+    }
+
+    @Override
+    protected int getBateria() {
+        return 0;
+    }
+
+    public float getDIS_MAX() {
+        return DIS_MAX;
+    }
+
+    public void mover(Evento_Movimiento eventoMovimientoMisil) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'mover'");
+    }
+
+    public void calculoDeNuevaPosicion() {
+        float deltaX = (float) Math.cos(this.angulo) * this.velocidad;
+        float deltaY = (float) Math.sin(this.angulo) * this.velocidad;
+        this.posicionX += deltaX;
+        this.posicionY += deltaY;
+        this.distancia = this.distancia - velocidad;
+    }
 
 }

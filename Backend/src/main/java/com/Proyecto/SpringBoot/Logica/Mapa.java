@@ -36,4 +36,13 @@ public class Mapa {
     public void setContenido(int i, int j, int valor) {
         contenido[i][j] = valor;
     }
+
+    public boolean estaEnLaTrayectoria(float nuevaPosX, float nuevaPosY, float nuevaPosZ, Float posicionX, Float posicionY,
+            float posicionZ) {
+        boolean enColicion = false;
+        if(nuevaPosX ==posicionX && nuevaPosY == posicionY && nuevaPosZ == posicionZ) {
+            enColicion = true;
+        }
+        return enColicion;
+    }
 }

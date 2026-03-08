@@ -63,7 +63,7 @@ public class PortaDron extends Elemento {
     // Busca el primer dron INACTIVO y lo activa
     public Dron desplegarDron(Evento_DesplegarDron eventoDesplegarDron) {
         Dron dronDesplegado = null;
-        
+
         // Buscar el primer dron inactivo disponible
         for (int i = 0; i < drones.size(); i++) {
             Dron dron = drones.get(i);
@@ -75,7 +75,7 @@ public class PortaDron extends Elemento {
                 i = drones.size();
             }
         }
-        
+
         return dronDesplegado;
     }
 
@@ -101,8 +101,28 @@ public class PortaDron extends Elemento {
 
     @Override
     public void recibeImpacto(Evento_Movimiento intencion) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'recibeImpacto'");
+        PortaDron portaDron = (PortaDron) intencion.getElemento();
+        if (portaDron.getTipo() == TipoElemento.AEREO) {
+            int danos = 16;
+            this.setVida(this.getVida()-danos);
+            if (this.getVida() <= 5) {
+                this.setEstado(EstadoElemento.DESTRUIDO);
+                this.setVida(0);
+            }
+        }
+        else if (portaDron.getTipo() == TipoElemento.NAVAL) {
+            int danos = 33;
+            this.setVida(this.getVida()-danos);
+            if (this.getVida() <= 2) {
+                this.setEstado(EstadoElemento.DESTRUIDO);
+                this.setVida(0);
+            }
+        }   
+
     }
 
+    @Override
+    protected int getBateria() {
+        return 0;
+    }
 }

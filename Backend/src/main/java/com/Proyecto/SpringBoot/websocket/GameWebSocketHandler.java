@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-
 import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 import com.Proyecto.SpringBoot.Logica.Fachada;
 import com.Proyecto.SpringBoot.Logica.iHandler;
@@ -71,7 +70,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
         if (tipo == null) {
             response.put("tipo", "ERROR");
             response.put("mensaje", "El mensaje no contiene un campo 'tipo' válido.");
-            sendMessageSafely(session, new TextMessage(response.toString()));
+            sendMessageSafely(session, response);
             return;
         }
 
@@ -84,7 +83,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
             if (usuariosConectadosbySocket.get(session) == null) {
                 response.put("tipo", "ERROR");
                 response.put("mensaje", "El jugador no ha iniciado sesión.");
-                sendMessageSafely(session, new TextMessage(response.toString()));
+                sendMessageSafely(session, response);
                 return;
             }
             response = pasarLobby(session, node);
@@ -92,7 +91,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
             if (usuariosConectadosbySocket.get(session) == null) {
                 response.put("tipo", "ERROR");
                 response.put("mensaje", "El jugador no ha iniciado sesión.");
-                sendMessageSafely(session, new TextMessage(response.toString()));
+                sendMessageSafely(session, response);
                 return;
             }
             response = procesarMovimiento(session, node);
@@ -100,7 +99,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
             if (usuariosConectadosbySocket.get(session) == null) {
                 response.put("tipo", "ERROR");
                 response.put("mensaje", "El jugador no ha iniciado sesión.");
-                sendMessageSafely(session, new TextMessage(response.toString()));
+                sendMessageSafely(session, response);
                 return;
             }
             response = procesarDespliegue(session, node);
@@ -108,18 +107,10 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
             if (usuariosConectadosbySocket.get(session) == null) {
                 response.put("tipo", "ERROR");
                 response.put("mensaje", "El jugador no ha iniciado sesión.");
-                sendMessageSafely(session, new TextMessage(response.toString()));
+                sendMessageSafely(session, response);
                 return;
             }
             response = procesarDisparo(session, node);
-        } else if (tipo.equals("RECARGAR")) {
-            if (usuariosConectadosbySocket.get(session) == null) {
-                response.put("tipo", "ERROR");
-                response.put("mensaje", "El jugador no ha iniciado sesión.");
-                sendMessageSafely(session, new TextMessage(response.toString()));
-                return;
-            }
-            response = procesarRecarga(session, node);
         } else if (tipo.equals("PING")) {
             // Responder a PING con PONG para medir latencia
             response.put("tipo", "PONG");
@@ -130,8 +121,25 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
             response.put("tipo", "ERROR");
             response.put("mensaje", "Tipo de mensaje no reconocido: " + tipo);
         }
-        sendMessageSafely(session, new TextMessage(response.toString()));
+
+        sendMessageSafely(session, response);
     }
+
+    /*
+     * private void enviarMensaje(WebSocketSession session, ObjectNode response) {
+     * 
+     * try {
+     * synchronized (session) {
+     * String s = response.toString();
+     * session.sendMessage(new TextMessage(s));
+     * }
+     * } catch (IOException e) {
+     * // TODO Auto-generated catch block
+     * e.printStackTrace();
+     * }
+     * 
+     * }
+     */
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
@@ -153,21 +161,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
         System.out.println("Cliente desconectado: " + session.getId());
     }
 
-    //Envía un mensaje de forma segura sincronizando en la sesión para evitar
-    //error cuando múltiples threads intentan enviar mensajes simultáneamente a la misma sesión
-
-    private void sendMessageSafely(WebSocketSession session, TextMessage message) throws IOException {
-        if (session == null || !session.isOpen()) {
-            return;
-        }
-        synchronized (session) {
-            session.sendMessage(message);
-        }
-    }
-
     @Override
     public boolean enviarAcciones(List<EntidadJugador> jugadores, CambiosDTO cambios) {
-       
 
         ObjectMapper mapper = new ObjectMapper();
         mapper.clearCaches();
@@ -175,20 +170,19 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
         sobre.put("tipo", "ACTUALIZAR_PARTIDA");
         sobre.set("datos", mapper.valueToTree(cambios));
 
-       
         for (EntidadJugador jugador : jugadores) {
             try {
                 WebSocketSession session = usuariosConectadosbyIdJugador.get(jugador.getId());
                 if (session != null && session.isOpen()) {
-                    sendMessageSafely(session, new TextMessage(jsonFinal));
-                    enviado = true;
+                    sendMessageSafely(session, sobre);
+
                     System.out.println("ACTUALIZAR_PARTIDA enviado a jugador:" + jugador.getId());
                 } else {
                     System.out.println("No se envio ACTUALIZAR_PARTIDA a jugador:" + jugador.getId()
                             + " (session nula o cerrada)");
                 }
             } catch (Exception e) {
-               
+
                 System.err.println(
                         "Error enviando ACTUALIZAR_PARTIDA a jugador:" + jugador.getId() + ": " + e.getMessage());
             }
@@ -203,12 +197,6 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
 
         try {
             int idPortaDron = node.get("IdPortaDron").asInt();
-
-            if (idPortaDron < 0) {
-                response.put("tipo", "ERROR");
-                response.put("mensaje", "ID de portadrón inválido.");
-                return response;
-            }
 
             System.out.println("DESPLEGAR recibido -> jugador=" + usuariosConectadosbySocket.get(session).getId()
                     + " idPortaDron=" + idPortaDron);
@@ -275,40 +263,6 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
         return response;
     }
 
-    private ObjectNode procesarRecarga(WebSocketSession session, JsonNode node) {
-        ObjectNode response = new ObjectMapper().createObjectNode();
-
-        try {
-            int idDron = node.has("IdDron") ? node.get("IdDron").asInt() : 
-                         node.has("idDron") ? node.get("idDron").asInt() : -1;
-
-            if (idDron < 0) {
-                response.put("tipo", "ERROR");
-                response.put("mensaje", "Falta IdDron para procesar la recarga.");
-                return response;
-            }
-
-            System.out.println("RECARGAR recibido -> jugador=" + usuariosConectadosbySocket.get(session).getId() + " idDron=" + idDron);
-
-            boolean resultado = fachada.accion_recargar(usuariosConectadosbySocket.get(session), idDron);
-
-            if (resultado) {
-                response.put("tipo", "RECARGA_PROCESADA");
-                System.out.println("RECARGA_PROCESADA -> idDron=" + idDron);
-            } else {
-                response.put("tipo", "RECARGA_FALLIDA");
-                response.put("mensaje", "No se pudo procesar la recarga. Verifica que el dron esté sobre el portadron.");
-                System.out.println("RECARGA_FALLIDA -> idDron=" + idDron);
-            }
-        } catch (Exception e) {
-            response.put("tipo", "ERROR");
-            response.put("mensaje", "Error al procesar la recarga: " + e.getMessage());
-            System.err.println("ERROR en procesarRecarga: " + e.getMessage());
-        }
-
-        return response;
-    }
-
     private ObjectNode procesarMovimiento(WebSocketSession session, JsonNode node) {
         ObjectNode response = new ObjectMapper().createObjectNode();
 
@@ -327,7 +281,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
             System.out.println("MOVER_ELEMENTO recibido -> jugador=" + usuariosConectadosbySocket.get(session).getId()
                     + " idElemento=" + idElemento + " x=" + x + " y=" + y + " z=" + z + " angulo=" + angulo);
 
-            boolean resultado = fachada.accion_mover(usuariosConectadosbySocket.get(session).getId(), idElemento, x, y, z,
+            boolean resultado = fachada.accion_mover(usuariosConectadosbySocket.get(session).getId(), idElemento, x, y,
+                    z,
                     angulo);
 
             if (resultado) {
@@ -420,7 +375,6 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
             usuariosConectadosbyIdJugador.put(login.getId(), session);
             System.err.println("Jugador " + login.getNickName() + " ha iniciado sesión con ID: " + login.getId());
 
-            
             response.put("tipo", "LOGIN_EXITOSO");
         } catch (Exception JugadorNoExisteException) {
 
@@ -433,6 +387,15 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
 
     }
 
+    private void sendMessageSafely(WebSocketSession session, ObjectNode message) throws IOException {
+        if (session == null || !session.isOpen()) {
+            return;
+        }
+        synchronized (session) {
+            session.sendMessage(new TextMessage(message.toString()));
+        }
+    }
+
     @Override
     public boolean enviarInicioPartida(EscenarioInicialDTO partida) {
 
@@ -441,13 +404,12 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
         JsonNode datos = mapper.valueToTree(partida);
         sobre.put("tipo", "PARTIDA_INICIADA");
         sobre.set("datos", datos);
-        String jsonFinal = mapper.writeValueAsString(sobre);
 
         for (JugadorDTO jugador : partida.getListaJugadores()) {
             try {
                 WebSocketSession session = usuariosConectadosbyIdJugador.get(jugador.getId());
-                sendMessageSafely(session, new TextMessage(jsonFinal));
-            } catch (IOException e) {
+                sendMessageSafely(session, sobre);
+            } catch (Exception e) {
                 System.err.println("Error al enviar mensaje al jugador: " + e.getMessage());
             }
         }
@@ -456,27 +418,25 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
     }
 
     @Override
-    public boolean enviarFinPartida(List<Jugador> jugadores, String ganadorId) {
+    public boolean enviarFinPartida(List<String> jugadores, String ganadorId) {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode sobre = mapper.createObjectNode();
         sobre.put("tipo", "FIN_PARTIDA");
         sobre.put("ganador", ganadorId);
-        
-        String jsonFinal;
+
         try {
-            jsonFinal = mapper.writeValueAsString(sobre);
-            
-            for (Jugador jugador : jugadores) {
+
+            for (String jugador : jugadores) {
                 try {
-                    WebSocketSession session = usuariosConectadosbyIdJugador.get(jugador.getId());
+                    WebSocketSession session = usuariosConectadosbyIdJugador.get(jugador);
                     if (session != null && session.isOpen()) {
-                        sendMessageSafely(session, new TextMessage(jsonFinal));
+                        sendMessageSafely(session, sobre);
                     }
                 } catch (Exception e) {
-                    System.err.println("Error al enviar FIN_PARTIDA al jugador " + jugador.getId() + ": " + e.getMessage());
+                    System.err.println("Error al enviar FIN_PARTIDA al jugador " + jugador + ": " + e.getMessage());
                 }
             }
-            
+
             return true;
         } catch (Exception e) {
             System.err.println("Error creando mensaje FIN_PARTIDA: " + e.getMessage());

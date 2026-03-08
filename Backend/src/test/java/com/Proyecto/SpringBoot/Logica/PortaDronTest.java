@@ -11,18 +11,18 @@ public class PortaDronTest {
     @Test
     public void testConstructor() {
         EntidadJugador j1 = new EntidadJugador("001", "Nacho", "ACTIVO");
-        PortaDron portaDron = new PortaDron(001,
-                10f,
-                20f,
-                30f,
-                90,
-                100,
-                EstadoElemento.ACTIVO,
-                0,
-                0,
-                0,
-                TipoElemento.AEREO,
-                j1);
+        PortaDron portaDron = new PortaDron(001, 
+                                        10f, 
+                                        20f, 
+                                        30f, 
+                                        90, 
+                                        100, 
+                                        EstadoElemento.ACTIVO, 
+                                        0, 
+                                        0, 
+                                        0, 
+                                        TipoElemento.AEREO, 
+                                        j1);
         assertEquals(001, portaDron.getId());
         assertEquals(10f, portaDron.getPosicionX());
         assertEquals(20f, portaDron.getPosicionY());
@@ -38,30 +38,30 @@ public class PortaDronTest {
     @Test
     public void testAgregarDron() {
         EntidadJugador j1 = new EntidadJugador("001", "Nacho", "ACTIVO");
-        PortaDron portaDron = new PortaDron(001,
-                10f,
-                20f,
-                30f,
-                90,
-                100,
-                EstadoElemento.ACTIVO,
-                0,
-                0,
-                0,
-                TipoElemento.AEREO,
-                j1);
-        Dron dron1 = new Dron(1,
-                10f,
-                20f,
-                30f,
-                90,
-                100,
-                EstadoElemento.ACTIVO,
-                1,
-                0,
-                50,
-                TipoElemento.AEREO,
-                j1);
+        PortaDron portaDron = new PortaDron(001, 
+                                        10f, 
+                                        20f, 
+                                        30f, 
+                                        90, 
+                                        100, 
+                                        EstadoElemento.ACTIVO, 
+                                        0, 
+                                        0, 
+                                        0, 
+                                        TipoElemento.AEREO, 
+                                        j1);
+        Dron dron1 = new Dron(1, 
+                            10f, 
+                            20f,
+                            30f, 
+                            90, 
+                            100, 
+                            EstadoElemento.ACTIVO, 
+                            1, 
+                            0, 
+                            50, 
+                            TipoElemento.AEREO, 
+                            j1);
         portaDron.AgregarDron(dron1);
         assertEquals(1, portaDron.getDrones().size());
         assertEquals(dron1, portaDron.getDrones().get(0));
@@ -70,18 +70,18 @@ public class PortaDronTest {
     @Test
     public void testSetTipo() {
         EntidadJugador j1 = new EntidadJugador("001", "Nacho", "ACTIVO");
-        PortaDron portaDron = new PortaDron(001,
-                10f,
-                20f,
-                30f,
-                90,
-                100,
-                EstadoElemento.ACTIVO,
-                0,
-                0,
-                0,
-                TipoElemento.AEREO,
-                j1);
+        PortaDron portaDron = new PortaDron(001, 
+                                        10f, 
+                                        20f, 
+                                        30f, 
+                                        90, 
+                                        100, 
+                                        EstadoElemento.ACTIVO, 
+                                        0, 
+                                        0, 
+                                        0, 
+                                        TipoElemento.AEREO, 
+                                        j1);
         portaDron.setTipo(TipoElemento.NAVAL);
         assertEquals(TipoElemento.NAVAL, portaDron.getTipo());
     }

@@ -32,8 +32,11 @@ public class EntidadJugador {
         this.team = team;
     }
 
-    public EntidadJugador() {
 
+    public EntidadJugador() {
+        id = "";
+        nickName = "";
+        team = "";
     }
 
     public String getId() {

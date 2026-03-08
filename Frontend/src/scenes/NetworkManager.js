@@ -38,7 +38,11 @@ export class NetworkManager {
             
             // Log solo de mensajes importantes (no ACTUALIZAR_PARTIDA ni MOVIMIENTO_PROCESADO)
             if (data.tipo !== 'ACTUALIZAR_PARTIDA' && data.tipo !== 'MOVIMIENTO_PROCESADO') {
-                console.log(`Mensaje recibido: ${data.tipo}`, data);
+                // Mensaje: tipo
+            } else if (data.tipo === 'ACTUALIZAR_PARTIDA') {
+                // Log reducido para ACTUALIZAR_PARTIDA (solo # de elementos)
+                const numElementos = data.datos?.elementos?.length || 0;
+                // Actualizar partida
             }
             
             // Emitir evento en la escena
@@ -115,6 +119,13 @@ export class NetworkManager {
 
     finalizarPartida(idJugador, mensaje) {
         return this.send('FINALIZAR_PARTIDA', {
+            idJugador: idJugador,
+            Mensaje: mensaje
+        });
+    }
+
+    guardarPartida(idJugador, mensaje) {
+        return this.send('GUARDAR_PARTIDA', {
             idJugador: idJugador,
             Mensaje: mensaje
         });

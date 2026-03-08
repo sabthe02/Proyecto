@@ -54,10 +54,13 @@ export class GameChoice extends Phaser.Scene {
         this.statusText = this.add.text(20, 20, '', { fontSize: '16px', fill: '#ffffff' }).setScrollFactor(0);
         this.errorText = this.add.text(width / 2, height / 2 + 150, '', { fontSize: '18px', fill: '#ff6b6b', align: 'center' }).setOrigin(0.5);
 
+        // Verificar si el jugador tiene partidas guardadas
+        const partidaGuardada = sessionStorage.getItem('partidaGuardada') === 'true';
+
         // botones
         const containerHTML = `
             <div style="display:flex;flex-direction:column;align-items:center;gap:18px;">
-                <button id="recargar" style="padding:14px 28px;border-radius:25px;border:none;background:linear-gradient(90deg, #e1f1f158, #e1f1f19a);color:#000;font-size:20px;font-weight:bold;cursor:pointer;transition:all 0.25s ease;box-shadow:0 0 10px rgba(18,18,18,0.83);">Recargar partida guardada</button>
+                <button id="recargar" style="padding:14px 28px;border-radius:25px;border:none;background:linear-gradient(90deg, #e1f1f158, #e1f1f19a);color:#000;font-size:20px;font-weight:bold;cursor:pointer;transition:all 0.25s ease;box-shadow:0 0 10px rgba(18,18,18,0.83);display:${partidaGuardada ? 'block' : 'none'};">Recargar partida guardada</button>
                 <button id="lobby" style="padding:14px 28px;border-radius:25px;border:none;background:linear-gradient(90deg, #e1f1f158, #e1f1f19a);color:#000;font-size:20px;font-weight:bold;cursor:pointer;transition:all 0.25s ease;box-shadow:0 0 10px rgba(18,18,18,0.83);">Ir al lobby</button>
             </div>
         `;
@@ -68,8 +71,10 @@ export class GameChoice extends Phaser.Scene {
         const recargarBtn = dom.node.querySelector('#recargar');
         const lobbyBtn = dom.node.querySelector('#lobby');
 
+        // Agregar animaciones solo a botones visibles
+        const botonesVisibles = partidaGuardada ? [recargarBtn, lobbyBtn] : [lobbyBtn];
 
-        [recargarBtn, lobbyBtn].forEach(btn => {
+        botonesVisibles.forEach(btn => {
             btn.addEventListener('mouseenter', () => {
                 btn.style.transform = 'scale(1.08)';
                 btn.style.boxShadow = '0 0 25px rgba(18, 18, 18, 0.83)';
@@ -86,19 +91,21 @@ export class GameChoice extends Phaser.Scene {
             });
         });
 
-        // Recargar partida
-        recargarBtn.addEventListener('click', () => {
-            window.location.reload(); // Falta!!!
-        });
+        // Recargar partida (solo si el boton es visible)
+        if (partidaGuardada) {
+            recargarBtn.addEventListener('click', () => {
+                this.scene.start('LoadGameSelection');
+            });
+        }
 
-        // Initialize NetworkManager (creates/reuses WebSocket connection)
+        // Initialize NetworkManager (crea/reusa conexión WebSocket)
         this.network = new NetworkManager(this);
         this.socket = this.network.socket;
         this.pendingLobbyRequest = false;
 
         // Escucha mensajes del NetworkManager para manejar eventos relacionados con la partida y el lobby
         this.events.on('PARTIDA_INICIADA', (data) => {
-            console.log('¡PARTIDA INICIADA! datos:', data);
+            console.log('PARTIDA INICIADA! datos:', data);
             const extras = {
                 playerId: sessionStorage.getItem('playerId') || '',
                 nickname: sessionStorage.getItem('nickname') || 'Player',
@@ -142,12 +149,12 @@ export class GameChoice extends Phaser.Scene {
             const enviado = this.network.pasarLobby();
             
             if (!enviado) {
-                console.warn('[GameChoice] Socket no esta abierto');
+                console.warn('Socket no esta abierto');
                 this.errorText.setText('Error: conexion no disponible');
                 this.pendingLobbyRequest = false;
                 lobbyBtn.disabled = false;
             } else {
-                console.log('[GameChoice] PASAR_LOBBY enviado');
+                console.log('PASAR_LOBBY enviado');
             }
         });
     }

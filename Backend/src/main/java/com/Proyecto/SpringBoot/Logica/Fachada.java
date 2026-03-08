@@ -164,7 +164,18 @@ public class Fachada implements iFachada {
 
     @Override
     public void EnviarFinPartida(String ganador) {
-        // Implementar enviar fin partida cuando iHandler lo soporte
+        // Obtener jugadores de la sesión activa
+        String idSesion = jugadorEnSesion.values().iterator().hasNext() ? 
+                         jugadorEnSesion.values().iterator().next() : null;
+        
+        if (idSesion != null && sesionesActivas.containsKey(idSesion)) {
+            SesionJuego sesion = sesionesActivas.get(idSesion);
+            List<Jugador> jugadores = new java.util.ArrayList<>(sesion.getElementosJugadores().keySet());
+            
+            if (handler != null) {
+                handler.enviarFinPartida(jugadores, ganador);
+            }
+        }
     }
 
     private boolean detectarColision(Municion proyectil, Elemento objetivo, float radioColision) {
@@ -177,6 +188,21 @@ public class Fachada implements iFachada {
         }
         if (objetivo.getEstado() != EstadoElemento.ACTIVO) {
             return false;
+        }
+
+        // Para bombas, solo detectar colision cuando estan cerca del suelo
+        // Esto evita que la bomba impacte unidades mientras esta cayendo en el aire
+        if (proyectil instanceof Bomba) {
+            if (proyectil.getPosicionZ()> 50) {
+                // La bomba todavia esta en el aire, no hay colision
+                return false;
+            }
+            // Para drones aereos volando alto, verificar altura
+            // Pero PORTADRONES siempre pueden ser impactados (son objetivos grandes/estáticos)
+            if (objetivo instanceof Dron && objetivo.getPosicionZ() > 50) {
+                // El dron esta volando alto, la bomba no puede impactarlo
+                return false;
+            }
         }
 
         float dx = proyectil.getPosicionX() - objetivo.getPosicionX();
@@ -226,6 +252,21 @@ public class Fachada implements iFachada {
                 claseProyectil);
         List<Evento> eventos = new java.util.ArrayList<>();
         eventos.add(eventoDano);
+        
+        // Si el objetivo fue destruido, también enviar Evento_Movimiento con estado DESTRUIDO
+        // Esto permite que Frontend lo elimine del mapa
+        if (estaDestruido) {
+            Evento_Movimiento eventoDestruccion = new Evento_Movimiento(
+                objetivo,
+                objetivo.getPosicionX(),
+                objetivo.getPosicionY(),
+                objetivo.getAngulo()
+            );
+            eventoDestruccion.habilitar();
+            eventos.add(eventoDestruccion);
+            System.out.println("Enviando Evento_Movimiento DESTRUIDO para elemento " + objetivo.getId());
+        }
+        
         EnviarActualizaciones(jugadoresSesion, eventos);
 
         System.out.println("Daño aplicado: objetivo=" + objetivo.getId() + " vida=" + vidaNueva + "/" + vidaActual

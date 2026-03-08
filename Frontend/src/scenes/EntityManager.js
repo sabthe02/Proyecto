@@ -29,28 +29,26 @@ export class EntityManager {
         // Solo loguear el total de elementos, no cada uno
         // console.log('EntityManager.sincronizar - Recibidos', gameData.elementos.length, 'elementos');
         
-        const idsRecibidos = new Set();
-
+        // ACTUALIZAR_PARTIDA es un update INCREMENTAL - solo actualiza/crea elementos recibidos
+        // NO elimina elementos que no están en el mensaje
         gameData.elementos.forEach(datosUnidad => {
-            idsRecibidos.add(datosUnidad.id);
-            
             // Solo loguear elementos nuevos o con información crítica de debug
             // console.log('Elemento recibido:', datosUnidad.id, 'clase=', datosUnidad.clase, 'tipoEquipo=', datosUnidad.tipoEquipo, 'x=', datosUnidad.x, 'y=', datosUnidad.y, 'z=', datosUnidad.z);
 
+            // Si el elemento está marcado como DESTRUIDO, eliminarlo del frontend
+            if (datosUnidad.estado === 'DESTRUIDO') {
+                if (this.unidades.has(datosUnidad.id)) {
+                    console.log(`[EntityManager] Elemento ${datosUnidad.id} (${datosUnidad.clase || 'unknown'}) DESTRUIDO - eliminando del frontend`);
+                    this.eliminarUnidad(datosUnidad.id);
+                }
+                return; // No crear ni actualizar elementos destruidos
+            }
+
             if (!this.unidades.has(datosUnidad.id)) {
-              
                 this.crearUnidad(datosUnidad);
             } else {
-                // Si existe, actualizamos sus atributos
-                const unidad = this.unidades.get(datosServidor.id);
-                unidad.actualizarDesdeServidor(datosServidor);
-            }
-        });
-
-        // Eliminar unidades que ya no existen
-        this.unidades.forEach((unidad, id) => {
-            if (!idsRecibidos.has(id)) {
-                this.eliminarUnidad(id);
+                const unidad = this.unidades.get(datosUnidad.id);
+                unidad.actualizarDesdeServidor(datosUnidad);
             }
         });
     }
@@ -60,15 +58,15 @@ export class EntityManager {
         
         // Distinguir entre Dron, Portadron, y Proyectiles según clase del Backend
         if (data.clase === 'PORTADRON') {
-            console.log(`[+] Portadron ${data.id} (${data.tipoEquipo}) idJugador=${data.idJugador || 'MISSING'}`);
+            // Portadron creado
             nuevaUnidad = new Portadrones(this.scene, data.x, data.y, data);
         } else if (data.clase === 'DRON') {
-            console.log(`[+] Dron ${data.id} (${data.tipoEquipo}) estado=${data.estado} idJugador=${data.idJugador || 'MISSING'}`);
+            // Dron creado
             nuevaUnidad = new Drone(this.scene, data);
         } else if (data.clase === 'MISIL' || data.clase === 'BOMBA') {
             // No loguear proyectiles en (0,0) - son municiones inactivas
             if (data.x !== 0 || data.y !== 0) {
-                console.log(`[+] Projectile ${data.id} (${data.clase})`);
+                // Projectile creado
             }
             nuevaUnidad = new Projectile(this.scene, data);
         } else {
@@ -82,6 +80,7 @@ export class EntityManager {
     eliminarUnidad(id) {
         const unidad = this.unidades.get(id);
         if (unidad) {
+            // Unidad eliminada
             // Llamar al método de destrucción apropiado según el tipo de unidad
             if (unidad.destruir) {
                 unidad.destruir(); // Portadrones y Proyectiles
@@ -91,6 +90,8 @@ export class EntityManager {
                 unidad.destroy(); // Fallback
             }
             this.unidades.delete(id);
+        } else {
+            console.warn(`Intento de eliminar unidad ${id} que no existe`);
         }
     }
 
@@ -104,35 +105,109 @@ export class EntityManager {
         // { tipo: 'APLICAR_DANO', idObjetivo: number, dano: number, vidaRestante: number, estaDestruido: boolean, claseProyectil: string }
         const { idObjetivo, dano, vidaRestante, estaDestruido, claseProyectil } = data;
         
+        console.log(`[EntityManager] APLICAR_DANO recibido:`, {
+            idObjetivo, dano, vidaRestante, estaDestruido, claseProyectil
+        });
+        
         const unidad = this.unidades.get(idObjetivo);
         if (!unidad) {
-            console.warn(`APLICAR_DANO: Unidad ${idObjetivo} no encontrada`);
+            console.warn(`[EntityManager] APLICAR_DANO: Unidad ${idObjetivo} no encontrada en frontend`);
             return;
         }
         
-        console.log(`[DANO] Unidad ${idObjetivo} recibio ${dano} de daño. Vida restante: ${vidaRestante}${estaDestruido ? ' (DESTRUIDO)' : ''}`);
+        let sufijo;
+        if (estaDestruido) {
+            sufijo = ' (DESTRUIDO)';
+        } else {
+            sufijo = '';
+        }
+        // Dano aplicado
         
-        // Always show ImpactView for:
+        // Siempre mostrar ImpactoView para:
         // - ANY drone hit (drones always die from one hit)
         // - ANY portadron hit
         const esDron = unidad.clase === 'DRON';
         const esPortadron = unidad.clase === 'PORTADRON';
         
+        console.log(`Verificando ImpactView: clase=${unidad.clase}, esDron=${esDron}, esPortadron=${esPortadron}`);
+        
         if (esDron || esPortadron) {
-            // Show side-view impact scene
+            // Determinar angulo basado en proyectil
+            let proyectilAngulo;
+            let proyectilPosicion = null;
+            
+            if (claseProyectil === 'BOMBA') {
+                // Bombas siempre caen verticalmente desde arriba
+                proyectilAngulo = 270; // 270° = cayendo desde arriba (en Phaser Y+ es abajo)
+            } else if (claseProyectil === 'MISIL') {
+                // Misiles viajan horizontalmente - buscar el misil para obtener su direccion
+                let misilEncontrado = null;
+                let encontradoFlag = false;
+                
+                for (let [id, entidad] of this.unidades.entries()) {
+                    if (encontradoFlag) {
+                        continue;
+                    }
+                    
+                    if (entidad.clase === 'MISIL') {
+                        const distancia = Phaser.Math.Distance.Between(
+                            entidad.x, entidad.y, 
+                            unidad.x, unidad.y
+                        );
+                        
+                        if (distancia < 50) {
+                            misilEncontrado = entidad;
+                            entidad.causedImpact = true;
+                            encontradoFlag = true;
+                        }
+                    }
+                }
+                
+                if (misilEncontrado && misilEncontrado.rotation !== undefined) {
+                    proyectilAngulo = Phaser.Math.RadToDeg(misilEncontrado.rotation);
+                } else {
+                    proyectilAngulo = 0; // Horizontal por defecto
+                }
+            } else {
+                // Tipo desconocido - usar horizontal por defecto
+                proyectilAngulo = 0;
+            }
+            
+            // Mostrar escena de impacto en vista lateral
+            let proyectilTipo;
+            if (claseProyectil) {
+                proyectilTipo = claseProyectil;
+            } else if (dano >= 100) {
+                proyectilTipo = 'BOMBA';
+            } else {
+                proyectilTipo = 'MISIL';
+            }
+            
+            let equipoObjetivo = 'AEREO';
+            if (unidad.tipoEquipo) {
+                equipoObjetivo = unidad.tipoEquipo;
+            }
+            
             const datosImpacto = {
-                proyectilTipo: claseProyectil || (dano >= 100 ? 'BOMBA' : 'MISIL'),
+                proyectilTipo: proyectilTipo,
                 objetivoTipo: unidad.clase,
-                objetivoEquipo: unidad.tipoEquipo || 'AEREO',
-                dañoInfligido: dano
+                objetivoEquipo: equipoObjetivo,
+                dañoInfligido: dano,
+                angulo: proyectilAngulo,
+                targetPosicion: { x: unidad.x, y: unidad.y },
+                proyectilPosicion: proyectilPosicion
             };
             
+            // Mostrando ImpactView
+            console.log('[EntityManager] Mostrando ImpactView con datos:', datosImpacto);
             if (this.scene.mostrarVistaImpacto) {
                 this.scene.mostrarVistaImpacto(datosImpacto);
+            } else {
+                console.error('[EntityManager] ERROR: scene.mostrarVistaImpacto no existe!');
             }
         }
         
-        // Show damage visual effect
+        // Show damage visual effect (red flash and damage text)
         if (unidad.mostrarDano) {
             unidad.mostrarDano(dano);
         }
@@ -142,7 +217,9 @@ export class EntityManager {
             unidad.vida = vidaRestante;
         }
         
-        // Note: Entity destruction will be handled automatically via ACTUALIZAR_PARTIDA
-        // when backend marks estado='DESTRUIDO' or removes it from elementos[]
+        // Importante: No eliminar ni marcar como destruido aquí - el backend se encarga de eso en ACTUALIZAR_PARTIDA para evitar inconsistencias visuales
+        // La destrucción de entidades se manejará automáticamente a través de ACTUALIZAR_PARTIDA
+        // cuando el backend marque estado='DESTRUIDO' o las elimine de elementos[]
+        // APLICAR_DANO procesado
     }
 }

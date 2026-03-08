@@ -38,9 +38,9 @@ public class Dron extends Elemento {
 
         Municion municion = null;
         if (tipo == TipoElemento.AEREO) {
-            municion = new Bomba(idMunicion, jugador);
+            municion = new Bomba(idMunicion, jugador); 
         } else if (tipo == TipoElemento.NAVAL) {
-            municion = new Misil(idMunicion, jugador);
+            municion = new Misil(idMunicion, jugador); 
         }
 
         municiones.add(municion);
@@ -127,15 +127,28 @@ public class Dron extends Elemento {
 
     public void moverse(Evento_Movimiento intencion) {
         Dron dron = (Dron) intencion.getElemento();
-        dron.setEstado(EstadoElemento.ACTIVO);
+        // No forzar ACTIVO si el dron ya esta DESTRUIDO
+        if (dron.getEstado() != EstadoElemento.DESTRUIDO) {
+            dron.setEstado(EstadoElemento.ACTIVO);
+        }
         this.setPosicionX(intencion.getNuevaPosX());
         this.setPosicionY(intencion.getNuevaPosY());
         this.setAngulo(intencion.getNuevoAngulo());
+        this.consumirBateriaPorMovimiento();
     }
 
     public void consumirBateriaPorMovimiento() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'consumirBateriaPorMovimiento'");
+        if (this.estado != EstadoElemento.ACTIVO) {
+            return;
+        }
+        
+        // Consume bateria al moverse
+        this.bateria = Math.max(this.bateria - recargaPorTick, 0);
+        
+        // Si se agota la bateria, el dron se destruye
+        if (this.bateria <= 0) {
+            this.estado = EstadoElemento.DESTRUIDO;
+        }
     }
 
     public Elemento disparar(Evento_Disparo intencion) {
@@ -182,7 +195,7 @@ public class Dron extends Elemento {
         if (this.estado != EstadoElemento.ACTIVO)
             return;
 
-        this.bateria = Math.min(this.bateria - recargaPorTick, 0);
+        this.bateria = Math.max(this.bateria - recargaPorTick, 0);
 
         if (this.bateria <= 0) {
             this.estado = EstadoElemento.DESTRUIDO;

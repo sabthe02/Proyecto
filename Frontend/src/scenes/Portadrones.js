@@ -4,6 +4,7 @@ export class Portadrones extends Phaser.GameObjects.Container {
         super(scene, x, y);
         this.scene = scene;
         this.id = data.id;
+        this.clase = 'PORTADRON';
         this.tipoEquipo = data.tipoEquipo;
         
         // Ownership: Quién controla este portadrón (soportar ambos campos)
@@ -90,17 +91,24 @@ export class Portadrones extends Phaser.GameObjects.Container {
         // Actualizar profundidad según altitud
         this.setDepth(200 + (data.z || 0));
         
+
+    //Controlar la animación de movimiento suavemente en lugar de salto instantáneo
         this.scene.tweens.add({
             targets: this,
             x: data.x,
             y: data.y,
             angle: data.angulo,
-            duration: 100 
+            duration: 300,
+            ease: 'Linear'
         });
 
         
         // Backend envía listaDrones array - mostrar su tamaño
-        const dronesCount = data.listaDrones ? data.listaDrones.length : 0;
+        let dronesCount = 0;
+        if (data.listaDrones) {
+            dronesCount = data.listaDrones.length;
+        }
+        
         this.labelHangar.setText(`DRONES EN PORTADRONES: ${dronesCount}`);
         this.dibujarBarras(data.vida);
     }
@@ -115,7 +123,10 @@ export class Portadrones extends Phaser.GameObjects.Container {
         }
         
         // Calcular porcentaje basado en la escala del backend
-        const vidaPorcentaje = this.vidaMax > 0 ? Math.max(0, vida / this.vidaMax) : 0;
+        let vidaPorcentaje = 0;
+        if (this.vidaMax > 0) {
+            vidaPorcentaje = Math.max(0, vida / this.vidaMax);
+        }
         
         const ancho = 120;
         const alto = 10;
@@ -130,7 +141,7 @@ export class Portadrones extends Phaser.GameObjects.Container {
     }
 
     destruir() {
-        console.log(`Portadrones ${this.id} fuera de combate.`);
+        // Portadrones fuera de combate
 
         // Crear explosión más grande para el portadrones
         const explosion = this.scene.add.sprite(this.x, this.y, 'proyectil_bomba');
@@ -173,10 +184,18 @@ export class Portadrones extends Phaser.GameObjects.Container {
     }
 
     mostrarDano(cantidad) {
-        // Flash red tint
-        this.setTint(0xff0000);
+        // Safety check: ensure sprite still exists (not destroyed)
+        if (!this.sprite || !this.sprite.active) {
+            console.warn(`[Portadrones ${this.id}] mostrarDano llamado pero sprite ya fue destruido`);
+            return;
+        }
+        
+        // Flash red tint on the sprite (Container doesn't have setTint, sprite does)
+        this.sprite.setTint(0xff0000);
         this.scene.time.delayedCall(200, () => {
-            this.clearTint();
+            if (this.sprite && this.sprite.active) {
+                this.sprite.clearTint();
+            }
         });
         
         // Spawn damage text
@@ -216,6 +235,6 @@ export class Portadrones extends Phaser.GameObjects.Container {
             this.scene.cameras.main.shake(300, 0.005);
         }
         
-        console.log(`[Portadron ${this.id}] Mostrando daño: ${cantidad}`);
+        // Mostrando dano
     }
 }

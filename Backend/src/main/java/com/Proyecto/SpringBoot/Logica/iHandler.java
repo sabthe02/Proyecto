@@ -9,4 +9,5 @@ public interface iHandler {
 
     boolean enviarAcciones(List<Jugador> jugadores, List<Evento> acciones);
     boolean enviarInicioPartida(EscenarioInicialDTO partida);
+    boolean enviarFinPartida(List<Jugador> jugadores, String ganadorId);
 }

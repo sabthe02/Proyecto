@@ -10,38 +10,80 @@ export class InputManager {
         this.idDronActivo = null; // ID del dron desplegado activo
         this.elementoActivo = portadronId; // Elemento actualmente controlado
         
-        console.log(`[InputManager] Inicializado - playerId: ${playerId}, portadronId inicial: ${portadronId}`);
+        // InputManager inicializado
         
         // Referencia al UIManager para actualizar vista
         this.uiManager = null; // Será configurado desde Game.js
         
         // Agregar Spacebar para cambiar vista PORTADRON <-> DRON activo
         if (scene.input.keyboard) {
-            scene.input.keyboard.on('keydown-SPACE', () => {
-                console.log(`[InputManager] Spacebar presionado - Vista actual: ${this.vistaActual}, idDronActivo: ${this.idDronActivo}, idPortadron: ${this.idPortadron}`);
+            // Asegurar que el teclado capture las teclas
+            scene.input.keyboard.enableGlobalCapture();
+            
+            // Usar addKey para mejor compatibilidad
+            this.spaceKey = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+            this.spaceKey.on('down', () => {
+                console.log(`Space detectado - Vista actual: ${this.vistaActual}, idDronActivo: ${this.idDronActivo}, idPortadron: ${this.idPortadron}`);
                 this.cambiarVista();
             });
+            
+            // Agregar tecla I para mostrar vista de impacto (se maneja en Game.js, pero asegurar que se capture)
+            this.iKey = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.I);
+            this.iKey.on('down', () => {
+                console.log('I detectado');
+            });
+            
+            // Agregar R para recargar dron (solo funciona en vista DRON)
+            this.rKey = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+            this.rKey.on('down', () => {
+                console.log(`Tecla r detectada - Vista actual: ${this.vistaActual}`);
+                if (this.vistaActual === 'DRON') {
+                    this.procesarRecarga();
+                } else {
+                    console.log('R solo funciona en vista DRON');
+                }
+            });
+            
+            console.log('Teclado configurado: SPACE (cambiar vista), I (probar impacto), R (recargar)');
         } else {
-            console.warn('[InputManager] scene.input.keyboard no disponible, Spacebar deshabilitado');
+            console.warn('scene.input.keyboard no disponible, controles de teclado deshabilitados');
         }
 
         // Tracking de última posición del mouse para movimiento continuo
         this.ultimaPosicionEnviada = { x: 0, y: 0 };
+        this.ultimaPosicionMouse = { x: 0, y: 0 }; // Última posición del mouse (incluye clics)
         this.cooldownMovimiento = 0; // Milisegundos para evitar spam
         
         // Configurar mouse: movimiento para mover, clic izquierdo para disparar/desplegar
         scene.input.on('pointermove', (pointer) => {
+            this.ultimaPosicionMouse.x = pointer.worldX;
+            this.ultimaPosicionMouse.y = pointer.worldY;
             this.procesarMovimiento(pointer.worldX, pointer.worldY);
         });
         
         scene.input.on('pointerdown', (pointer) => {
-            if (pointer.rightButtonDown()) return; // Ignorar clic derecho
+            if (pointer.rightButtonDown()) {
+                console.log('Click derecho ignorado');
+                return; // Ignorar clic derecho
+            }
+            
+            // Actualizar última posición del mouse con la posición del clic
+            this.ultimaPosicionMouse.x = pointer.worldX;
+            this.ultimaPosicionMouse.y = pointer.worldY;
+            
+            const worldX = Math.round(pointer.worldX);
+            const worldY = Math.round(pointer.worldY);
+            console.log(`Click izquierdo en (${worldX}, ${worldY}) - Vista: ${this.vistaActual}, idDronActivo: ${this.idDronActivo}, elementoActivo: ${this.elementoActivo}`);
             
             // Clic izquierdo depende de la vista actual
             if (this.vistaActual === 'PORTADRON') {
+        // Desplegar dron
                 this.procesarDespliegue();
             } else if (this.vistaActual === 'DRON') {
+        // Disparar
                 this.procesarDisparo();
+            } else {
+                console.warn(`Vista desconocida: ${this.vistaActual}`);
             }
         });
         
@@ -51,10 +93,10 @@ export class InputManager {
     
     configurarPortadron(portadronId) {
         // Configurar el portadrón del jugador después de PARTIDA_INICIADA
-        console.log(`[InputManager] configurarPortadron llamado con ID: ${portadronId}`);
         this.idPortadron = portadronId;
         this.elementoActivo = portadronId;
-        console.log(`[InputManager] Portadrón configurado: ${this.idPortadron}, elementoActivo: ${this.elementoActivo}`);
+        this.vistaActual = 'PORTADRON';
+        console.log(`Portadron configurado: ID=${portadronId}, elementoActivo=${this.elementoActivo}`);
     }
     
     configurarUIManager(uiManager) {
@@ -68,7 +110,7 @@ export class InputManager {
             // Buscar el dron ACTIVO del jugador (soportar idJugador o jugadorId)
             const gameData = data.datos || data;
             
-            // FILTRO: Solo drones que pertenecen a ESTE jugador
+            // Solo drones que pertenecen a ESTE jugador
             const misDrones = gameData.elementos?.filter(e => 
                 e.clase === 'DRON' && 
                 (e.idJugador === this.playerId || e.jugadorId === this.playerId)
@@ -77,55 +119,53 @@ export class InputManager {
             // Buscar algún dron ACTIVO del jugador
             const dronActivo = misDrones.find(e => e.estado === 'ACTIVO');
             
-            // Actualizar el ID del dron activo si se encuentra uno
+            // Actualizar el ID del dron activo si se encuentra uno NUEVO (comparar como numeros)
             if (dronActivo) {
-                if (this.idDronActivo !== dronActivo.id) {
-                    console.log(`[InputManager] Dron activo detectado: ID=${dronActivo.id} (${misDrones.length} drones mios, ${misDrones.filter(d => d.estado === 'ACTIVO').length} activos)`);
+                const dronActivoId = parseInt(dronActivo.id);
+                let idActual = null;
+                if (this.idDronActivo !== null) {
+                    idActual = parseInt(this.idDronActivo);
+                }
+                
+                if (idActual !== dronActivoId) {
                     this.idDronActivo = dronActivo.id;
+                    this.elementoActivo = dronActivo.id;
                     
                     // Auto-cambiar a vista dron tras despliegue
                     if (this.vistaActual === 'PORTADRON') {
-                        console.log('[InputManager] Auto-cambiando a vista DRON tras despliegue');
                         this.cambiarVista();
                     }
                 }
-            } else {
-                // DEBUG: Mostrar qué drones tengo y sus estados
-                if (misDrones.length > 0) {
-                    const estadosDrones = misDrones.map(d => `ID=${d.id} estado=${d.estado}`).join(', ');
-                    console.log(`[InputManager] Mis drones: ${estadosDrones}`);
-                }
-                // Solo limpiar idDronActivo si estábamos rastreando un dron
-                // No limpiar en la primera actualización cuando todavía no hay drones desplegados
-                if (this.idDronActivo !== null) {
-                    // Verificar si el dron fue destruido (buscar con estado DESTRUIDO)
-                    const dronDestruido = gameData.elementos?.find(e => 
-                        e.clase === 'DRON' && 
-                        e.id === this.idDronActivo &&
-                        e.estado === 'DESTRUIDO'
-                    );
+            }
+            
+            // Solo limpiar idDronActivo y cambiar vista si el dron fue DESTRUIDO
+            // NO cambiar vista si el dron simplemente no está en este update incremental
+            if (this.idDronActivo !== null) {
+                const miDronActual = gameData.elementos?.find(e => e.id === this.idDronActivo);
+                
+                // Solo actuar si el dron ESTÁ presente en este update Y está DESTRUIDO
+                // Ignorar si el dron no está en el update (puede ser un update incremental)
+                if (miDronActual && miDronActual.estado === 'DESTRUIDO') {
+                    // El dron existe en el update y está marcado como DESTRUIDO
+                    console.log(`Dron ${this.idDronActivo} DESTRUIDO - volviendo a PORTADRON`);
+                    this.idDronActivo = null;
                     
-                    if (dronDestruido || !gameData.elementos?.some(e => e.id === this.idDronActivo)) {
-                        console.log('[InputManager] Dron activo ya no disponible o destruido');
-                        this.idDronActivo = null;
-                        
-                        // Si estábamos en vista dron, volver a portadrón
-                        if (this.vistaActual === 'DRON') {
-                            console.log('[InputManager] Volviendo a vista PORTADRON (dron perdido)');
-                            this.vistaActual = 'PORTADRON';
-                            this.elementoActivo = this.idPortadron;
-                            if (this.uiManager) {
-                                this.uiManager.actualizarVista('PORTADRON');
-                            }
+                    // Si estábamos en vista dron, volver a portadrón
+                    if (this.vistaActual === 'DRON') {
+                        this.vistaActual = 'PORTADRON';
+                        this.elementoActivo = this.idPortadron;
+                        if (this.uiManager) {
+                            this.uiManager.actualizarVista('PORTADRON');
                         }
                     }
                 }
+                // Si el dron no está en este update o está en cualquier otro estado, mantener vista actual
             }
         });
     }
 
     update() {
-        // NO keyboard controls - solo mouse
+        // NO teclas - solo mouse
         
         // Reducir cooldown de movimiento
         if (this.cooldownMovimiento > 0) {
@@ -134,34 +174,42 @@ export class InputManager {
     }
 
     cambiarVista() {
-        console.log(`[InputManager] cambiarVista llamado - vistaActual: ${this.vistaActual}, idDronActivo: ${this.idDronActivo}, idPortadron: ${this.idPortadron}`);
+        // Cambiar vista
         
         if (this.vistaActual === 'PORTADRON') {
             // Intentar cambiar a vista de dron
             if (this.idDronActivo !== null && this.idDronActivo !== undefined) {
                 this.vistaActual = 'DRON';
                 this.elementoActivo = this.idDronActivo;
-                console.log(`[InputManager] Vista cambiada a DRON (ID: ${this.idDronActivo})`);
+                // Vista cambiada a DRON
                 
                 // Actualizar UI si está disponible
                 if (this.uiManager) {
                     this.uiManager.actualizarVista('DRON');
                 }
             } else {
-                console.warn(`[InputManager] [WARN] No se puede cambiar a DRON - no hay dron activo (idDronActivo: ${this.idDronActivo})`);
+                console.warn(`No se puede cambiar a DRON - no hay dron activo (idDronActivo: ${this.idDronActivo}). Despliegue un dron primero.`);
             }
         } else if (this.vistaActual === 'DRON') {
-            // Cambiar a vista de portadrón
+            // Cambiar a vista de portadrón (siempre debe ser posible)
+            if (!this.idPortadron) {
+                console.error('Error, idPortadron no configurado. Forzando a null.');
+            }
             this.vistaActual = 'PORTADRON';
             this.elementoActivo = this.idPortadron;
-            console.log(`[InputManager] Vista cambiada a PORTADRON (ID: ${this.idPortadron})`);
+            // Vista cambiada a PORTADRON
             
             // Actualizar UI si está disponible
             if (this.uiManager) {
                 this.uiManager.actualizarVista('PORTADRON');
             }
         } else {
-            console.warn(`[InputManager] [WARN] Estado de vista desconocido: ${this.vistaActual}`);
+            console.warn(`Estado de vista desconocido: ${this.vistaActual}, forzando a PORTADRON`);
+            this.vistaActual = 'PORTADRON';
+            this.elementoActivo = this.idPortadron;
+            if (this.uiManager) {
+                this.uiManager.actualizarVista('PORTADRON');
+            }
         }
     }
 
@@ -174,7 +222,7 @@ export class InputManager {
         const dy = targetY - this.ultimaPosicionEnviada.y;
         const distancia = Math.sqrt(dx * dx + dy * dy);
         
-        if (distancia < 10) return; // Ignorar movimientos muy pequeños
+        if (distancia < 10) return; // Ignorar movimientos muy chicos
         
         // Enviar comando de movimiento al backend
         this.network.send('MOVER_ELEMENTO', {
@@ -191,12 +239,12 @@ export class InputManager {
 
     procesarDespliegue() {
         // Solicitar desplegar dron desde el portadrón
-        console.log(`[InputManager] procesarDespliegue - idPortadron: ${this.idPortadron}, vistaActual: ${this.vistaActual}`);
+        // Procesando despliegue
         if (this.idPortadron === null || this.idPortadron === undefined) {
-            console.error(`[InputManager] ERROR - No hay portadrón configurado para desplegar. Estado: idPortadron=${this.idPortadron}, elementoActivo=${this.elementoActivo}, playerId=${this.playerId}`);
+            console.error(`ERROR - No hay portadrón configurado para desplegar. Estado: idPortadron=${this.idPortadron}, elementoActivo=${this.elementoActivo}, playerId=${this.playerId}`);
             return;
         }
-        console.log(`[InputManager] Desplegando dron desde portadron ID: ${this.idPortadron}`);
+        // Desplegando dron
         this.network.send('DESPLEGAR', {
             IdPortaDron: this.idPortadron
         });
@@ -204,26 +252,95 @@ export class InputManager {
 
     procesarDisparo() {
         if (!this.idDronActivo) {
-            console.warn('No hay dron activo para disparar');
+            console.warn('No hay dron activo para disparar (idDronActivo es null)');
             return;
         }
         
-        // Enviar comando de disparo (sin coordenadas - el backend usa la última posición del MOVER_ELEMENTO)
-        console.log(`Disparando dron ${this.idDronActivo}`);
+        // Verificar el estado del dron antes de permitir disparar
+        // Acceder a entityManager a través de la escena
+        const dronActivo = this.scene.entityManager?.getUnidad(this.idDronActivo);
+        if (dronActivo && dronActivo.estadoActual) {
+            if (dronActivo.estadoActual === 'CARGANDO') {
+                console.warn('No se puede disparar - el dron está CARGANDO (recargando batería)');
+                return;
+            }
+            if (dronActivo.estadoActual === 'INACTIVO') {
+                console.warn('No se puede disparar - el dron está INACTIVO');
+                return;
+            }
+            if (dronActivo.estadoActual === 'DESTRUIDO') {
+                console.warn('No se puede disparar - el dron está DESTRUIDO');
+                return;
+            }
+        }
+        
+        // Disparar enviado
+        
+        // Enviar comando de disparo SIN coordenadas - el backend maneja la lógica de disparo
+        // El backend determinará qué se impacta basándose en Evento_Disparo
         this.network.send('DISPARAR', {
             IdDron: this.idDronActivo
         });
     }
 
     procesarRecarga() {
-        if (!this.idDronActivo) {
-            console.warn('No hay dron activo para recargar');
+        // Solo en vista DRON - recargar el dron activo
+        if (this.vistaActual !== 'DRON') {
+            console.warn('Recarga solo funciona en vista DRON. Cambie a vista DRON primero (presione SPACE).');
             return;
         }
         
-        console.log(`Recargando dron ${this.idDronActivo}`);
+        if (!this.idDronActivo) {
+            console.warn('No hay dron activo (idDronActivo es null)');
+            return;
+        }
+        
+        console.log(`Recargando dron ${this.idDronActivo} - cambiando a vista PORTADRON`);
+        
+        // Enviar comando de recarga al backend
         this.network.send('RECARGAR', {
             IdDron: this.idDronActivo
         });
+        
+        // Cambiar inmediatamente a vista PORTADRON porque el dron entrará en estado CARGANDO
+        // y el jugador querrá desplegar otro dron
+        this.vistaActual = 'PORTADRON';
+        this.elementoActivo = this.idPortadron;
+        
+        // Limpiar idDronActivo porque el dron ya no está bajo control directo
+        this.idDronActivo = null;
+        
+        // Actualizar UI
+        if (this.uiManager) {
+            this.uiManager.actualizarVista('PORTADRON');
+        }
+    }
+    
+    reactivar() {
+        // Reactivar input después de que la escena se reanuda
+        console.log('Reactivando controles de teclado');
+        
+        if (this.scene.input.keyboard) {
+            this.scene.input.keyboard.enabled = true;
+            this.scene.input.keyboard.enableGlobalCapture();
+            
+            // Asegurar que las teclas estén habilitadas
+            if (this.spaceKey) {
+                this.spaceKey.enabled = true;
+            }
+            if (this.iKey) {
+                this.iKey.enabled = true;
+            }
+            if (this.rKey) {
+                this.rKey.enabled = true;
+            }
+            
+            console.log('Teclado reactivado: SPACE, I, R activados');
+        }
+        
+        // Restaurar foco del canvas
+        if (this.scene.game.canvas) {
+            this.scene.game.canvas.focus();
+        }
     }
 }

@@ -157,11 +157,39 @@ public class Fachada implements iFachada {
         return jugadoresDAO.save(nuevoJugador);
     }
 
-    public void desconectarUsuario(String jugadorId) {
-        usuariosConectados.remove(jugadorId);
+    public void desconectarUsuario(String jugadorId) {   
+        // Obtener sesión antes de remover del mapa
+        String sesionId = jugadorEnSesion.get(jugadorId);
+        
+        // Remover de colecciones de tracking
+        Jugador jugador = usuariosConectados.remove(jugadorId);
         jugadoresEnLobby.remove(jugadorId);
         jugadorEnSesion.remove(jugadorId);
-        throw new UnsupportedOperationException("No implementado aun");
+        
+        // Si estaba en una sesión activa, limpiar
+        if (sesionId != null) {
+            SesionJuego sesion = sesionesActivas.get(sesionId);
+            if (sesion != null) {
+                Map<Jugador, PortaDron> elementosJugadores = sesion.getElementosJugadores();
+                
+                // Remover jugador de la sesión
+                if (jugador != null) {
+                    elementosJugadores.remove(jugador);
+                }
+                
+                // Notificar a jugadores restantes
+                List<Jugador> jugadoresRestantes = new java.util.ArrayList<>(elementosJugadores.keySet());
+                if (!jugadoresRestantes.isEmpty()) {
+                    List<Evento> estadoActual = new java.util.ArrayList<>();
+                    
+                    EnviarActualizaciones(jugadoresRestantes, estadoActual);
+                } else {
+                    // No quedan jugadores, eliminar sesión
+                    sesionesActivas.remove(sesionId);
+                    System.out.println("Sesion " + sesionId + " eliminada (sin jugadores)");
+                }
+            }
+        }
     }
 
     public boolean recuperarPartida() {
@@ -250,8 +278,6 @@ public class Fachada implements iFachada {
             return false;
         }
 
-        System.out.println("Dron desplegado -> sesion=" + sesionId + " idPortaDron=" + idPortaDron + " idDron=" + dronDesplegado.getId());
-
         // Enviar actualizacion a todos los jugadores
         List<Evento> acciones = new java.util.ArrayList<>();
         sesion.getElementosEnJuego().forEach((id, elem) -> {
@@ -264,7 +290,72 @@ public class Fachada implements iFachada {
         });
 
         boolean actualizado = EnviarActualizaciones(jugadoresSesion, acciones);
-        System.out.println("ACTUALIZAR_PARTIDA enviado tras despliegue=" + actualizado + " jugadores=" + jugadoresSesion.size() + " acciones=" + acciones.size());
+        return actualizado;
+    }
+
+    // Revisar que el dron este dentro del radio de recarga del portadron y cambiar su estado a CARGANDO
+
+    public boolean accion_recargar(Jugador jugador, int idElemento) throws AccionInvalidaException {
+        String sesionId = jugadorEnSesion.get(jugador.getId());
+
+        if(sesionId == null) {
+            throw new AccionInvalidaException("El jugador no esta en una sesion activa.");
+        }
+
+        SesionJuego sesion = sesionesActivas.get(sesionId);
+        if (sesion == null) {
+            throw new AccionInvalidaException("La sesion de juego no existe.");
+        }
+
+        Elemento elemento = sesion.getElementosEnJuego().get(idElemento);
+        if (!(elemento instanceof Dron)) {
+            throw new AccionInvalidaException("El elemento no es un dron valido para recargar.");
+        }
+
+        Dron dron = (Dron) elemento;
+        if (dron.getJugador() == null || !dron.getJugador().getId().equals(jugador.getId())) {
+            throw new AccionInvalidaException("El dron no pertenece al jugador.");
+        }
+
+        if (dron.getEstado() != EstadoElemento.ACTIVO && dron.getEstado() != EstadoElemento.INACTIVO) {
+            return false;
+        }
+
+        // Verificar que el dron esté sobre el portadron (dentro del radio)
+        PortaDron portaDron = null;
+        for (Elemento elem : sesion.getElementosEnJuego().values()) {
+            if (elem instanceof PortaDron && elem.getJugador().getId().equals(jugador.getId()) && portaDron == null) {
+                portaDron = (PortaDron) elem;
+            }
+        }
+
+        if (portaDron == null) {
+            return false;
+        }
+
+        // Verificar distancia entre dron y portadron
+        float dx = dron.getPosicionX() - portaDron.getPosicionX();
+        float dy = dron.getPosicionY() - portaDron.getPosicionY();
+        float distancia = (float) Math.sqrt(dx * dx + dy * dy);
+
+        if (distancia > 100) { // Radio de recarga de 100 unidades
+            return false;
+        }
+
+        // Cambiar estado del dron a CARGANDO
+        dron.setEstado(EstadoElemento.CARGANDO);
+        dron.setComenzandoCarga(0);
+
+        List<Jugador> jugadoresSesion = new java.util.ArrayList<>();
+        sesion.getElementosJugadores().forEach((jugadorSesion, porta) -> {
+            jugadoresSesion.add(jugadorSesion);
+        });
+
+        List<Evento> acciones = new java.util.ArrayList<>();
+        Evento_Recarga eventoRecarga = new Evento_Recarga(dron);
+        eventoRecarga.habilitar();
+        acciones.add(eventoRecarga);
+        boolean actualizado = EnviarActualizaciones(jugadoresSesion, acciones);
         return actualizado;
     }
 
@@ -292,9 +383,8 @@ public class Fachada implements iFachada {
 
         Municion municionDisponible = null;
         for (Municion m : dron.getMuniciones()) {
-            if (m != null && !m.isUsada()) {
+            if (m != null && !m.isUsada() && municionDisponible == null) {
                 municionDisponible = m;
-                break;
             }
         }
 
@@ -305,7 +395,12 @@ public class Fachada implements iFachada {
         municionDisponible.setUsada(true);
         municionDisponible.setPosicionX(dron.getPosicionX());
         municionDisponible.setPosicionY(dron.getPosicionY());
-        municionDisponible.setPosicionZ(dron.getPosicionZ());
+        // Para bombas, siempre iniciar en MAX_ALTURA (100) para que caigan desde arriba
+        if (municionDisponible instanceof Bomba) {
+            municionDisponible.setPosicionZ(Elemento.MAX_ALTURA);
+        } else {
+            municionDisponible.setPosicionZ(dron.getPosicionZ());
+        }
         municionDisponible.setAngulo(dron.getAngulo());
         municionDisponible.setEstado(EstadoElemento.ACTIVO);
 
@@ -318,20 +413,17 @@ public class Fachada implements iFachada {
         accionesIniciales.add(new Evento_Disparo(municionDisponible));
         accionesIniciales.add(new Evento_Disparo(dron));
         boolean enviadoInicial = EnviarActualizaciones(jugadoresSesion, accionesIniciales);
-        System.out.println("Disparo inicial broadcast enviado=" + enviadoInicial + " municionId=" + municionDisponible.getId());
-
-        System.out.println("Disparo aceptado -> sesion=" + sesionId + " idDron=" + idElemento + " municionId=" + municionDisponible.getId() + " tipo=" + municionDisponible.getClass().getSimpleName());
 
         if (municionDisponible instanceof Bomba) {
             Bomba bomba = (Bomba) municionDisponible;
             new Thread(() -> {
                 long tiempoInicio = System.currentTimeMillis();
-                // inventé esto porque no vi nada hecho, por fa borrar si no aplica
-                long duracionCaidaMs = 3000;
+         
+                long duracionCaidaMs = 2000;
 
                 while (System.currentTimeMillis() - tiempoInicio < duracionCaidaMs && bomba.getEstado() == EstadoElemento.ACTIVO) {
                     float progreso = (System.currentTimeMillis() - tiempoInicio) / (float) duracionCaidaMs;
-                    bomba.setPosicionZ(bomba.MAX_ALTURA * (1 - progreso));
+                    bomba.setPosicionZ(Elemento.MAX_ALTURA * (1 - progreso));
 
                     Elemento objetivo = buscarObjetivoImpactado(bomba, sesion, 50f);
                     if (objetivo != null) {
@@ -380,10 +472,10 @@ public class Fachada implements iFachada {
                 }
 
                 while (distanciaRecorrida < distanciaMax && misil.getEstado() == EstadoElemento.ACTIVO) {
-                    float paso = velocidad * 2.2f;
-                    inicioX += (float) Math.cos(anguloRad) * paso;
-                    inicioY += (float) Math.sin(anguloRad) * paso;
-                    distanciaRecorrida += paso;
+                    float peso = velocidad * 2.2f;
+                    inicioX += (float) Math.cos(anguloRad) * peso;
+                    inicioY += (float) Math.sin(anguloRad) * peso;
+                    distanciaRecorrida += peso;
 
                     misil.setPosicionX(inicioX);
                     misil.setPosicionY(inicioY);
@@ -493,7 +585,18 @@ public class Fachada implements iFachada {
 
     @Override
     public void EnviarFinPartida(String ganador) {
-        // Implementar enviar fin partida cuando iHandler lo soporte
+        // Obtener jugadores de la sesión activa
+        String idSesion = jugadorEnSesion.values().iterator().hasNext() ? 
+                         jugadorEnSesion.values().iterator().next() : null;
+        
+        if (idSesion != null && sesionesActivas.containsKey(idSesion)) {
+            SesionJuego sesion = sesionesActivas.get(idSesion);
+            List<Jugador> jugadores = new java.util.ArrayList<>(sesion.getElementosJugadores().keySet());
+            
+            if (handler != null) {
+                handler.enviarFinPartida(jugadores, ganador);
+            }
+        }
     }
 
     private boolean detectarColision(Municion proyectil, Elemento objetivo, float radioColision) {
@@ -506,6 +609,21 @@ public class Fachada implements iFachada {
         }
         if (objetivo.getEstado() != EstadoElemento.ACTIVO) {
             return false;
+        }
+
+        // Para bombas, solo detectar colision cuando estan cerca del suelo
+        // Esto evita que la bomba impacte unidades mientras esta cayendo en el aire
+        if (proyectil instanceof Bomba) {
+            if (proyectil.getPosicionZ()> 50) {
+                // La bomba todavia esta en el aire, no hay colision
+                return false;
+            }
+            // Para drones aereos volando alto, verificar altura
+            // Pero PORTADRONES siempre pueden ser impactados (son objetivos grandes/estáticos)
+            if (objetivo instanceof Dron && objetivo.getPosicionZ() > 50) {
+                // El dron esta volando alto, la bomba no puede impactarlo
+                return false;
+            }
         }
 
         float dx = proyectil.getPosicionX() - objetivo.getPosicionX();
@@ -551,9 +669,25 @@ public class Fachada implements iFachada {
 
         proyectil.setEstado(EstadoElemento.DESTRUIDO);
 
+        // Enviar evento de daño (para ImpactView)
         Evento_AplicarDano eventoDano = new Evento_AplicarDano(objetivo, danoInfligido, vidaNueva, estaDestruido, claseProyectil);
         List<Evento> eventos = new java.util.ArrayList<>();
         eventos.add(eventoDano);
+        
+        // Si el objetivo fue destruido, también enviar Evento_Movimiento con estado DESTRUIDO
+        // Esto permite que Frontend lo elimine del mapa
+        if (estaDestruido) {
+            Evento_Movimiento eventoDestruccion = new Evento_Movimiento(
+                objetivo,
+                objetivo.getPosicionX(),
+                objetivo.getPosicionY(),
+                objetivo.getAngulo()
+            );
+            eventoDestruccion.habilitar();
+            eventos.add(eventoDestruccion);
+            System.out.println("Enviando Evento_Movimiento DESTRUIDO para elemento " + objetivo.getId());
+        }
+        
         EnviarActualizaciones(jugadoresSesion, eventos);
 
         System.out.println("Daño aplicado: objetivo=" + objetivo.getId() + " vida=" + vidaNueva + "/" + vidaActual + " destruido=" + estaDestruido);

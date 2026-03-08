@@ -219,5 +219,141 @@ public class DronTest {
         assertEquals(80, dron.getBateria());
     }
 
+    @Test
+    void recibeImpacto_cambiaEstadoYVida() {
+        Jugador j9 = new Jugador("009", "Nacho09", "ACTIVO");
+        Dron dron = new Dron(1, 
+                            10f, 
+                            20f,
+                            30f, 
+                            90, 
+                            100, 
+                            EstadoElemento.ACTIVO, 
+                            0, 
+                            0, 
+                            50, 
+                            TipoElemento.AEREO, 
+                            j9);  
+        Evento_Movimiento eventoMovimiento = new Evento_Movimiento(dron, 10f, 20f, 90);
+        dron.recibeImpacto(eventoMovimiento);
+        assertEquals(EstadoElemento.DESTRUIDO, dron.getEstado());
+        assertEquals(0, dron.getVida());
+    }
+
+    @Test
+    void moverse_cambiaPosicion() {
+        Jugador j10 = new Jugador("010", "Nacho10", "ACTIVO");
+        Dron dron = new Dron(1, 
+                            10f, 
+                            20f,
+                            30f, 
+                            90, 
+                            100, 
+                            EstadoElemento.ACTIVO, 
+                            0, 
+                            0, 
+                            50, 
+                            TipoElemento.NAVAL, 
+                            j10);  
+        Evento_Movimiento eventoMovimiento = new Evento_Movimiento(dron, 15f, 25f, 90);
+        dron.moverse(eventoMovimiento);
+        assertEquals(15f, dron.getPosicionX());
+        assertEquals(25f, dron.getPosicionY());
+        assertEquals(30f, dron.getPosicionZ());
+    }
+
+    @Test
+    void moverse_cambiaEstadoAActivo() {
+        Jugador j11 = new Jugador("011", "Nacho11", "ACTIVO");
+        Dron dron = new Dron(1, 
+                            10f, 
+                            20f,
+                            30f, 
+                            90, 
+                            100, 
+                            EstadoElemento.INACTIVO, 
+                            0, 
+                            0, 
+                            50, 
+                            TipoElemento.AEREO, 
+                            j11);  
+        Evento_Movimiento eventoMovimiento = new Evento_Movimiento(dron, 15f, 25f, 90);
+        dron.moverse(eventoMovimiento);
+        assertEquals(EstadoElemento.ACTIVO, dron.getEstado());
+    }
+
+    @Test
+    void disparar_sinMunicionesNoDispara() {
+        Jugador j12 = new Jugador("012", "Nacho12", "ACTIVO");
+        Dron dron = new Dron(1, 
+                            10f, 
+                            20f,
+                            30f, 
+                            90, 
+                            100, 
+                            EstadoElemento.ACTIVO, 
+                            0, 
+                            0, 
+                            50, 
+                            TipoElemento.NAVAL, 
+                            j12);  
+        Evento_Disparo eventoDisparo = new Evento_Disparo(dron);
+        Elemento disparo = dron.disparar(eventoDisparo);
+        assertNull(disparo);
+    }
+
+    @Test
+    void disparar_conMunicionesDisparaYMarcaMunicionComoUsadaNaval() {
+        Jugador j13 = new Jugador("013", "Nacho13", "ACTIVO");
+        Dron dron = new Dron(1, 
+                            10f, 
+                            20f,
+                            30f, 
+                            90, 
+                            100, 
+                            EstadoElemento.ACTIVO, 
+                            0, 
+                            0, 
+                            50, 
+                            TipoElemento.NAVAL, 
+                            j13);  
+
+        dron.agregarMunicion(01);
+        dron.agregarMunicion(02);
+        Evento_Disparo eventoDisparo = new Evento_Disparo(dron);
+        Elemento disparo = dron.disparar(eventoDisparo);
+        assertTrue(disparo instanceof Misil);
+        Municion municion = (Municion) disparo;
+        assertTrue(municion.isUsada());
+        Elemento disparo2 = dron.disparar(eventoDisparo);
+        assertTrue(disparo2 instanceof Misil);
+        Municion municion2 = (Municion) disparo2;
+        assertTrue(municion2.isUsada());
+    }
+
+    @Test
+    void disparar_conMunicionesDisparaYMarcaMunicionComoUsadaAereo() {
+        Jugador j13 = new Jugador("013", "Nacho13", "ACTIVO");
+        Dron dron = new Dron(1, 
+                            10f, 
+                            20f,
+                            30f, 
+                            90, 
+                            100, 
+                            EstadoElemento.ACTIVO, 
+                            0, 
+                            0, 
+                            50, 
+                            TipoElemento.AEREO, 
+                            j13);  
+
+        dron.agregarMunicion(01);
+        Evento_Disparo eventoDisparo = new Evento_Disparo(dron);
+        Elemento disparo = dron.disparar(eventoDisparo);
+        assertTrue(disparo instanceof Bomba);
+        Municion municion = (Municion) disparo;
+        assertTrue(municion.isUsada());
+    }
+
 
 }

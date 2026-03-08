@@ -222,8 +222,8 @@ public class Dron extends Elemento {
 
     @Override
     public void recibeImpacto(Evento_Movimiento intencion) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'recibeImpacto'");
+        this.setVida(0);
+        this.setEstado(EstadoElemento.DESTRUIDO);
     }
 
     public long getComenzandoCarga() {

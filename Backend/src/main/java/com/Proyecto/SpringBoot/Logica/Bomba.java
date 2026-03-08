@@ -64,4 +64,15 @@ public class Bomba extends Municion {
         throw new UnsupportedOperationException("Unimplemented method 'recibeImpacto'");
     }
 
+    @Override
+    protected TipoElemento getTipo() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getTipo'");
+    }
+
+    @Override
+    protected int getBateria() {
+        return 0;
+    }
+
 }

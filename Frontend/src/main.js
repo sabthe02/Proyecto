@@ -3,13 +3,14 @@ import { GameChoice } from './scenes/GameChoice.js';
 import { Lobby } from './scenes/Lobby.js';
 import { Game } from './scenes/Game.js';
 import { GameOver } from './scenes/GameOver.js';
+import { ImpactView } from './scenes/ImpactView.js';
 
 const config = {
     type: Phaser.AUTO,
     parent: 'game-container',
     width: window.innerWidth,
     height: window.innerHeight,
-    scene: [Greeting, GameChoice, Lobby, Game, GameOver],
+    scene: [Greeting, GameChoice, Lobby, Game, GameOver, ImpactView],
 
     physics: {
         default: 'arcade',

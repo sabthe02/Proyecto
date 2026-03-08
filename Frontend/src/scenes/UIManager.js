@@ -16,7 +16,7 @@ export class UIManager {
         this.bateriaMax = null;
 
         this.crearHUD();
-        this.escucharMensajesServidor();
+        this.escucharEventos();
     }
 
     crearHUD() {

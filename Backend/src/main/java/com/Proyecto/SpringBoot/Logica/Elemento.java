@@ -1,6 +1,6 @@
 package com.Proyecto.SpringBoot.Logica;
 
-import com.Proyecto.SpringBoot.Modelos.Jugador;
+import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public abstract class Elemento {
@@ -11,7 +11,7 @@ public abstract class Elemento {
     float posicionZ;
     Integer angulo;
     Integer vida;
-    Jugador jugador;
+    EntidadJugador jugador;
     public static final float MAX_ALTURA = 100;
 
     EstadoElemento estado;
@@ -27,7 +27,7 @@ public abstract class Elemento {
         jugador = null;
     }
 
-    public Elemento(int id, Jugador jugador) {
+    public Elemento(int id, EntidadJugador jugador) {
         this.id = id;
         this.jugador = jugador;
         posicionX = 0f;
@@ -45,7 +45,7 @@ public abstract class Elemento {
             Integer angulo,
             Integer vida,
             EstadoElemento estado,
-            Jugador jugador) {
+            EntidadJugador jugador) {
         this.id = id;
         this.posicionX = posicionX2;
         this.posicionY = posicionY2;
@@ -109,11 +109,11 @@ public abstract class Elemento {
     }
 
     @JsonIgnore // para que el campo jugador no se incluya en la serialización JSON
-    public Jugador getJugador() {
+    public EntidadJugador getJugador() {
         return jugador;
     }
 
-    public void setJugador(Jugador jugador) {
+    public void setJugador(EntidadJugador jugador) {
         this.jugador = jugador;
     }
     

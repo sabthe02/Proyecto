@@ -4,13 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-import com.Proyecto.SpringBoot.Modelos.Jugador;
+import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 
 public class BombaTest {    
 
     @Test
     void constructor_seteaCampos() {
-        Jugador j1 = new Jugador("001", "Nacho", "ACTIVO");
+        EntidadJugador j1 = new EntidadJugador("001", "Nacho", "ACTIVO");
         Bomba bomba = new Bomba(1, 
                             5f, 
                             20f,
@@ -27,7 +27,7 @@ public class BombaTest {
     
     @Test
     void setters_modificanCampos() {    
-        Jugador j2 = new Jugador("002", "Nacho02", "ACTIVO");
+        EntidadJugador j2 = new EntidadJugador("002", "Nacho02", "ACTIVO");
         Bomba bomba = new Bomba(1, 
                             5f, 
                             20f,

@@ -1,6 +1,6 @@
 package com.Proyecto.SpringBoot.Logica;
 
-import com.Proyecto.SpringBoot.Modelos.Jugador;
+import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 
 public class Bomba extends Municion {
 
@@ -9,7 +9,7 @@ public class Bomba extends Municion {
     private float gravedad = 0.5f;
     private float velocidadInicio = 0;
 
-    public Bomba(int id, Jugador jugador) {
+    public Bomba(int id, EntidadJugador jugador) {
         super(id, jugador);
         this.peso = 100;
         this.radioExplosion = 5f;
@@ -24,7 +24,7 @@ public class Bomba extends Municion {
                 EstadoElemento estado, 
                 int peso, 
                 float radioExplosion, 
-                Jugador jugador) {
+                EntidadJugador jugador) {
         super(id, posicionX, posicionY, posicionZ, angulo, vida, estado, jugador);
         this.peso = peso;
         this.radioExplosion = radioExplosion;

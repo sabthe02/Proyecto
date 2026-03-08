@@ -1,4 +1,4 @@
-export class PortaDron extends Phaser.GameObjects.Container {
+export class Portadrones extends Phaser.GameObjects.Container {
     constructor(scene, datos) {
         
         super(scene, datos.posicionX, datos.posicionY);

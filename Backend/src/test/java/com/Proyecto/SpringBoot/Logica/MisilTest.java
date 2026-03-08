@@ -4,13 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-import com.Proyecto.SpringBoot.Modelos.Jugador;
+import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 
 public class MisilTest {
     
     @Test
     public void testConstructor() {
-        Jugador j1 = new Jugador("001", "Nacho", "ACTIVO");
+        EntidadJugador j1 = new EntidadJugador("001", "Nacho", "ACTIVO");
         Misil misil = new Misil(1, j1);
         assertEquals(1, misil.getVelocidad());
         assertEquals(1, misil.getDistancia());
@@ -19,7 +19,7 @@ public class MisilTest {
 
     @Test
     public void testConstructor_conParametros() {
-        Jugador j1 = new Jugador("001", "Nacho", "ACTIVO");
+        EntidadJugador j1 = new EntidadJugador("001", "Nacho", "ACTIVO");
         Misil misil = new Misil(1, 
                         10f, 
                         20f, 
@@ -36,7 +36,7 @@ public class MisilTest {
 
     @Test
     public void setters_modificanCampos() {
-        Jugador j1 = new Jugador("001", "Nacho", "ACTIVO");
+        EntidadJugador j1 = new EntidadJugador("001", "Nacho", "ACTIVO");
         Misil misil = new Misil(1, j1);
         misil.setVelocidad(5);
         misil.setDistancia(10f);

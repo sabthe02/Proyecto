@@ -1,4 +1,4 @@
-export class Dron extends Phaser.GameObjects.Container {
+export class Drone extends Phaser.GameObjects.Container {
     constructor(scene, datos) {
         
         super(scene, datos.posicionX, datos.posicionY);

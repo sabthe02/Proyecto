@@ -4,13 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-import com.Proyecto.SpringBoot.Modelos.Jugador;
+import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 
 public class Evento_DisparoTest {
     
     @Test
     public void testEventoDisparo() {
-        Jugador j8 = new Jugador("008", "Nacho08", "ACTIVO");
+        EntidadJugador j8 = new EntidadJugador("008", "Nacho08", "ACTIVO");
         Dron elemento = new Dron(1, 
                             10f, 
                             20f,

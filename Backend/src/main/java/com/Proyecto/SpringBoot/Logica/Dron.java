@@ -3,7 +3,7 @@ package com.Proyecto.SpringBoot.Logica;
 import java.util.List;
 import java.util.Map;
 
-import com.Proyecto.SpringBoot.Modelos.Jugador;
+import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 
 public class Dron extends Elemento {
 
@@ -25,7 +25,7 @@ public class Dron extends Elemento {
             int cantidadUsada,
             int bateria,
             TipoElemento tipo,
-            Jugador jugador) {
+            EntidadJugador jugador) {
         super(id, posicionX, posicionY, posicionZ, angulo, vida, estado, jugador);
 
         municiones = new java.util.ArrayList<Municion>();

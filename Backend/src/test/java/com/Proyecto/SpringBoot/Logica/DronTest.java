@@ -2,17 +2,17 @@ package com.Proyecto.SpringBoot.Logica;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
+import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import com.Proyecto.SpringBoot.Modelos.Jugador;
 
 public class DronTest {
     
     @Test
     void constructor_seteaCamposAereo() {
-        Jugador j1 = new Jugador("id-1", "Nacho", "ACTIVO");
+        EntidadJugador j1 = new EntidadJugador("id-1", "Nacho", "ACTIVO");
         Dron dron = new Dron(1, 
                             10f, 
                             20f,
@@ -40,7 +40,7 @@ public class DronTest {
 
     @Test
     void constructor_seteaCamposNaval() {
-        Jugador j1 = new Jugador("id-1", "Nacho", "ACTIVO");
+        EntidadJugador j1 = new EntidadJugador("id-1", "Nacho", "ACTIVO");
         Dron dron = new Dron(1, 
                             10f, 
                             20f,
@@ -68,7 +68,7 @@ public class DronTest {
 
     @Test
     void agregarMunicion_agregaBomba() {
-        Jugador j2 = new Jugador("002", "Nacho02", "ACTIVO");
+        EntidadJugador j2 = new EntidadJugador("002", "Nacho02", "ACTIVO");
         Dron dron = new Dron(1, 
                             10f, 
                             20f,
@@ -89,7 +89,7 @@ public class DronTest {
 
     @Test
     void agregarMunicion_agregaMisil() {
-        Jugador j3 = new Jugador("003", "Nacho03", "ACTIVO");
+        EntidadJugador j3 = new EntidadJugador("003", "Nacho03", "ACTIVO");
         Dron dron = new Dron(1, 
                             10f, 
                             20f,
@@ -109,7 +109,7 @@ public class DronTest {
     
     @Test
     void cantidadMunicionesUsadas_cuentaCorrectamente() {
-        Jugador j4 = new Jugador("004", "Nacho04", "ACTIVO");
+        EntidadJugador j4 = new EntidadJugador("004", "Nacho04", "ACTIVO");
         Dron dron = new Dron(1, 
                             10f, 
                             20f,
@@ -132,7 +132,7 @@ public class DronTest {
 
     @Test
     void cantidadMunicionesDisponibles_cuentaCorrectamente() {
-        Jugador j5 = new Jugador("005", "Nacho05", "ACTIVO");
+        EntidadJugador j5 = new EntidadJugador("005", "Nacho05", "ACTIVO");
         Dron dron = new Dron(1, 
                             10f, 
                             20f,
@@ -156,7 +156,7 @@ public class DronTest {
 
     @Test
     void cargarMunicionInicial_agregaMunicionAElemento() {
-        Jugador j6 = new Jugador("006", "Nacho06", "ACTIVO");
+        EntidadJugador j6 = new EntidadJugador("006", "Nacho06", "ACTIVO");
         Dron dron = new Dron(1, 
                             10f, 
                             20f,
@@ -181,7 +181,7 @@ public class DronTest {
 
     @Test   
     void cargarMunicionInicial_noAgregaMunicionSiMapaEsNull() {
-        Jugador j7 = new Jugador("007", "Nacho07", "ACTIVO");
+        EntidadJugador j7 = new EntidadJugador("007", "Nacho07", "ACTIVO");
         Dron dron = new Dron(1, 
                             10f, 
                             20f,
@@ -200,7 +200,7 @@ public class DronTest {
 
     @Test
     void setters_modificanCampos() {
-        Jugador j8 = new Jugador("008", "Nacho08", "ACTIVO");
+        EntidadJugador j8 = new EntidadJugador("008", "Nacho08", "ACTIVO");
         Dron dron = new Dron(1, 
                             10f, 
                             20f,
@@ -221,7 +221,7 @@ public class DronTest {
 
     @Test
     void recibeImpacto_cambiaEstadoYVida() {
-        Jugador j9 = new Jugador("009", "Nacho09", "ACTIVO");
+        EntidadJugador j9 = new EntidadJugador("009", "Nacho09", "ACTIVO");
         Dron dron = new Dron(1, 
                             10f, 
                             20f,
@@ -242,7 +242,7 @@ public class DronTest {
 
     @Test
     void moverse_cambiaPosicion() {
-        Jugador j10 = new Jugador("010", "Nacho10", "ACTIVO");
+        EntidadJugador j10 = new EntidadJugador("010", "Nacho10", "ACTIVO");
         Dron dron = new Dron(1, 
                             10f, 
                             20f,
@@ -264,7 +264,7 @@ public class DronTest {
 
     @Test
     void moverse_cambiaEstadoAActivo() {
-        Jugador j11 = new Jugador("011", "Nacho11", "ACTIVO");
+        EntidadJugador j11 = new EntidadJugador("011", "Nacho11", "ACTIVO");
         Dron dron = new Dron(1, 
                             10f, 
                             20f,
@@ -284,7 +284,7 @@ public class DronTest {
 
     @Test
     void disparar_sinMunicionesNoDispara() {
-        Jugador j12 = new Jugador("012", "Nacho12", "ACTIVO");
+        EntidadJugador j12 = new EntidadJugador("012", "Nacho12", "ACTIVO");
         Dron dron = new Dron(1, 
                             10f, 
                             20f,
@@ -304,7 +304,7 @@ public class DronTest {
 
     @Test
     void disparar_conMunicionesDisparaYMarcaMunicionComoUsadaNaval() {
-        Jugador j13 = new Jugador("013", "Nacho13", "ACTIVO");
+        EntidadJugador j13 = new EntidadJugador("013", "Nacho13", "ACTIVO");
         Dron dron = new Dron(1, 
                             10f, 
                             20f,
@@ -333,7 +333,7 @@ public class DronTest {
 
     @Test
     void disparar_conMunicionesDisparaYMarcaMunicionComoUsadaAereo() {
-        Jugador j13 = new Jugador("013", "Nacho13", "ACTIVO");
+        EntidadJugador j13 = new EntidadJugador("013", "Nacho13", "ACTIVO");
         Dron dron = new Dron(1, 
                             10f, 
                             20f,

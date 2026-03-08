@@ -11,6 +11,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import com.Proyecto.SpringBoot.Logica.Evento;
 import com.Proyecto.SpringBoot.Logica.Evento_AplicarDano;
+import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 import com.Proyecto.SpringBoot.Logica.Bomba;
 import com.Proyecto.SpringBoot.Logica.Dron;
 import com.Proyecto.SpringBoot.Logica.Elemento;
@@ -23,7 +24,6 @@ import com.Proyecto.SpringBoot.Logica.DTO.EscenarioInicialDTO;
 import com.Proyecto.SpringBoot.Logica.DTO.JugadorDTO;
 import com.Proyecto.SpringBoot.Logica.Excepciones.ExisteNickNameException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.LobbyException;
-import com.Proyecto.SpringBoot.Modelos.Jugador;
 
 import jakarta.annotation.PostConstruct;
 import tools.jackson.databind.JsonNode;
@@ -36,7 +36,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
     @Autowired
     Fachada fachada;
 
-    Dictionary<WebSocketSession, Jugador> usuariosConectadosbySocket;
+    Dictionary<WebSocketSession, EntidadJugador> usuariosConectadosbySocket;
     Dictionary<String, WebSocketSession> usuariosConectadosbyIdJugador;
 
     @PostConstruct
@@ -141,13 +141,18 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         // Puse esto porque no me estaba conectando
-        Jugador jugador = usuariosConectadosbySocket.get(session);
+        EntidadJugador jugador = usuariosConectadosbySocket.get(session);
         
         // Remover el jugador de ambas tablas de conexión
         usuariosConectadosbySocket.remove(session);
         if (jugador != null) {
             usuariosConectadosbyIdJugador.remove(jugador.getId());
-            fachada.desconectarUsuario(jugador.getId());
+            try {
+                fachada.desconectarUsuario(jugador);
+            } catch (Exception e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
         }
 
         System.out.println("Cliente desconectado: " + session.getId());
@@ -166,7 +171,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
     }
 
     @Override
-    public boolean enviarAcciones(List<Jugador> jugadores, List<Evento> acciones) {
+    public boolean enviarAcciones(List<EntidadJugador> jugadores, List<Evento> acciones) {
         if (jugadores == null || acciones == null || acciones.isEmpty()) {
             return false;
         }
@@ -206,7 +211,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
                     continue;
                 }
                 
-                for (Jugador jugador : jugadores) {
+                for (EntidadJugador jugador : jugadores) {
                     if (jugador == null) {
                         continue;
                     }
@@ -315,7 +320,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
         String jsonFinal = mapper.writeValueAsString(sobre);
 
         boolean enviado = false;
-        for (Jugador jugador : jugadores) {
+        for (EntidadJugador jugador : jugadores) {
             if (jugador == null) {
                 continue;
             }
@@ -511,7 +516,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
         String team = teamNode.asString();
         ObjectNode response = new ObjectMapper().createObjectNode();
 
-        Jugador nuevoJugador = null;
+        EntidadJugador nuevoJugador = null;
 
         try {
             nuevoJugador = fachada.crearUsuario(nickname, team);
@@ -543,7 +548,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
         
         String nickname = nicknameNode.asString();
 
-        Jugador jugador = null;
+        EntidadJugador jugador = null;
         
         try {
             jugador = fachada.loginUsuario(nickname);

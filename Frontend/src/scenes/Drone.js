@@ -4,24 +4,61 @@ export class Dron extends Phaser.GameObjects.Container {
         super(scene, datos.posicionX, datos.posicionY);
         
         this.id = data.id;
+        this.clase = 'DRON';
         this.tipoEquipo = data.tipoEquipo;
-        this.estadoActual = data.estado || 'INACTIVO';
-        this.idJugador = data.idJugador || data.jugadorId || null; // Para saber a quién pertenece
+        
+        let estadoInicial;
+        if (data.estado) {
+            estadoInicial = data.estado;
+        } else {
+            estadoInicial = 'INACTIVO';
+        }
+        this.estadoActual = estadoInicial;
+        
+        // Para saber a quién pertenece
+        let idJugadorInicial;
+        if (data.idJugador) {
+            idJugadorInicial = data.idJugador;
+        } else if (data.jugadorId) {
+            idJugadorInicial = data.jugadorId;
+        } else {
+            idJugadorInicial = null;
+        }
+        this.idJugador = idJugadorInicial;
+        
         this.jugadorId = this.idJugador; // Alias para compatibilidad
         this.portadronPadreId = data.portadronPadreId; // Si está en un portadrón
         
-        // Backend usa escala de game ticks (e.g., 1000 = 100%)
-        // Rastreamos el max valor para calcular porcentajes
-        this.bateriaMax = null; // Se detecta dinámicamente
+        // Backend usa MAX_BATERIA = 1000 ticks
+        // Inicializar con el valor conocido del backend
+        this.bateriaMax = 1000;
 
-        const skin = this.tipoEquipo === 'AEREO' ? 'dron_aereo' : 'dron_naval';
+        let skin;
+        if (this.tipoEquipo === 'AEREO') {
+            skin = 'dron_aereo';
+        } else {
+            skin = 'dron_naval';
+        }
+        
         this.sprite = scene.add.sprite(0, 0, skin);
-        // Escalar drones para que no sean tan grandes (similar a portadrones)
-        this.sprite.setScale(this.tipoEquipo === 'AEREO' ? 0.3 : 0.25);
+        // Escalar drones
+        let escala;
+        if (this.tipoEquipo === 'AEREO') {
+            escala = 0.3;
+        } else {
+            escala = 0.25;
+        }
+        this.sprite.setScale(escala);
         this.add(this.sprite); // Lo metemos al contenedor
         
-        // Sistema de capas (depth) - drones por encima de portadrones
-        this.setDepth(300 + (data.z || 0));
+        // Drones por encima de portadrones
+        let zInicial;
+        if (data.z) {
+            zInicial = data.z;
+        } else {
+            zInicial = 0;
+        }
+        this.setDepth(300 + zInicial);
 
         // Etiqueta
         this.label = scene.add.text(0, -45, `ID: ${this.id}`, { fontSize: '12px' }).setOrigin(0.5);
@@ -42,17 +79,38 @@ export class Dron extends Phaser.GameObjects.Container {
 
 
     actualizarDesdeServidor(data) {
-        this.setPosition(data.x, data.y);
-        this.setAngle(data.angulo);
+        // Animar movimiento suavemente en lugar de salto instantaneo
+        this.scene.tweens.add({
+            targets: this,
+            x: data.x,
+            y: data.y,
+            angle: data.angulo,
+            duration: 200,
+            ease: 'Linear'
+        });
         
-        // Actualizar ownership si cambia (raro pero posible)
+        // Actualizar dueño si cambia
         if (data.idJugador !== undefined || data.jugadorId !== undefined) {
-            this.idJugador = data.idJugador || data.jugadorId || this.idJugador;
+            let nuevoIdJugador;
+            if (data.idJugador) {
+                nuevoIdJugador = data.idJugador;
+            } else if (data.jugadorId) {
+                nuevoIdJugador = data.jugadorId;
+            } else {
+                nuevoIdJugador = this.idJugador;
+            }
+            this.idJugador = nuevoIdJugador;
             this.jugadorId = this.idJugador;
         }
         
         // Actualizar profundidad según altitud
-        this.setDepth(300 + (data.z || 0));
+        let zActual;
+        if (data.z) {
+            zActual = data.z;
+        } else {
+            zActual = 0;
+        }
+        this.setDepth(300 + zActual);
         
         // Aplicar indicadores visuales según estado
         if (data.estado && data.estado !== this.estadoActual) {
@@ -67,17 +125,24 @@ export class Dron extends Phaser.GameObjects.Container {
             this.setVisible(false);
         }
         
-        // Drones solo muestran batería (one-hit kill, no vida)
-        // IMPORTANTE: Solo dibujar barras para drones ACTIVOS y visibles
-        if (this.visible && data.estado === 'ACTIVO') {
-            const bateria = data.bateria !== undefined ? data.bateria : 100;
-            // Solo loguear si el valor es anómalo (backend bug)
-            if (bateria > 100 || bateria < 0) {
+        // Drones muestran batería cuando ACTIVO o CARGANDO
+        // ACTIVO: bateria drenandose en tiempo real
+        // CARGANDO: bateria recargandose en portadron
+        if (data.estado === 'ACTIVO' || data.estado === 'CARGANDO') {
+            let bateria;
+            if (data.bateria !== undefined) {
+                bateria = data.bateria;
+            } else {
+                bateria = 100;
+            }
+            
+            // Solo loguear si el valor es realmente anómalo
+            if (bateria < 0 || bateria > 10000) {
                 console.warn(`[Dron ${this.id}] Batería anómala del backend: ${bateria}`);
             }
             this.dibujarInterfazInterna(bateria);
         } else {
-            // Limpiar barras si el dron no está activo
+            // Limpiar barras si el dron no está activo ni cargando
             this.barras.clear();
         }
     }
@@ -87,45 +152,50 @@ export class Dron extends Phaser.GameObjects.Container {
         this.sprite.clearTint();
         this.sprite.setAlpha(1.0);
         
-        switch(estado) {
-            case 'ACTIVO':
-                // Tinte verde brillante para indicar que está activo
-                this.sprite.setTint(0x88ff88);
-                break;
-            case 'INACTIVO':
-                // Semi-transparente para inactivos
-                this.sprite.setAlpha(0.5);
-                break;
-            case 'CARGANDO':
-                // Tinte azulado pulsante
-                this.sprite.setTint(0x8888ff);
-                this.scene.tweens.add({
-                    targets: this.sprite,
-                    alpha: { from: 0.5, to: 1.0 },
-                    duration: 500,
-                    yoyo: true,
-                    repeat: -1
-                });
-                break;
-            case 'DESTRUIDO':
-                // Será eliminado por EntityManager, no hacer nada
-                break;
+        if (estado === 'ACTIVO') {
+            // Tinta verde brillante para indicar que está activo
+            this.sprite.setTint(0x88ff88);
+            return;
+        }
+        
+        if (estado === 'INACTIVO') {
+            // Semi-transparente para inactivos
+            this.sprite.setAlpha(0.5);
+            return;
+        }
+        
+        if (estado === 'CARGANDO') {
+            // Tinta azulado pulsante
+            this.sprite.setTint(0x8888ff);
+            this.scene.tweens.add({
+                targets: this.sprite,
+                alpha: { from: 0.5, to: 1.0 },
+                duration: 500,
+                yoyo: true,
+                repeat: -1
+            });
+            return;
+        }
+        
+        if (estado === 'DESTRUIDO') {
+            // Será eliminado por EntityManager, no hacer nada
+            return;
         }
     }
 
     dibujarInterfazInterna(bateria) {
         this.barras.clear();
         
-        // Backend usa escala de game ticks (e.g., 1000 = 100%)
-        // Detectamos el max valor y calculamos porcentaje relativo
-        if (this.bateriaMax === null || bateria > this.bateriaMax) {
-            this.bateriaMax = bateria;
+        // Backend usa MAX_BATERIA = 1000
+        // Calcular porcentaje basado en la escala del backend
+        let bateriaPorcentaje;
+        if (this.bateriaMax > 0 && bateria !== undefined && bateria !== null) {
+            bateriaPorcentaje = Math.max(0, Math.min(1, bateria / this.bateriaMax));
+        } else {
+            bateriaPorcentaje = 0;
         }
         
-        // Calcular porcentaje basado en la escala del backend
-        const bateriaPorcentaje = this.bateriaMax > 0 ? Math.max(0, bateria / this.bateriaMax) : 0;
-        
-        // Barra ajustada al tamaño del sprite escalado - más visible
+        // Barra ajustada al tamaño del sprite escalado
         const barWidth = 30;
         const barHeight = 5;
         const barX = -barWidth / 2;
@@ -137,18 +207,19 @@ export class Dron extends Phaser.GameObjects.Container {
         this.barras.fillRect(barX, barY, barWidth, barHeight);
         this.barras.strokeRect(barX, barY, barWidth, barHeight);
         
-        // Batería amarilla (proporcional a escala del backend)
+        // Batería amarilla
         this.barras.fillStyle(0xffff00);
         this.barras.fillRect(barX, barY, bateriaPorcentaje * barWidth, barHeight);
     }
 
     morir() {
-        console.log(`Dron ${this.id} destruido.`);
+        // Dron destruido
+        console.trace('[Drone] Rastreo de llamada a morir()');
 
         // Crear explosión en la posición del dron
         const explosion = this.scene.add.sprite(this.x, this.y, 'proyectil_bomba');
         explosion.setScale(1.5);
-        explosion.setTint(0xff6600); // Tinte naranja/rojo para explosión
+        explosion.setTint(0xff6600); // Tinta naranja/rojo para explosión
         explosion.setDepth(10000); // Encima de todo
 
         // Animar la explosión con los frames de fuego
@@ -186,13 +257,21 @@ export class Dron extends Phaser.GameObjects.Container {
     }
 
     mostrarDano(cantidad) {
-        // Flash red tint
-        this.setTint(0xff0000);
+        // Chequeo de seguridad: asegurar que el sprite aún existe (no destruido)
+        if (!this.sprite || !this.sprite.active) {
+            console.warn(`[Drone ${this.id}] mostrarDano llamado pero sprite ya fue destruido`);
+            return;
+        }
+        
+        // Tinta roja en el dron
+        this.sprite.setTint(0xff0000);
         this.scene.time.delayedCall(200, () => {
-            this.clearTint();
+            if (this.sprite && this.sprite.active) {
+                this.sprite.clearTint();
+            }
         });
         
-        // Spawn damage text
+        // Texto de daño flotante
         const damageText = this.scene.add.text(this.x, this.y - 40, `-${cantidad}`, {
             fontSize: '24px',
             color: '#ff0000',
@@ -201,7 +280,7 @@ export class Dron extends Phaser.GameObjects.Container {
             strokeThickness: 4
         }).setOrigin(0.5).setDepth(200);
         
-        // Animate damage text floating up
+        // Animatar el texto flotando hacia arriba
         this.scene.tweens.add({
             targets: damageText,
             y: damageText.y - 50,
@@ -210,7 +289,7 @@ export class Dron extends Phaser.GameObjects.Container {
             onComplete: () => damageText.destroy()
         });
         
-        // Show explosion particles
+        // Mostrar explosión pequeña para impactos críticos (ejemplo: daño > 20)
         const explosion = this.scene.add.sprite(this.x, this.y, 'fire00')
             .setScale(0.8)
             .setDepth(150)
@@ -224,7 +303,7 @@ export class Dron extends Phaser.GameObjects.Container {
             onComplete: () => explosion.destroy()
         });
         
-        console.log(`[Drone ${this.id}] Mostrando daño: ${cantidad}`);
+
     }
 
     

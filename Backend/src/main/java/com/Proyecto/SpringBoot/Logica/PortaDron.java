@@ -63,11 +63,13 @@ public class PortaDron extends Elemento {
     // Busca el primer dron INACTIVO y lo activa
     public Dron desplegarDron(Evento_DesplegarDron eventoDesplegarDron) {
         Dron dronDesplegado = null;
-
-        // Buscar el primer dron inactivo disponible
+        
+        // Buscar el primer dron inactivo disponible (solo INACTIVO, no CARGANDO)
         for (int i = 0; i < drones.size(); i++) {
             Dron dron = drones.get(i);
-            if (dron.getEstado() == EstadoElemento.INACTIVO) {
+            // Solo desplegar drones INACTIVO con batería completa
+            // No desplegar drones CARGANDO (están en proceso de recarga)
+            if (dron.getEstado() == EstadoElemento.INACTIVO && dron.getBateria() >= Dron.MAX_BATERIA) {
                 // Activar el dron y desplegarlo
                 dron.setEstado(EstadoElemento.ACTIVO);
                 dronDesplegado = dron;

@@ -161,8 +161,7 @@ public class PartidasService implements iPartidaService{
     }
 
     public boolean accion_desplegar(EntidadJugador jugador, int idPortaDron) throws AccionInvalidaException {
-        
-        
+
         boolean actualizado = false;
         if (validar_accion(jugador)) {
             String sesionId = jugadorEnSesion.get(jugador.getId());
@@ -172,6 +171,7 @@ public class PartidasService implements iPartidaService{
             em.setElemento(sesion.getElemento(idPortaDron));
             actualizado = sesion.agregarEvento(em);
         }
+
         return actualizado;
         
     }
@@ -202,7 +202,7 @@ public class PartidasService implements iPartidaService{
     }
 
     @Override
-    public void EnviarFinPartida(String ganador) {
-        fachada.EnviarFinPartida(ganador);
+    public void EnviarFinPartida(List<EntidadJugador> jugadores, EntidadJugador ganador) {
+        fachada.EnviarFinPartida(jugadores, ganador);
     }
 }

@@ -7,5 +7,5 @@ import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 public interface iFachada {
     boolean EnviarActualizaciones(List<EntidadJugador> jugadores, List<Evento> acciones);
     boolean EnviarInicioPartida(List<PortaDron> portaDrones, Mapa mapa);
-    void EnviarFinPartida(String ganador);
+    void EnviarFinPartida(List<EntidadJugador> jugadores, EntidadJugador ganador);
 }

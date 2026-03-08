@@ -1,12 +1,10 @@
 package com.Proyecto.SpringBoot.Logica.DTO;
 
-import java.beans.EventHandler;
 import java.util.List;
 
 import com.Proyecto.SpringBoot.Logica.Bomba;
 import com.Proyecto.SpringBoot.Logica.Dron;
 import com.Proyecto.SpringBoot.Logica.Evento;
-import com.Proyecto.SpringBoot.Logica.Evento_Movimiento;
 import com.Proyecto.SpringBoot.Logica.Misil;
 import com.Proyecto.SpringBoot.Logica.PortaDron;
 import com.Proyecto.SpringBoot.Logica.TipoElemento;
@@ -96,14 +94,10 @@ public class MapearDTO {
             }else 
             {
                 Bomba bomba = (Bomba)evento.getElemento();
-                BombaDTO bDTO = new BombaDTO();
+                BombaDTO mDTO = new BombaDTO(bomba.getId(), bomba.getPosicionX(), bomba.getPosicionY(), bomba.getPosicionZ(), bomba.getAngulo(), bomba.getVida(), bomba.getEstado().toString(), bomba.getRadioExplosion(), bomba.isUsada());
+                cambios.insertarElemento(mDTO);
             }
-
-            if(evento instanceof Evento_Movimiento)
-            {
-
-
-            }
+            
         }
 
 

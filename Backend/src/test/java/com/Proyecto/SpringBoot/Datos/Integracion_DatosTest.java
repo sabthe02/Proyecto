@@ -17,9 +17,13 @@ import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 import com.Proyecto.SpringBoot.Datos.Entidades.EntidadPortadron;
 import com.Proyecto.SpringBoot.Datos.Entidades.EntidadSesion;
 import com.Proyecto.SpringBoot.Logica.EstadoElemento;
+import com.Proyecto.SpringBoot.Logica.Evento;
 import com.Proyecto.SpringBoot.Logica.Fachada;
+import com.Proyecto.SpringBoot.Logica.Mapa;
+import com.Proyecto.SpringBoot.Logica.PortaDron;
 import com.Proyecto.SpringBoot.Logica.SesionJuego;
 import com.Proyecto.SpringBoot.Logica.TipoElemento;
+import com.Proyecto.SpringBoot.Logica.iPartidaService;
 
 import jakarta.transaction.Transactional;
 
@@ -68,7 +72,27 @@ public class Integracion_DatosTest {
         jugadores.add(j1);
         jugadores.add(j2);
         
-        SesionJuego sJ = new SesionJuego("idSesionTest", jugadores, new Fachada());
+        SesionJuego sJ = new SesionJuego("idSesionTest", jugadores, new iPartidaService() {
+
+            @Override
+            public boolean EnviarActualizaciones(List<EntidadJugador> jugadores, List<Evento> acciones) {
+                // TODO Auto-generated method stub
+                throw new UnsupportedOperationException("Unimplemented method 'EnviarActualizaciones'");
+            }
+
+            @Override
+            public boolean EnviarInicioPartida(List<PortaDron> portaDrones, Mapa mapa) {
+                // TODO Auto-generated method stub
+                throw new UnsupportedOperationException("Unimplemented method 'EnviarInicioPartida'");
+            }
+
+            @Override
+            public void EnviarFinPartida(List<EntidadJugador> jugadores, EntidadJugador ganador) {
+                // TODO Auto-generated method stub
+                throw new UnsupportedOperationException("Unimplemented method 'EnviarFinPartida'");
+            }
+            
+        });
         sJ.iniciarSesion();
 
 

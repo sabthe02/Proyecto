@@ -49,10 +49,13 @@ public class SesionJuegoTest {
             }
 
             @Override
-            public void EnviarFinPartida(String ganador) {
-                
-                
+            public void EnviarFinPartida(List<EntidadJugador> jugadores, EntidadJugador ganador) {
+                // TODO Auto-generated method stub
+                throw new UnsupportedOperationException("Unimplemented method 'EnviarFinPartida'");
             }
+
+            
+            
             
         });
         sesion.iniciarSesion();

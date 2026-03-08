@@ -15,10 +15,12 @@ public class PortaDronNavalDTO {
     String jugadorId;
 
     String tipo = "Naval";
+    String clase = "PORTADRON";
 
     List<DronNavalDTO> listaDrones;
 
-    public PortaDronNavalDTO(int id, float x, float y, float z, int angulo, int vida, String estado, String nickName, String jugadorId) {
+    public PortaDronNavalDTO(int id, float x, float y, float z, int angulo, int vida, String estado, String nickName,
+            String jugadorId) {
         this.id = id;
         this.x = x;
         this.y = y;
@@ -122,6 +124,10 @@ public class PortaDronNavalDTO {
 
     public void setListaDrones(List<DronNavalDTO> listaDrones) {
         this.listaDrones = listaDrones;
+    }
+
+    public String getClase() {
+        return clase;
     }
 
 }

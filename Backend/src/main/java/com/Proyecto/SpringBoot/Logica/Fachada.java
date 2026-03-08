@@ -10,11 +10,14 @@ import org.springframework.stereotype.Service;
 
 
 import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
+import com.Proyecto.SpringBoot.Logica.DTO.CambiosDTO;
 import com.Proyecto.SpringBoot.Logica.DTO.DronAereoDTO;
 import com.Proyecto.SpringBoot.Logica.DTO.DronNavalDTO;
 import com.Proyecto.SpringBoot.Logica.DTO.EscenarioInicialDTO;
 import com.Proyecto.SpringBoot.Logica.DTO.JugadorDTO;
+import com.Proyecto.SpringBoot.Logica.DTO.LoginUsuarioDTO;
 import com.Proyecto.SpringBoot.Logica.DTO.MapaDTO;
+import com.Proyecto.SpringBoot.Logica.DTO.MapearDTO;
 import com.Proyecto.SpringBoot.Logica.DTO.PortaDronAereoDTO;
 import com.Proyecto.SpringBoot.Logica.DTO.PortaDronNavalDTO;
 import com.Proyecto.SpringBoot.Logica.Excepciones.AccionInvalidaException;
@@ -53,17 +56,26 @@ public class Fachada implements iFachada {
         this.partidasService.setiFachada(this);
     }
 
-    public EntidadJugador loginUsuario(String nickName) throws JugadorNoExisteException {
-        return jugadoresService.loginUsuario(nickName);
-    }
+    public LoginUsuarioDTO loginUsuario(String nickName) throws JugadorNoExisteException {
+        EntidadJugador jugador = jugadoresService.loginUsuario(nickName);
+       
+        boolean partidaGuardada = partidasService.existePartidaByJugador(jugador);
 
-    public EntidadJugador crearUsuario(String nickName, String team) throws ExisteNickNameException {
+        LoginUsuarioDTO usuarioDTO = new LoginUsuarioDTO(jugador.getId(), jugador.getNickName(), jugador.getTeam(), partidaGuardada);
+        return usuarioDTO;
+    }
+    public LoginUsuarioDTO crearUsuario(String nickName, String team) throws ExisteNickNameException {
         
-        return jugadoresService.crearUsuario(nickName, team);
+        EntidadJugador jugador = jugadoresService.crearUsuario(nickName, team);
+        LoginUsuarioDTO usuarioDTO = new LoginUsuarioDTO(jugador.getId(), jugador.getNickName(), jugador.getTeam(), false);
+
+
+        return usuarioDTO;
     }
 
-    public void desconectarUsuario(EntidadJugador jugador) throws Exception
+    public void desconectarUsuario(String idJugador) throws Exception
     {
+        EntidadJugador jugador = jugadoresService.obtenerJugadorConectado(idJugador);
         jugadoresService.desconectarUsuario(jugador);
         lobbyService.desconectarJugador(jugador);
         partidasService.desconectarJugador(jugador);
@@ -77,28 +89,30 @@ public class Fachada implements iFachada {
         return partidasService.recuperarPartida(jugador);
     }
 
-    public boolean accion_mover(EntidadJugador jugador, int idElemento, float x, float y, float z, int angulo)
+    public boolean accion_mover(String idJugador, int idElemento, float x, float y, float z, int angulo)
             throws AccionInvalidaException {
-        return partidasService.accion_mover(jugador, idElemento, x, y, z, angulo);
+        return partidasService.accion_mover(jugadoresService.obtenerJugadorConectado(idJugador), idElemento, x, y, z, angulo);
     }
 
     // Accion para desplegar un dron desde el portadron
-    public boolean accion_desplegar(EntidadJugador jugador, int idPortaDron) throws AccionInvalidaException {
-        return partidasService.accion_desplegar(jugador, idPortaDron);
+    public boolean accion_desplegar(String  idJugador, int idPortaDron) throws AccionInvalidaException {
+        return partidasService.accion_desplegar(jugadoresService.obtenerJugadorConectado(idJugador), idPortaDron);
     }
 
-    public boolean accion_disparar(EntidadJugador jugador, int idElemento) throws AccionInvalidaException {
-        return partidasService.accion_disparar(jugador, idElemento);
+    public boolean accion_disparar(String idJugador, int idElemento) throws AccionInvalidaException {
+        return partidasService.accion_disparar(jugadoresService.obtenerJugadorConectado(idJugador), idElemento);
     }
 
-    public void pasarALobby(EntidadJugador jugador) throws LobbyException {
-        jugadoresService.pasarALobby(jugador);
+    public void pasarALobby(String idjugador) throws LobbyException {
+        jugadoresService.pasarALobby(jugadoresService.obtenerJugadorConectado(idjugador));
     }
 
     @Override
     public boolean EnviarActualizaciones(List<EntidadJugador> jugadores, List<Evento> acciones) {
         if (handler != null) {
-            return handler.enviarAcciones(jugadores, acciones);
+            MapearDTO mapeo = new MapearDTO();
+            CambiosDTO cambios = mapeo.mapearCambios(acciones);
+            return handler.enviarAcciones(jugadores, cambios);
         }
         return false;
     }
@@ -106,44 +120,7 @@ public class Fachada implements iFachada {
     @Override
     public boolean EnviarInicioPartida(List<PortaDron> portaDrones, Mapa mapa) {
 
-        EscenarioInicialDTO escenarioInicial = new EscenarioInicialDTO();
-
-        for (PortaDron portaDron : portaDrones) {
-            escenarioInicial.agregarJugador(new JugadorDTO(portaDron.jugador.getId(), portaDron.jugador.getNickName(),
-                    portaDron.jugador.getTeam()));
-
-            if (portaDron.tipo == TipoElemento.AEREO) {
-                PortaDronAereoDTO portaD = new PortaDronAereoDTO(portaDron.getId(), portaDron.getPosicionX(),
-                        portaDron.getPosicionY(), portaDron.getPosicionZ(), portaDron.getAngulo(), portaDron.getVida(),
-                        portaDron.getEstado().toString(), portaDron.getJugador().getNickName(),
-                        portaDron.getJugador().getId());
-
-                for (Dron dron : portaDron.getDrones()) {
-                    DronAereoDTO dronDTO = new DronAereoDTO(dron.getId(), dron.getPosicionX(), dron.getPosicionY(),
-                            dron.getPosicionZ(), dron.getAngulo(), dron.getVida(), dron.getEstado().toString(),
-                            dron.getBateria());
-                    dronDTO.cargarMunicionesDesdeDron(dron);
-                    portaD.agregarDron(dronDTO);
-                }
-
-                escenarioInicial.agregarPortaDronAereo(portaD);
-            } else if (portaDron.tipo == TipoElemento.NAVAL) {
-                PortaDronNavalDTO portaD = new PortaDronNavalDTO(portaDron.getId(), portaDron.getPosicionX(),
-                        portaDron.getPosicionY(), portaDron.getPosicionZ(), portaDron.getAngulo(), portaDron.getVida(),
-                        portaDron.getEstado().toString(), portaDron.getJugador().getNickName(),
-                        portaDron.getJugador().getId());
-
-                for (Dron dron : portaDron.getDrones()) {
-                    DronNavalDTO dronDTO = new DronNavalDTO(dron.getId(), dron.getPosicionX(), dron.getPosicionY(),
-                            dron.getPosicionZ(), dron.getAngulo(), dron.getVida(), dron.getEstado().toString(),
-                            dron.getBateria());
-                    dronDTO.cargarMunicionesDesdeDron(dron);
-                    portaD.agregarDron(dronDTO);
-                }
-
-                escenarioInicial.agregarPortaDronNaval(portaD);
-            }
-        }
+        EscenarioInicialDTO escenarioInicial = new MapearDTO().mapearEscenario(portaDrones);
 
         MapaDTO mp = new MapaDTO();
         mp.setContenido(mapa.getContenido());
@@ -167,114 +144,5 @@ public class Fachada implements iFachada {
         // Implementar enviar fin partida cuando iHandler lo soporte
     }
 
-    private boolean detectarColision(Municion proyectil, Elemento objetivo, float radioColision) {
-        // hecho esto porque no vi nada hecho, por fa borrar si no aplica
-        if (objetivo == null) {
-            return false;
-        }
-        if (proyectil == null) {
-            return false;
-        }
-        if (objetivo.getEstado() != EstadoElemento.ACTIVO) {
-            return false;
-        }
-
-        float dx = proyectil.getPosicionX() - objetivo.getPosicionX();
-        float dy = proyectil.getPosicionY() - objetivo.getPosicionY();
-        float distancia = (float) Math.sqrt(dx * dx + dy * dy);
-
-        return distancia <= radioColision;
-    }
-
-    private void aplicarDano(Elemento objetivo, Municion proyectil, List<EntidadJugador> jugadoresSesion) {
-        if (objetivo == null) {
-            return;
-        }
-        if (proyectil == null) {
-            return;
-        }
-
-        int danoInfligido = 0;
-        String claseProyectil = "";
-
-        if (proyectil instanceof Misil) {
-            danoInfligido = 50;
-            claseProyectil = "MISIL";
-        }
-        if (proyectil instanceof Bomba) {
-            danoInfligido = 100;
-            claseProyectil = "BOMBA";
-        }
-
-        int vidaActual = objetivo.getVida();
-        int vidaNueva = vidaActual - danoInfligido;
-        if (vidaNueva < 0) {
-            vidaNueva = 0;
-        }
-
-        objetivo.setVida(vidaNueva);
-
-        boolean estaDestruido = false;
-        if (vidaNueva <= 0) {
-            estaDestruido = true;
-            objetivo.setEstado(EstadoElemento.DESTRUIDO);
-        }
-
-        proyectil.setEstado(EstadoElemento.DESTRUIDO);
-
-        Evento_AplicarDano eventoDano = new Evento_AplicarDano(objetivo, danoInfligido, vidaNueva, estaDestruido,
-                claseProyectil);
-        List<Evento> eventos = new java.util.ArrayList<>();
-        eventos.add(eventoDano);
-        EnviarActualizaciones(jugadoresSesion, eventos);
-
-        System.out.println("Daño aplicado: objetivo=" + objetivo.getId() + " vida=" + vidaNueva + "/" + vidaActual
-                + " destruido=" + estaDestruido);
-    }
-
-    private Elemento buscarObjetivoImpactado(Municion proyectil, SesionJuego sesion, float radioColision) {
-        if (proyectil == null) {
-            return null;
-        }
-        if (sesion == null) {
-            return null;
-        }
-
-        EntidadJugador disparador = proyectil.getJugador();
-        if (disparador == null) {
-            return null;
-        }
-
-        Map<Integer, Elemento> elementos = sesion.getElementosEnJuego();
-        Elemento objetivoEncontrado = null;
-
-        for (Elemento elemento : elementos.values()) {
-            if (elemento == null) {
-                continue;
-            }
-            if (elemento.getId() == proyectil.getId()) {
-                continue;
-            }
-            if (elemento instanceof Municion) {
-                continue;
-            }
-
-            EntidadJugador propietario = elemento.getJugador();
-            if (propietario == null) {
-                continue;
-            }
-            if (propietario.getId().equals(disparador.getId())) {
-                continue;
-            }
-
-            boolean hayColision = detectarColision(proyectil, elemento, radioColision);
-            if (hayColision) {
-                objetivoEncontrado = elemento;
-                return objetivoEncontrado;
-            }
-        }
-
-        return objetivoEncontrado;
-    }
 
 }

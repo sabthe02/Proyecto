@@ -82,4 +82,9 @@ public class JugadoresService {
 
     }
 
+    public EntidadJugador obtenerJugadorConectado(String idJugador)
+    {
+        return usuariosConectados.get(idJugador);
+    }
+
 }

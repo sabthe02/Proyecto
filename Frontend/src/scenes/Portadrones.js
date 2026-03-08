@@ -4,11 +4,11 @@ export class Portadrones extends Phaser.GameObjects.Container {
         super(scene, datos.posicionX, datos.posicionY);
         
         this.scene = scene;
-        this.id = data.id;
-        this.tipoEquipo = data.tipoEquipo;
+        this.id = datos.id;
+        this.tipoEquipo = datos.tipoEquipo;
         
         // Ownership: Quién controla este portadrón (soportar ambos campos)
-        this.idJugador = data.idJugador || data.jugadorId || null;
+        this.idJugador = datos.idJugador || datos.jugadorId || null;
         this.jugadorId = this.idJugador; // Alias para compatibilidad
         
         // Backend usa escala de game ticks (e.g., 1000 = 100%)
@@ -16,7 +16,7 @@ export class Portadrones extends Phaser.GameObjects.Container {
         this.vidaMax = null; // Se detecta dinámicamente
         
         // Sistema de capas (depth) - portadrones más abajo que drones
-        this.setDepth(200 + (data.z || 0));
+        this.setDepth(200 + (datos.z || 0));
 
         const config = this.obtenerConfiguracion();
         

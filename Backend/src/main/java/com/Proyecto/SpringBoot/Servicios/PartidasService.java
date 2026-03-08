@@ -53,6 +53,12 @@ public class PartidasService implements iPartidaService{
         this.fachada = fachada;
     }
 
+    public boolean existePartidaByJugador(EntidadJugador jugador)
+    {
+        return sesionDAO.findByJugadorPrincipal(jugador) != null;
+
+    }
+
     public boolean desconectarJugador(EntidadJugador jugador) throws Exception {
         throw new Exception("Metodo no implementado");
 

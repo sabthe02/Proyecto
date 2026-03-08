@@ -22,5 +22,6 @@ public interface SesionDAO extends JpaRepository<EntidadSesion, String>{
     @Query("SELECT s FROM EntidadSesion s JOIN s.listaJugadores j WHERE j.nickName = :nombre")
     List<EntidadSesion> buscarSesionesPorNombreJugador(@Param("nombre") String nombre);
 
+    EntidadSesion findByJugadorPrincipal(EntidadJugador jugador);
 
 }

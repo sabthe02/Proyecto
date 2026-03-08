@@ -4,6 +4,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
@@ -21,6 +23,11 @@ public class EntidadJugador {
 
     public EntidadJugador(String id, String nickName, String team) {
         this.id = id;
+        this.nickName = nickName;
+        this.team = team;
+    }
+
+     public EntidadJugador(String nickName, String team) {
         this.nickName = nickName;
         this.team = team;
     }

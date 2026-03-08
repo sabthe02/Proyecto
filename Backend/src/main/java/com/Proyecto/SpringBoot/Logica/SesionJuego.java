@@ -12,7 +12,7 @@ public class SesionJuego extends GameLoop {
     private Map<EntidadJugador, PortaDron> elementosJugadores;
     private Map<Integer, Elemento> elementosEnJuego;
     private List<Evento> accionesPendientesEnviar;
-    private List<Evento> accionesPendientesProcesar;
+    //private List<Evento> accionesPendientesProcesar;
     private List<EntidadJugador> jugadores;
     private Mapa mapa;
     private String ganadorID;
@@ -30,7 +30,6 @@ public class SesionJuego extends GameLoop {
         }
         elementosEnJuego = new java.util.Hashtable<Integer, Elemento>();
         accionesPendientesEnviar = new java.util.ArrayList<Evento>();
-        accionesPendientesProcesar = new java.util.ArrayList<Evento>();
     }
 
     private PortaDron crearPortaDronParaJugador(EntidadJugador jugador) {
@@ -53,13 +52,16 @@ public class SesionJuego extends GameLoop {
 
     public void iniciarSesion() {
         // Recorro la lista de jugadores y les creo los portadrones y drones.
-        for (int h = 0; h < elementosJugadores.size(); h++) {
-            EntidadJugador jugador = (EntidadJugador) elementosJugadores.keySet().toArray()[h];
-            System.out.println("iniciarSesion - Jugador: " + jugador.getNickName() + ", Team: " + jugador.getTeam());
-            TipoElemento tipoJugador = obtenerTipoElementoJugador(jugador);
-            System.out.println("Tipo asignado: " + tipoJugador);
+        for (int h = 0; h < jugadores.size(); h++) {
+
+            EntidadJugador jugador = (EntidadJugador) jugadores.get(h);
+
+            TipoElemento tipoJugador = TipoElemento.AEREO;
+            if ((h + 1) % 2 == 0)
+                tipoJugador = TipoElemento.NAVAL;
 
             if (tipoJugador == TipoElemento.AEREO) {
+                jugador.setTeam("AEREO");
                 PortaDron p = new PortaDron(elementosEnJuego.size(), 500f, 500f, 99f, 0, 100, EstadoElemento.ACTIVO, 0,
                         0,
                         0,
@@ -87,6 +89,7 @@ public class SesionJuego extends GameLoop {
                     j++;
                 }
             } else {
+                jugador.setTeam("AEREO");
                 PortaDron p = new PortaDron(elementosEnJuego.size(), 3500f, 3500f, 0f, 0, 100, EstadoElemento.ACTIVO, 0,
                         0, 0,
                         TipoElemento.NAVAL, jugador);
@@ -113,8 +116,8 @@ public class SesionJuego extends GameLoop {
                     j++;
                 }
             }
-        }
 
+        }
         List<PortaDron> portaDrones = new java.util.ArrayList<PortaDron>();
         elementosJugadores.forEach((jugador, portaDron) -> {
             portaDrones.add(portaDron);
@@ -122,12 +125,13 @@ public class SesionJuego extends GameLoop {
 
         notificadorPartida.EnviarInicioPartida(portaDrones, mapa);
 
+        iniciar();
+
+
         // Enviar estado inicial del juego (elementos creados)
         List<EntidadJugador> jugadores = new java.util.ArrayList<>(elementosJugadores.keySet());
+        /* 
         List<Evento> estadoInicial = new java.util.ArrayList<>();
-
-        System.out.println("=== ESTADO INICIAL DEL JUEGO ===");
-        System.out.println("Total elementos en juego: " + elementosEnJuego.size());
 
         // Crear eventos de movimiento para todos los elementos creados
         elementosEnJuego.forEach((id, elemento) -> {
@@ -145,9 +149,8 @@ public class SesionJuego extends GameLoop {
 
         System.out.println("Enviando ACTUALIZAR_PARTIDA con " + estadoInicial.size() + " eventos");
         boolean enviado = notificadorPartida.EnviarActualizaciones(jugadores, estadoInicial);
-        System.out.println("ACTUALIZAR_PARTIDA enviado=" + enviado);
+        System.out.println("ACTUALIZAR_PARTIDA enviado=" + enviado);*/
 
-        // startGameLoop();
     }
 
     public String getIdSesion() {
@@ -166,49 +169,30 @@ public class SesionJuego extends GameLoop {
         return accionesPendientesEnviar;
     }
 
-    public List<Evento> getAccionesPendientesProcesar() {
-        return accionesPendientesProcesar;
-    }
+   
 
-    public Elemento getElemento(int idElemento) throws PartidaException
-    {
+    public Elemento getElemento(int idElemento) throws PartidaException {
         Elemento el = elementosEnJuego.get(idElemento);
 
-        if(el == null)
-        {
+        if (el == null) {
             throw new PartidaException("El elemento " + idElemento + " no existe en la partida.");
         }
 
         return el;
     }
 
-    @Override
-    protected void processGameLoop() {
-        while (isGameRunning()) {
-
-            while (!accionesPendientesProcesar.isEmpty()) {
-                Evento accion = accionesPendientesProcesar.remove(0);
-
-                processInput(accion);
-                update(accion);
-                // Procesar la acción y actualizar el estado del juego
-            }
-
-            render();
-        }
-        throw new UnsupportedOperationException("Unimplemented method 'processGameLoop'");
-    }
-
     public boolean agregarEvento(Evento ev) {
-        accionesPendientesProcesar.add(ev);
+        agregarEventoEntrada(ev);
         return true;
     }
 
     @Override
-    protected void render()
-    {
-        notificadorPartida.EnviarActualizaciones(jugadores, accionesPendientesEnviar);
-        accionesPendientesEnviar.clear();
+    protected void render() {
+        if(accionesPendientesEnviar.size()>0)
+        {
+            notificadorPartida.EnviarActualizaciones(jugadores, accionesPendientesEnviar);
+            accionesPendientesEnviar.clear();
+        }
     }
 
     @Override
@@ -217,9 +201,15 @@ public class SesionJuego extends GameLoop {
             case "Evento_Movimiento":
                 Evento_Movimiento eventoMovimiento = (Evento_Movimiento) intencion;
                 Elemento elemento = elementosEnJuego.get(intencion.getIdElemento());
-                if (elemento.getEstado() != EstadoElemento.ACTIVO || elemento.getBateria() <= 0
-                        || elemento.getVida() <= 0) {
+                if (elemento.getEstado() != EstadoElemento.ACTIVO ||  elemento.getVida() <= 0) {
                     return;
+                }
+                if(elemento instanceof Dron)
+                {
+                    if(elemento.getBateria() <= 0)
+                    {
+                        return;
+                    }
                 }
                 if (elemento instanceof Misil) {
                     Misil misil = (Misil) elemento;
@@ -232,7 +222,8 @@ public class SesionJuego extends GameLoop {
                     }
                     if (misil.getDistancia() < misil.getDIS_MAX()) {
                         misil.calculoDeNuevaPosicion();
-                        accionesPendientesProcesar.add(new Evento_Movimiento(misil, misil.getPosicionX(), misil.getPosicionY(), misil.getAngulo()));
+                        agregarEventoEntrada(new Evento_Movimiento(misil, misil.getPosicionX(),
+                                misil.getPosicionY(), misil.getAngulo()));
                     } else {
                         misil.setEstado(EstadoElemento.INACTIVO);
                     }
@@ -257,7 +248,7 @@ public class SesionJuego extends GameLoop {
                             municion.getPosicionY(),
                             municion.getAngulo());
                     eventoMovimientoMunicion.habilitar();
-                    accionesPendientesProcesar.add(eventoMovimientoMunicion);
+                    agregarEventoEntrada(eventoMovimientoMunicion);
                     eventoDisparo.habilitar();
                 }
                 break;
@@ -287,13 +278,14 @@ public class SesionJuego extends GameLoop {
         }
     }
 
-    private void update(Evento accion) {
+    @Override
+    protected void update(Evento accion) {
         switch (accion.getClass().getSimpleName()) {
             case "Evento_Movimiento":
                 if (accion.estaHabilitado()) {
                     Evento_Movimiento eventoMovimiento = (Evento_Movimiento) accion;
-                    Dron dron = (Dron) elementosEnJuego.get(accion.getIdElemento());// Y si se mueve el portadrones??
-                    dron.moverse(eventoMovimiento);
+                    Elemento e = elementosEnJuego.get(accion.getIdElemento());
+                    e.moverse(eventoMovimiento);
                 }
                 this.accionesPendientesEnviar.add(accion);
                 break;
@@ -412,10 +404,5 @@ public class SesionJuego extends GameLoop {
         return this.ganadorID;
     }
 
-    @Override
-    protected void update(long deltaTime) {
-        // TODO Auto-generated method stub
-
-    }
-
+   
 }

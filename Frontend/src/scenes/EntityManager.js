@@ -42,8 +42,8 @@ export class EntityManager {
                 this.crearUnidad(datosUnidad);
             } else {
                 // Si existe, actualizamos sus atributos
-                const unidad = this.unidades.get(datosServidor.id);
-                unidad.actualizarDesdeServidor(datosServidor);
+                const unidad = this.unidades.get(datosUnidad.id);
+                unidad.actualizarDesdeServidor(datosUnidad);
             }
         });
 

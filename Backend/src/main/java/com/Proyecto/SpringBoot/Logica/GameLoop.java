@@ -9,30 +9,27 @@ public abstract class GameLoop {
     private volatile boolean corriendo = false;
     EstadoJuego estadoJuego;
     private Thread gameThread;
-    private final ConcurrentLinkedQueue<Evento> colaEventosEntrada;
+    private final ConcurrentLinkedQueue<Evento> accionesPendientesProcesar;
+
 
     public GameLoop() {
         estadoJuego = EstadoJuego.INICIANDO;
-        colaEventosEntrada = new ConcurrentLinkedQueue<>();
+        accionesPendientesProcesar = new ConcurrentLinkedQueue<>();
     }
 
-    public void iniciar() {
+    protected void iniciar() {
         if (!corriendo) {
             estadoJuego = EstadoJuego.INICIANDO;
             corriendo = true;
             gameThread = new Thread(this::processGameLoop);
             gameThread.start();
-            // run();
         }
     }
 
-    /*
-     * public void run() {
-     * estadoJuego = EstadoJuego.EN_JUEGO;
-     * gameThread = new Thread(this::processGameLoop);
-     * gameThread.start();
-     * }
-     */
+    protected void agregarEventoPendiente(Evento ev)
+    {
+        accionesPendientesProcesar.add(ev);
+    }
 
     public void stopGameLoop() {
         corriendo = false;
@@ -44,10 +41,10 @@ public abstract class GameLoop {
     }
 
     public void agregarEventoEntrada(Evento evento) {
-        colaEventosEntrada.add(evento);
+        accionesPendientesProcesar.add(evento);
     }
 
-    protected abstract void update(long tiempoTranscurrido);
+    protected abstract void update(Evento accion);
 
     protected abstract void processInput(Evento accion);
 
@@ -65,10 +62,9 @@ public abstract class GameLoop {
 
                 // pROCESAMOS TODOS LOS EVENTOS DE ENTRADA QUE HAYAN LLEGADO
                 Evento evento;
-                while ((evento = colaEventosEntrada.poll()) != null) {
+                while ((evento = accionesPendientesProcesar.poll()) != null) {
                     processInput(evento);
-                    // ACTUALIZAMOS EL ESTADO DEL JUEGO
-                    update(tiempoTranscurrido);
+                    update(evento);
                 }
 
                 // RENDERIZAMOS EL JUEGO

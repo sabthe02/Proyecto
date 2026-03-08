@@ -8,6 +8,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 
 
 @Entity
@@ -21,6 +22,9 @@ public class EntidadSesion {
 
     @ManyToMany
     private List<EntidadJugador> listaJugadores;
+
+    @OneToOne
+    private EntidadJugador jugadorPrincipal;
 
     public EntidadSesion(String idSesion)
     {

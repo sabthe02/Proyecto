@@ -235,6 +235,9 @@ export class Greeting extends Phaser.Scene {
             if (data.id) {
                 sessionStorage.setItem('playerId', data.id);
             }
+            if (data.partidaGuardada !== undefined) {
+                sessionStorage.setItem('partidaGuardada', data.partidaGuardada.toString());
+            }
             if (this.statusText) {
                 this.statusText.setText('Login OK — entrando');
             }

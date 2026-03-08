@@ -1,5 +1,6 @@
 package com.Proyecto.SpringBoot.Logica;
 
+import java.security.Timestamp;
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -9,12 +10,9 @@ public abstract class GameLoop {
     private volatile boolean corriendo = false;
     EstadoJuego estadoJuego;
     private Thread gameThread;
-    private final ConcurrentLinkedQueue<Evento> accionesPendientesProcesar;
-
 
     public GameLoop() {
         estadoJuego = EstadoJuego.INICIANDO;
-        accionesPendientesProcesar = new ConcurrentLinkedQueue<>();
     }
 
     protected void iniciar() {
@@ -26,10 +24,7 @@ public abstract class GameLoop {
         }
     }
 
-    protected void agregarEventoPendiente(Evento ev)
-    {
-        accionesPendientesProcesar.add(ev);
-    }
+    
 
     public void stopGameLoop() {
         corriendo = false;
@@ -40,11 +35,9 @@ public abstract class GameLoop {
         return estadoJuego == EstadoJuego.EN_JUEGO;
     }
 
-    public void agregarEventoEntrada(Evento evento) {
-        accionesPendientesProcesar.add(evento);
-    }
+    
 
-    protected abstract void update(Evento accion);
+    protected abstract void update(long deltaTime);
 
     protected abstract void processInput(Evento accion);
 
@@ -60,12 +53,7 @@ public abstract class GameLoop {
             long tiempoTranscurrido = ahora - ultimoTick;
             if (tiempoTranscurrido >= TICK) {
 
-                // pROCESAMOS TODOS LOS EVENTOS DE ENTRADA QUE HAYAN LLEGADO
-                Evento evento;
-                while ((evento = accionesPendientesProcesar.poll()) != null) {
-                    processInput(evento);
-                    update(evento);
-                }
+                update(tiempoTranscurrido);
 
                 // RENDERIZAMOS EL JUEGO
                 render();

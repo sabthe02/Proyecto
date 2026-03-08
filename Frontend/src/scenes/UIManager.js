@@ -23,31 +23,37 @@ export class UIManager {
         // Textos de información del jugador
         this.vidaTexto = this.scene.add.text(20, 20, 'VIDA: 100%', this.textStyle).setScrollFactor(0).setDepth(1000);
         this.bateriaTexto = this.scene.add.text(20, 50, 'BATERÍA: 100%', this.textStyle).setScrollFactor(0).setDepth(1000).setVisible(false);
+        this.municionTexto = this.scene.add.text(20, 80, 'MUNICIÓN: 0/0', this.textStyle).setScrollFactor(0).setDepth(1000).setVisible(false);
         
         // Mostrar equipo del jugador
         const playerTeam = this.scene.playerTeam || 'DESCONOCIDO';
-        this.equipoTexto = this.scene.add.text(20, 80, 'EQUIPO: ' + playerTeam, { ...this.textStyle, fontSize: '14px' }).setScrollFactor(0).setDepth(1000);
+        this.equipoTexto = this.scene.add.text(20, 110, 'EQUIPO: ' + playerTeam, { ...this.textStyle, fontSize: '14px' }).setScrollFactor(0).setDepth(1000);
         
         // Texto de vista actual
-        this.vistaTexto = this.scene.add.text(20, 110, 'VISTA: PORTADRON', { ...this.textStyle, fontSize: '14px' }).setScrollFactor(0).setDepth(1000);
+        this.vistaTexto = this.scene.add.text(20, 140, 'VISTA: PORTADRON', { ...this.textStyle, fontSize: '14px' }).setScrollFactor(0).setDepth(1000);
+        
+        // Texto de estado de carga (solo visible cuando está cargando)
+        this.cargaTexto = this.scene.add.text(20, 170, '', { ...this.textStyle, fontSize: '18px', fill: '#00ff00' }).setScrollFactor(0).setDepth(1000).setVisible(false);
         
         // Estado actual de vista (para controlar qué mostrar)
         this.vistaActual = 'PORTADRON';
         
-        // Indicador de latencia (esquina superior derecha) - oculto por defecto
-        this.latenciaTexto = this.scene.add.text(
-            this.scene.scale.width - 120, 
-            20, 
-            '', 
-            { fontSize: '14px', fill: '#888888', stroke: '#000000', strokeThickness: 3 }
-        ).setScrollFactor(0).setDepth(1000).setOrigin(0, 0).setVisible(false);
+        // Rastrear munición y estado previos para detectar cuando se completa la recarga
+        this.previousMunicion = null;
+        this.previousEstado = null;
+        
     }
 
     escucharEventos() {
-        // Cuando el server mande actualización, la UI reacciona
+        // Cuando el servidor mande actualización, la UI reacciona
         this.scene.events.on('ACTUALIZAR_PARTIDA', (data) => {
-            // Backend sends: {tipo: 'ACTUALIZAR_PARTIDA', datos: {elementos: [...]}}
-            const gameData = data.datos || data;
+            // El backend envía: {tipo: 'ACTUALIZAR_PARTIDA', datos: {elementos: [...]}}
+            let gameData;
+            if (data.datos) {
+                gameData = data.datos;
+            } else {
+                gameData = data;
+            }
             
             if (!gameData.elementos) {
                 console.warn('UIManager: ACTUALIZAR_PARTIDA sin elementos');
@@ -64,7 +70,7 @@ export class UIManager {
             const elementoActivo = gameData.elementos.find(e => e.id == elementoActivoId);
 
             if (elementoActivo) {
-                this.actualizar(elementoActivo.vida, elementoActivo.bateria, elementoActivo.x, elementoActivo.y);
+                this.actualizar(elementoActivo.vida, elementoActivo.bateria, elementoActivo.x, elementoActivo.y, elementoActivo.municionDisponible, elementoActivo.estado, elementoActivo.comenzandoCarga);
             }
         });
         
@@ -85,27 +91,10 @@ export class UIManager {
             this.mostrarError('Error de disparo: ' + (data.mensaje || 'Disparo inválido'));
         });
         
-        // Escuchar actualizaciones de latencia del NetworkManager
-        this.scene.events.on('LATENCY_UPDATE', (ms) => {
-            this.actualizarLatencia(ms);
-        });
-    }
-    
-    actualizarLatencia(ms) {
-        // Colorear según latencia: verde (<50ms), amarillo (<150ms), rojo (>=150ms)
-        let color;
-        if (ms < 50) {
-            color = '#00ff00'; // Verde
-        } else if (ms < 150) {
-            color = '#ffff00'; // Amarillo
-        } else {
-            color = '#ff0000'; // Rojo
-        }
-        
-        this.latenciaTexto.setText(`PING: ${Math.round(ms)}ms`).setFill(color);
     }
 
-    actualizar(vida, bateria, x, y) {
+
+    actualizar(vida, bateria, x, y, municionDisponible, estado, comenzandoCarga) {
         // Backend usa escala de game ticks - convertir a porcentaje para UI
         // Detectar max valores dinámicamente
         if (this.vidaMax === null || vida > this.vidaMax) {
@@ -116,21 +105,96 @@ export class UIManager {
         }
         
         // Calcular porcentajes para mostrar al jugador
-        const vidaPorcentaje = this.vidaMax > 0 ? Math.floor((vida / this.vidaMax) * 100) : 0;
-        const bateriaPorcentaje = this.bateriaMax > 0 ? Math.floor((bateria / this.bateriaMax) * 100) : 0;
+        let vidaPorcentaje;
+        if (this.vidaMax > 0) {
+            vidaPorcentaje = Math.floor((vida / this.vidaMax) * 100);
+        } else {
+            vidaPorcentaje = 0;
+        }
+        
+        let bateriaPorcentaje;
+        if (this.bateriaMax > 0) {
+            bateriaPorcentaje = Math.floor((bateria / this.bateriaMax) * 100);
+        } else {
+            bateriaPorcentaje = 0;
+        }
         
         // Mostrar solo vida o batería según la vista actual
         if (this.vistaActual === 'PORTADRON') {
             // Vista portadrón: mostrar VIDA (portadrones tienen vida, no batería)
             this.vidaTexto.setText(`VIDA: ${vidaPorcentaje}%`).setVisible(true);
             this.bateriaTexto.setVisible(false);
-            this.vidaTexto.setFill(vidaPorcentaje < 30 ? '#ff0000' : '#ffffff');
+            this.municionTexto.setVisible(false);
+            this.cargaTexto.setVisible(false);
+            
+            if (vidaPorcentaje < 30) {
+                this.vidaTexto.setFill('#ff0000');
+            } else {
+                this.vidaTexto.setFill('#ffffff');
+            }
+            
+            // Si un dron terminó de recargar (estaba CARGANDO, ahora INACTIVO en vista portadrón)
+            // Mostrar notificación toast
+            if (this.previousEstado === 'CARGANDO' && estado === 'INACTIVO') {
+                this.mostrarToastExito('Munición agregada');
+            }
         } else {
             // Vista dron: mostrar BATERÍA (drones tienen batería, no vida significativa)
-            this.bateriaTexto.setText(`BATERÍA: ${bateriaPorcentaje}%`).setVisible(true);
+            // Si el dron está en estado CARGANDO, mostrar mensaje especial
+            if (estado === 'CARGANDO') {
+                // Calcular porcentaje de carga (comenzandoCarga varía de 0 a 1000)
+                let cargaPorcentaje;
+                if (comenzandoCarga !== undefined) {
+                    cargaPorcentaje = Math.floor((comenzandoCarga / 1000) * 100);
+                } else {
+                    cargaPorcentaje = 0;
+                }
+                
+                this.cargaTexto.setText(`Estado de carga: ${cargaPorcentaje}%`).setVisible(true);
+                this.bateriaTexto.setText(`BATERÍA: ${bateriaPorcentaje}%`).setVisible(true);
+                this.bateriaTexto.setFill('#ffffff');
+            } else {
+                this.cargaTexto.setVisible(false);
+                this.bateriaTexto.setText(`BATERÍA: ${bateriaPorcentaje}%`).setVisible(true);
+                
+                if (bateriaPorcentaje < 30) {
+                    this.bateriaTexto.setFill('#ff0000');
+                } else {
+                    this.bateriaTexto.setFill('#ffffff');
+                }
+                
+                // Si acaba de terminar de cargar mientras está en vista DRON
+                if (this.previousEstado === 'CARGANDO' && estado === 'INACTIVO') {
+                    this.mostrarToastExito('Munición agregada');
+                }
+            }
             this.vidaTexto.setVisible(false);
-            this.bateriaTexto.setFill(bateriaPorcentaje < 30 ? '#ff0000' : '#ffffff');
+            
+            // Mostrar munición disponible si está definida
+            if (municionDisponible !== undefined && municionDisponible !== null) {
+                // Máximo de municiones: NAVAL=2, AEREO=1
+                let maxMunicion;
+                if (this.scene.playerTeam === 'AEREO') {
+                    maxMunicion = 1;
+                } else {
+                    maxMunicion = 2;
+                }
+                
+                this.municionTexto.setText(`MUNICIÓN: ${municionDisponible}/${maxMunicion}`).setVisible(true);
+                
+                if (municionDisponible === 0) {
+                    this.municionTexto.setFill('#ff0000');
+                } else {
+                    this.municionTexto.setFill('#ffffff');
+                }
+            } else {
+                this.municionTexto.setVisible(false);
+            }
         }
+        
+        // Rastrear cambios de estado para notificaciones toast
+        this.previousMunicion = municionDisponible;
+        this.previousEstado = estado;
     }
     
     actualizarVista(vista) {
@@ -138,13 +202,16 @@ export class UIManager {
         this.vistaActual = vista;
         this.vistaTexto.setText(`VISTA: ${vista}`);
         
-        // Actualizar visibilidad de vida/batería según la vista
+        // Actualizar visibilidad de vida/batería/munición según la vista
         if (vista === 'PORTADRON') {
             this.vidaTexto.setVisible(true);
             this.bateriaTexto.setVisible(false);
+            this.municionTexto.setVisible(false);
+            this.cargaTexto.setVisible(false);
         } else {
             this.vidaTexto.setVisible(false);
             this.bateriaTexto.setVisible(true);
+            this.municionTexto.setVisible(true);
         }
     }
     
@@ -164,7 +231,8 @@ export class UIManager {
             }
         )
         .setOrigin(0.5)
-        .setScrollFactor(0);
+        .setScrollFactor(0)
+        .setDepth(2000);
         
         // Desvanecer y destruir después de 3 segundos
         this.scene.tweens.add({
@@ -173,6 +241,35 @@ export class UIManager {
             duration: 1000,
             delay: 2000,
             onComplete: () => errorTexto.destroy()
+        });
+    }
+    
+    mostrarToastExito(mensaje) {
+        // Mostrar mensaje de éxito (verde) temporal
+        const toastTexto = this.scene.add.text(
+            this.scene.scale.width / 2, 
+            this.scene.scale.height - 100,
+            mensaje,
+            { 
+                fontSize: '20px', 
+                fill: '#00ff00',
+                stroke: '#000000',
+                strokeThickness: 4,
+                backgroundColor: '#00000099',
+                padding: { x: 15, y: 8 }
+            }
+        )
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(2000);
+        
+        // Desvanecer y destruir después de 2 segundos
+        this.scene.tweens.add({
+            targets: toastTexto,
+            alpha: 0,
+            duration: 800,
+            delay: 1500,
+            onComplete: () => toastTexto.destroy()
         });
     }
 

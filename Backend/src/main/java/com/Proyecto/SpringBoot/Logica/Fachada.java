@@ -1,6 +1,7 @@
 package com.Proyecto.SpringBoot.Logica;
 
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -11,15 +12,12 @@ import org.springframework.stereotype.Service;
 
 import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 import com.Proyecto.SpringBoot.Logica.DTO.CambiosDTO;
-import com.Proyecto.SpringBoot.Logica.DTO.DronAereoDTO;
-import com.Proyecto.SpringBoot.Logica.DTO.DronNavalDTO;
+
 import com.Proyecto.SpringBoot.Logica.DTO.EscenarioInicialDTO;
-import com.Proyecto.SpringBoot.Logica.DTO.JugadorDTO;
 import com.Proyecto.SpringBoot.Logica.DTO.LoginUsuarioDTO;
 import com.Proyecto.SpringBoot.Logica.DTO.MapaDTO;
 import com.Proyecto.SpringBoot.Logica.DTO.MapearDTO;
-import com.Proyecto.SpringBoot.Logica.DTO.PortaDronAereoDTO;
-import com.Proyecto.SpringBoot.Logica.DTO.PortaDronNavalDTO;
+
 import com.Proyecto.SpringBoot.Logica.Excepciones.AccionInvalidaException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.ExisteNickNameException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.JugadorNoExisteException;
@@ -140,9 +138,19 @@ public class Fachada implements iFachada {
     }
 
     @Override
-    public void EnviarFinPartida(String ganador) {
-        // Implementar enviar fin partida cuando iHandler lo soporte
+    public void EnviarFinPartida(List<EntidadJugador> jugadores, EntidadJugador ganador) {
+         
+        if (handler != null) {
+            List<String> listaJugadores = new ArrayList<>();
+            for (EntidadJugador entidadJugador : jugadores) {
+                listaJugadores.add(entidadJugador.getId());
+            }
+            if(ganador != null)
+                handler.enviarFinPartida(listaJugadores, ganador.getId());
+            else{
+                handler.enviarFinPartida(listaJugadores, "EMPATE");
+            }
+        }
+        
     }
-
-
 }

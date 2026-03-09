@@ -11,8 +11,8 @@ export class Drone extends Phaser.GameObjects.Container {
         this.nickName = data.nickName;
         this.portadronPadreId = data.portadronPadreId;
         this.z = data.z;
-        // Remover hardcoded battery max, use backend value si disponible
-        this.bateriaMax = data.bateriaMax;
+        // Backend no serializa bateriaMax — usar constante MAX_BATERIA = 1000
+        this.bateriaMax = data.bateriaMax || 1000;
         let skin = (this.tipoEquipo === 'AEREO') ? 'dron_aereo' : 'dron_naval';
         this.sprite = scene.add.sprite(0, 0, skin);
         let escala = (this.tipoEquipo === 'AEREO') ? 0.3 : 0.25;
@@ -38,6 +38,8 @@ export class Drone extends Phaser.GameObjects.Container {
         this.nickName = data.nickName;
         if (data.bateriaMax !== undefined) {
             this.bateriaMax = data.bateriaMax;
+        } else if (!this.bateriaMax) {
+            this.bateriaMax = 1000;
         }
         // Animar movimiento suavemente en lugar de salto instantaneo
         this.scene.tweens.add({

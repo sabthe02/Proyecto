@@ -299,7 +299,7 @@ export class Greeting extends Phaser.Scene {
 
         // Usar NetworkManager para enviar mensajes
         const enviado = tipo === 'REGISTRAR_JUGADOR' 
-            ? this.network.registrarJugador(nickname, 'AEREO')
+            ? this.network.registrarJugador(nickname, 'NAVAL')
             : this.network.loginJugador(nickname);
         
         if (!enviado && this.socket) {
@@ -307,7 +307,7 @@ export class Greeting extends Phaser.Scene {
             this.socket.addEventListener('open', () => {
                 console.log('Socket abrio — enviando mensaje');
                 if (tipo === 'REGISTRAR_JUGADOR') {
-                    this.network.registrarJugador(nickname, 'AEREO');
+                    this.network.registrarJugador(nickname, 'NAVAL');
                 } else {
                     this.network.loginJugador(nickname);
                 }

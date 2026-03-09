@@ -17,38 +17,41 @@ export class EntityManager {
 
     sincronizar(data) {
         // Backend sends: {tipo: 'ACTUALIZAR_PARTIDA', datos: {...}}
-        // Extract the actual game data from datos object
         const gameData = data.datos || data;
-        
-        // Check if elementos array exists
         if (!gameData.elementos) {
             console.warn('ACTUALIZAR_PARTIDA sin elementos:', data);
             return;
         }
-      
-        // Solo loguear el total de elementos, no cada uno
-        // console.log('EntityManager.sincronizar - Recibidos', gameData.elementos.length, 'elementos');
-        
-        // ACTUALIZAR_PARTIDA es un update INCREMENTAL - solo actualiza/crea elementos recibidos
-        // NO elimina elementos que no están en el mensaje
+        this.jugadores = gameData.jugadores || [];
+        this.mapa = gameData.mapa || null;
         gameData.elementos.forEach(datosUnidad => {
-            // Solo loguear elementos nuevos o con información crítica de debug
-            // console.log('Elemento recibido:', datosUnidad.id, 'clase=', datosUnidad.clase, 'tipoEquipo=', datosUnidad.tipoEquipo, 'x=', datosUnidad.x, 'y=', datosUnidad.y, 'z=', datosUnidad.z);
-
-            // Si el elemento está marcado como DESTRUIDO, eliminarlo del frontend
+            // La destrucción la maneja el backend
             if (datosUnidad.estado === 'DESTRUIDO') {
                 if (this.unidades.has(datosUnidad.id)) {
-                    console.log(`[EntityManager] Elemento ${datosUnidad.id} (${datosUnidad.clase || 'unknown'}) DESTRUIDO - eliminando del frontend`);
-                    this.eliminarUnidad(datosUnidad.id);
+                    const unidad = this.unidades.get(datosUnidad.id);
+                    if (unidad.clase === 'DRON' && unidad.morir) {
+                        // Determinar causa: batería agotada o combate
+                        let razon;
+                        if (datosUnidad.bateria !== undefined && datosUnidad.bateria <= 0) {
+                            razon = 'bateria';
+                        } else {
+                            razon = 'combate';
+                        }
+                        unidad.morir(razon);
+                        this.unidades.delete(datosUnidad.id);
+                    } else {
+                        this.eliminarUnidad(datosUnidad.id);
+                    }
                 }
-                return; // No crear ni actualizar elementos destruidos
+                return;
             }
-
             if (!this.unidades.has(datosUnidad.id)) {
                 this.crearUnidad(datosUnidad);
             } else {
                 const unidad = this.unidades.get(datosUnidad.id);
-                unidad.actualizarDesdeServidor(datosUnidad);
+                if (unidad.actualizarDesdeServidor) {
+                    unidad.actualizarDesdeServidor(datosUnidad);
+                }
             }
         });
     }
@@ -59,7 +62,7 @@ export class EntityManager {
         // Distinguir entre Dron, Portadron, y Proyectiles según clase del Backend
         if (data.clase === 'PORTADRON') {
             // Portadron creado
-            nuevaUnidad = new Portadrones(this.scene, data.x, data.y, data);
+            nuevaUnidad = new Portadrones(this.scene, data);
         } else if (data.clase === 'DRON') {
             // Dron creado
             nuevaUnidad = new Drone(this.scene, data);
@@ -101,91 +104,61 @@ export class EntityManager {
     }
 
     aplicarDano(data) {
-        // Expected backend structure:
-        // { tipo: 'APLICAR_DANO', idObjetivo: number, dano: number, vidaRestante: number, estaDestruido: boolean, claseProyectil: string }
         const { idObjetivo, dano, vidaRestante, estaDestruido, claseProyectil } = data;
-        
-        console.log(`[EntityManager] APLICAR_DANO recibido:`, {
-            idObjetivo, dano, vidaRestante, estaDestruido, claseProyectil
-        });
         
         const unidad = this.unidades.get(idObjetivo);
         if (!unidad) {
-            console.warn(`[EntityManager] APLICAR_DANO: Unidad ${idObjetivo} no encontrada en frontend`);
+            console.warn(`[EntityManager] APLICAR_DANO: Unidad ${idObjetivo} no encontrada`);
             return;
         }
         
-        let sufijo;
-        if (estaDestruido) {
-            sufijo = ' (DESTRUIDO)';
-        } else {
-            sufijo = '';
+        // Actualizar vida (ACTUALIZAR_PARTIDA lo sincroniza de todas formas)
+        if (unidad.vida !== undefined) {
+            unidad.vida = vidaRestante;
         }
-        // Dano aplicado
         
-        // Siempre mostrar ImpactoView para:
-        // - ANY drone hit (drones always die from one hit)
-        // - ANY portadron hit
-        const esDron = unidad.clase === 'DRON';
-        const esPortadron = unidad.clase === 'PORTADRON';
+        // Refrescar barra de vida del portadron de inmediato (sin esperar el próximo movimiento)
+        if (unidad.clase === 'PORTADRON' && unidad.dibujarBarras) {
+            unidad.dibujarBarras(vidaRestante);
+        }
         
-        console.log(`Verificando ImpactView: clase=${unidad.clase}, esDron=${esDron}, esPortadron=${esPortadron}`);
-        
-        if (esDron || esPortadron) {
-            // Determinar angulo basado en proyectil
-            let proyectilAngulo;
-            let proyectilPosicion = null;
-            
-            if (claseProyectil === 'BOMBA') {
-                // Bombas siempre caen verticalmente desde arriba
-                proyectilAngulo = 270; // 270° = cayendo desde arriba (en Phaser Y+ es abajo)
-            } else if (claseProyectil === 'MISIL') {
-                // Misiles viajan horizontalmente - buscar el misil para obtener su direccion
-                let misilEncontrado = null;
-                let encontradoFlag = false;
-                
-                for (let [id, entidad] of this.unidades.entries()) {
-                    if (encontradoFlag) {
-                        continue;
-                    }
-                    
-                    if (entidad.clase === 'MISIL') {
-                        const distancia = Phaser.Math.Distance.Between(
-                            entidad.x, entidad.y, 
-                            unidad.x, unidad.y
-                        );
-                        
-                        if (distancia < 50) {
-                            misilEncontrado = entidad;
-                            entidad.causedImpact = true;
-                            encontradoFlag = true;
-                        }
+        if (unidad.clase === 'DRON' || unidad.clase === 'PORTADRON') {
+            // Marcar el proyectil más cercano como causante para que no explote en el mapa
+            for (let [id, entidad] of this.unidades.entries()) {
+                if (entidad.clase === 'MISIL' || entidad.clase === 'BOMBA') {
+                    const distancia = Phaser.Math.Distance.Between(
+                        entidad.x, entidad.y, unidad.x, unidad.y
+                    );
+                    if (distancia < 200) {
+                        entidad.causedImpact = true;
                     }
                 }
-                
-                if (misilEncontrado && misilEncontrado.rotation !== undefined) {
-                    proyectilAngulo = Phaser.Math.RadToDeg(misilEncontrado.rotation);
-                } else {
-                    proyectilAngulo = 0; // Horizontal por defecto
-                }
-            } else {
-                // Tipo desconocido - usar horizontal por defecto
-                proyectilAngulo = 0;
             }
             
-            // Mostrar escena de impacto en vista lateral
+            // Mostrar número de daño sobre la unidad antes de pausar la escena
+            if (unidad.mostrarDano) {
+                unidad.mostrarDano(dano);
+            }
+            
+            // La animación se determina por el equipo del objetivo:
+            // Objetivo NAVAL → impactado por BOMBA aérea (cae desde arriba, 270°)
+            // Objetivo AEREO → impactado por MISIL naval (viene horizontal, 0°)
             let proyectilTipo;
-            if (claseProyectil) {
-                proyectilTipo = claseProyectil;
-            } else if (dano >= 100) {
+            let angulo;
+            const equipoObjetivoTipo = (unidad.tipoEquipo || '').toUpperCase();
+            if (equipoObjetivoTipo === 'NAVAL') {
                 proyectilTipo = 'BOMBA';
+                angulo = 270;
             } else {
                 proyectilTipo = 'MISIL';
+                angulo = 0;
             }
             
-            let equipoObjetivo = 'AEREO';
+            let equipoObjetivo;
             if (unidad.tipoEquipo) {
                 equipoObjetivo = unidad.tipoEquipo;
+            } else {
+                equipoObjetivo = equipoObjetivoTipo;
             }
             
             const datosImpacto = {
@@ -193,33 +166,14 @@ export class EntityManager {
                 objetivoTipo: unidad.clase,
                 objetivoEquipo: equipoObjetivo,
                 dañoInfligido: dano,
-                angulo: proyectilAngulo,
+                angulo: angulo,
                 targetPosicion: { x: unidad.x, y: unidad.y },
-                proyectilPosicion: proyectilPosicion
+                proyectilPosicion: null
             };
             
-            // Mostrando ImpactView
-            console.log('[EntityManager] Mostrando ImpactView con datos:', datosImpacto);
             if (this.scene.mostrarVistaImpacto) {
                 this.scene.mostrarVistaImpacto(datosImpacto);
-            } else {
-                console.error('[EntityManager] ERROR: scene.mostrarVistaImpacto no existe!');
             }
         }
-        
-        // Show damage visual effect (red flash and damage text)
-        if (unidad.mostrarDano) {
-            unidad.mostrarDano(dano);
-        }
-        
-        // Update vida immediately (ACTUALIZAR_PARTIDA will sync it anyway)
-        if (unidad.vida !== undefined) {
-            unidad.vida = vidaRestante;
-        }
-        
-        // Importante: No eliminar ni marcar como destruido aquí - el backend se encarga de eso en ACTUALIZAR_PARTIDA para evitar inconsistencias visuales
-        // La destrucción de entidades se manejará automáticamente a través de ACTUALIZAR_PARTIDA
-        // cuando el backend marque estado='DESTRUIDO' o las elimine de elementos[]
-        // APLICAR_DANO procesado
     }
 }

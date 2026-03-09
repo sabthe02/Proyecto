@@ -295,6 +295,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
                 }
 
                 jsonElemento.put("municionDisponible", municionDisponible);
+                jsonElemento.put("municionMax", dron.getCantidadMunicionInicial());
                 jsonElemento.put("tipoMunicion", tipoMunicion);
             } else if (elemento instanceof Misil) {
                 Misil misil = (Misil) elemento;
@@ -594,17 +595,15 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
     }
 
     @Override
-    public boolean enviarFinPartida(List<Jugador> jugadores, String ganadorId) {
+    public boolean enviarFinPartida(List<JugadorDTO> jugadores, String ganadorId) {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode sobre = mapper.createObjectNode();
         sobre.put("tipo", "FIN_PARTIDA");
         sobre.put("ganador", ganadorId);
-        
         String jsonFinal;
         try {
             jsonFinal = mapper.writeValueAsString(sobre);
-            
-            for (Jugador jugador : jugadores) {
+            for (JugadorDTO jugador : jugadores) {
                 try {
                     WebSocketSession session = usuariosConectadosbyIdJugador.get(jugador.getId());
                     if (session != null && session.isOpen()) {
@@ -614,7 +613,6 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
                     System.err.println("Error al enviar FIN_PARTIDA al jugador " + jugador.getId() + ": " + e.getMessage());
                 }
             }
-            
             return true;
         } catch (Exception e) {
             System.err.println("Error creando mensaje FIN_PARTIDA: " + e.getMessage());

@@ -15,6 +15,9 @@ import com.Proyecto.SpringBoot.Logica.Excepciones.UsuariosException;
 
 @Service
 public class JugadoresService {
+    public java.util.List<EntidadJugador> getJugadores() {
+        return java.util.Collections.list(usuariosConectados.elements());
+    }
 
     // Dado un id de usuario obtenermos el jugador.
     private Dictionary<String, EntidadJugador> usuariosConectados;

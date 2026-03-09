@@ -1,31 +1,25 @@
 export class Portadrones extends Phaser.GameObjects.Container {
-    constructor(scene, datos) {
-        
-        super(scene, datos.posicionX, datos.posicionY);
-        
+    constructor(scene, data) {
+        super(scene, data.x || data.posicionX, data.y || data.posicionY);
         this.scene = scene;
         this.id = data.id;
-        this.clase = 'PORTADRON';
-        this.tipoEquipo = data.tipoEquipo;
-        
-        // Ownership: Quién controla este portadrón (soportar ambos campos)
-        this.idJugador = data.idJugador || data.jugadorId || null;
-        this.jugadorId = this.idJugador; // Alias para compatibilidad
-        
-        // Backend usa escala de game ticks (e.g., 1000 = 100%)
-        // Rastreamos el max valor para calcular porcentajes
-        this.vidaMax = null; // Se detecta dinámicamente
-        
-        // Sistema de capas (depth) - portadrones más abajo que drones
-        this.setDepth(200 + (data.z || 0));
-
+        this.clase = data.clase || 'PORTADRON';
+        this.tipoEquipo = data.tipoEquipo || data.tipo || '';
+        this.estadoActual = data.estado;
+        this.vida = data.vida;
+        this.jugadorId = data.jugadorId || data.idJugador;
+        this.idJugador = this.jugadorId;
+        this.nickName = data.nickName;
+        this.z = data.z;
+        this.vidaMax = null;
+        if (data.vidaMax !== undefined) {
+            this.vidaMax = data.vidaMax;
+        }
+        this.setDepth(200 + (this.z || 0));
         const config = this.obtenerConfiguracion();
-        
         this.sprite = scene.add.sprite(0, 0, config.textura);
         this.sprite.setScale(config.escala);
         this.add(this.sprite);
-
-
         this.labelNombre = scene.add.text(0, config.offsetY - 20, `${this.tipoEquipo} [ID:${this.id}]`, {
             fontSize: '16px',
             fill: '#ffffff',
@@ -33,22 +27,18 @@ export class Portadrones extends Phaser.GameObjects.Container {
             backgroundColor: '#00000088'
         }).setOrigin(0.5);
         this.add(this.labelNombre);
-
         this.labelHangar = scene.add.text(0, 60, `DRONES EN PORTADRONES: 0`, {
             fontSize: '14px',
             fill: config.colorHangar,
             fontStyle: 'bold'
         }).setOrigin(0.5);
         this.add(this.labelHangar);
-
-        // Gráficos para barras de Vida
-        this.barrasUI = scene.add.graphics();
-        this.add(this.barrasUI);
-
-        //Efectos
+        this.barras = scene.add.graphics();
+        this.add(this.barras);
         this.configurarEfectos(config);
-
         scene.add.existing(this);
+        // Dibujar barra de vida desde el inicio para que sea visible sin esperar movimiento
+        this.dibujarBarras(this.vida || 0);
     }
 
     obtenerConfiguracion() {
@@ -80,11 +70,14 @@ export class Portadrones extends Phaser.GameObjects.Container {
 
  
     actualizarDesdeServidor(data) {
-        // Actualizar ownership si cambia (raro pero posible)
-        if (data.idJugador !== undefined || data.jugadorId !== undefined) {
-            this.idJugador = data.idJugador || data.jugadorId || this.idJugador;
-            this.jugadorId = this.idJugador;
+        // Sincronizar propiedades desde el servidor
+        this.estadoActual = data.estado;
+        this.vida = data.vida;
+        this.nickName = data.nickName;
+        if (data.vidaMax !== undefined) {
+            this.vidaMax = data.vidaMax;
         }
+
         
         // Actualizar profundidad según altitud
         this.setDepth(200 + (data.z || 0));
@@ -101,10 +94,14 @@ export class Portadrones extends Phaser.GameObjects.Container {
         });
 
         
-        // Backend envía listaDrones array - mostrar su tamaño
+        // Backend envía listaDrones array - contar solo los no destruidos
         let dronesCount = 0;
         if (data.listaDrones) {
-            dronesCount = data.listaDrones.length;
+            for (let i = 0; i < data.listaDrones.length; i++) {
+                if (data.listaDrones[i].estado !== 'DESTRUIDO') {
+                    dronesCount++;
+                }
+            }
         }
         
         this.labelHangar.setText(`DRONES EN PORTADRONES: ${dronesCount}`);
@@ -144,7 +141,7 @@ export class Portadrones extends Phaser.GameObjects.Container {
         // Crear explosión más grande para el portadrones
         const explosion = this.scene.add.sprite(this.x, this.y, 'proyectil_bomba');
         explosion.setScale(3.0); // Más grande que la explosión de dron
-        explosion.setTint(0xff3300); // Rojo/naranja intenso
+        explosion.setTint(0xff3300); // Rojo/naranja
         explosion.setDepth(10000); // Encima de todo
 
         // Animar la explosión con los frames de fuego

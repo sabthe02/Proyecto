@@ -10,10 +10,10 @@ export class UIManager {
             fontFamily: 'Arial'
         };
         
-        // Backend usa escala de game ticks (e.g., 1000 = 100%)
-        // Rastreamos max valores para calcular porcentajes de visualización
+        // Max values will be set from backend DTOs
         this.vidaMax = null;
         this.bateriaMax = null;
+        this.municionMax = null;
 
         this.crearHUD();
         this.escucharEventos();
@@ -21,19 +21,19 @@ export class UIManager {
 
     crearHUD() {
         // Textos de información del jugador
-        this.vidaTexto = this.scene.add.text(20, 20, 'VIDA: 100%', this.textStyle).setScrollFactor(0).setDepth(1000);
-        this.bateriaTexto = this.scene.add.text(20, 50, 'BATERÍA: 100%', this.textStyle).setScrollFactor(0).setDepth(1000).setVisible(false);
-        this.municionTexto = this.scene.add.text(20, 80, 'MUNICIÓN: 0/0', this.textStyle).setScrollFactor(0).setDepth(1000).setVisible(false);
+        this.vidaTexto = this.scene.add.text(20, 20, 'VIDA: 100%', this.estiloTexto).setScrollFactor(0).setDepth(1000);
+        this.bateriaTexto = this.scene.add.text(20, 50, 'BATERÍA: 100%', this.estiloTexto).setScrollFactor(0).setDepth(1000).setVisible(false);
+        this.municionTexto = this.scene.add.text(20, 80, 'MUNICIÓN: 0/0', this.estiloTexto).setScrollFactor(0).setDepth(1000).setVisible(false);
         
         // Mostrar equipo del jugador
         const playerTeam = this.scene.playerTeam || 'DESCONOCIDO';
-        this.equipoTexto = this.scene.add.text(20, 110, 'EQUIPO: ' + playerTeam, { ...this.textStyle, fontSize: '14px' }).setScrollFactor(0).setDepth(1000);
+        this.equipoTexto = this.scene.add.text(20, 110, 'EQUIPO: ' + playerTeam, { ...this.estiloTexto, fontSize: '14px' }).setScrollFactor(0).setDepth(1000);
         
         // Texto de vista actual
-        this.vistaTexto = this.scene.add.text(20, 140, 'VISTA: PORTADRON', { ...this.textStyle, fontSize: '14px' }).setScrollFactor(0).setDepth(1000);
+        this.vistaTexto = this.scene.add.text(20, 140, 'VISTA: PORTADRON', { ...this.estiloTexto, fontSize: '14px' }).setScrollFactor(0).setDepth(1000);
         
         // Texto de estado de carga (solo visible cuando está cargando)
-        this.cargaTexto = this.scene.add.text(20, 170, '', { ...this.textStyle, fontSize: '18px', fill: '#00ff00' }).setScrollFactor(0).setDepth(1000).setVisible(false);
+        this.cargaTexto = this.scene.add.text(20, 170, '', { ...this.estiloTexto, fontSize: '18px', fill: '#00ff00' }).setScrollFactor(0).setDepth(1000).setVisible(false);
         
         // Estado actual de vista (para controlar qué mostrar)
         this.vistaActual = 'PORTADRON';
@@ -70,6 +70,9 @@ export class UIManager {
             const elementoActivo = gameData.elementos.find(e => e.id == elementoActivoId);
 
             if (elementoActivo) {
+                if (elementoActivo.municionMax !== undefined && elementoActivo.municionMax !== null) {
+                    this.municionMax = elementoActivo.municionMax;
+                }
                 this.actualizar(elementoActivo.vida, elementoActivo.bateria, elementoActivo.x, elementoActivo.y, elementoActivo.municionDisponible, elementoActivo.estado, elementoActivo.comenzandoCarga);
             }
         });
@@ -95,29 +98,20 @@ export class UIManager {
 
 
     actualizar(vida, bateria, x, y, municionDisponible, estado, comenzandoCarga) {
-        // Backend usa escala de game ticks - convertir a porcentaje para UI
-        // Detectar max valores dinámicamente
-        if (this.vidaMax === null || vida > this.vidaMax) {
+        // Usar valores del backend para munición máxima si están disponibles
+        if (this.vidaMax === null && vida !== undefined) {
             this.vidaMax = vida;
         }
-        if (this.bateriaMax === null || bateria > this.bateriaMax) {
+        if (this.bateriaMax === null && bateria !== undefined) {
             this.bateriaMax = bateria;
         }
-        
+        // Si backend manda municionDisponible, usar su campo max para municionMax
+        if (this.municionMax === null && typeof municionDisponible === 'object' && municionDisponible.max !== undefined) {
+            this.municionMax = municionDisponible.max;
+        }
         // Calcular porcentajes para mostrar al jugador
-        let vidaPorcentaje;
-        if (this.vidaMax > 0) {
-            vidaPorcentaje = Math.floor((vida / this.vidaMax) * 100);
-        } else {
-            vidaPorcentaje = 0;
-        }
-        
-        let bateriaPorcentaje;
-        if (this.bateriaMax > 0) {
-            bateriaPorcentaje = Math.floor((bateria / this.bateriaMax) * 100);
-        } else {
-            bateriaPorcentaje = 0;
-        }
+        let vidaPorcentaje = (this.vidaMax > 0) ? Math.floor((vida / this.vidaMax) * 100) : 0;
+        let bateriaPorcentaje = (this.bateriaMax > 0) ? Math.floor((bateria / this.bateriaMax) * 100) : 0;
         
         // Mostrar solo vida o batería según la vista actual
         if (this.vistaActual === 'PORTADRON') {
@@ -172,21 +166,15 @@ export class UIManager {
             
             // Mostrar munición disponible si está definida
             if (municionDisponible !== undefined && municionDisponible !== null) {
-                // Máximo de municiones: NAVAL=2, AEREO=1
-                let maxMunicion;
-                if (this.scene.playerTeam === 'AEREO') {
-                    maxMunicion = 1;
-                } else {
-                    maxMunicion = 2;
+                let maxMunicion = this.municionMax;
+                // If backend sends municionDisponible as object {actual, max}, use it
+                let actualMunicion = municionDisponible;
+                if (typeof municionDisponible === 'object' && municionDisponible.actual !== undefined) {
+                    actualMunicion = municionDisponible.actual;
+                    maxMunicion = municionDisponible.max;
                 }
-                
-                this.municionTexto.setText(`MUNICIÓN: ${municionDisponible}/${maxMunicion}`).setVisible(true);
-                
-                if (municionDisponible === 0) {
-                    this.municionTexto.setFill('#ff0000');
-                } else {
-                    this.municionTexto.setFill('#ffffff');
-                }
+                this.municionTexto.setText(`MUNICIÓN: ${actualMunicion}/${maxMunicion !== null ? maxMunicion : ''}`).setVisible(true);
+                this.municionTexto.setFill(actualMunicion === 0 ? '#ff0000' : '#ffffff');
             } else {
                 this.municionTexto.setVisible(false);
             }

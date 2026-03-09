@@ -29,6 +29,13 @@ import jakarta.annotation.PostConstruct;
 
 @Service
 public class Fachada implements iFachada {
+    public boolean accion_recargar(EntidadJugador jugador, int idDron) {
+        // Lógica de recarga básica: delegar a partidasService si existe
+        if (partidasService != null) {
+            return partidasService.accion_recargar(jugador, idDron);
+        }
+        return false;
+    }
 
 
     @Autowired
@@ -164,17 +171,17 @@ public class Fachada implements iFachada {
 
     @Override
     public void EnviarFinPartida(String ganador) {
-        // Obtener jugadores de la sesión activa
-        String idSesion = jugadorEnSesion.values().iterator().hasNext() ? 
-                         jugadorEnSesion.values().iterator().next() : null;
-        
-        if (idSesion != null && sesionesActivas.containsKey(idSesion)) {
-            SesionJuego sesion = sesionesActivas.get(idSesion);
-            List<Jugador> jugadores = new java.util.ArrayList<>(sesion.getElementosJugadores().keySet());
-            
-            if (handler != null) {
-                handler.enviarFinPartida(jugadores, ganador);
+        // Obtener la lista de jugadores conectados
+        if (handler != null) {
+            List<JugadorDTO> jugadoresDTO = new java.util.ArrayList<>();
+            List<EntidadJugador> jugadores = jugadoresService.getJugadores();
+            for (EntidadJugador jugador : jugadores) {
+                // Convertir cada jugador a JugadorDTO
+                JugadorDTO dto = new JugadorDTO(jugador.getId(), jugador.getNickName(), jugador.getTeam());
+                jugadoresDTO.add(dto);
             }
+            // Enviar el mensaje de fin de partida a todos los jugadores
+            handler.enviarFinPartida(jugadoresDTO, ganador);
         }
     }
 
@@ -212,110 +219,6 @@ public class Fachada implements iFachada {
         return distancia <= radioColision;
     }
 
-    private void aplicarDano(Elemento objetivo, Municion proyectil, List<EntidadJugador> jugadoresSesion) {
-        if (objetivo == null) {
-            return;
-        }
-        if (proyectil == null) {
-            return;
-        }
-
-        int danoInfligido = 0;
-        String claseProyectil = "";
-
-        if (proyectil instanceof Misil) {
-            danoInfligido = 50;
-            claseProyectil = "MISIL";
-        }
-        if (proyectil instanceof Bomba) {
-            danoInfligido = 100;
-            claseProyectil = "BOMBA";
-        }
-
-        int vidaActual = objetivo.getVida();
-        int vidaNueva = vidaActual - danoInfligido;
-        if (vidaNueva < 0) {
-            vidaNueva = 0;
-        }
-
-        objetivo.setVida(vidaNueva);
-
-        boolean estaDestruido = false;
-        if (vidaNueva <= 0) {
-            estaDestruido = true;
-            objetivo.setEstado(EstadoElemento.DESTRUIDO);
-        }
-
-        proyectil.setEstado(EstadoElemento.DESTRUIDO);
-
-        Evento_AplicarDano eventoDano = new Evento_AplicarDano(objetivo, danoInfligido, vidaNueva, estaDestruido,
-                claseProyectil);
-        List<Evento> eventos = new java.util.ArrayList<>();
-        eventos.add(eventoDano);
-        
-        // Si el objetivo fue destruido, también enviar Evento_Movimiento con estado DESTRUIDO
-        // Esto permite que Frontend lo elimine del mapa
-        if (estaDestruido) {
-            Evento_Movimiento eventoDestruccion = new Evento_Movimiento(
-                objetivo,
-                objetivo.getPosicionX(),
-                objetivo.getPosicionY(),
-                objetivo.getAngulo()
-            );
-            eventoDestruccion.habilitar();
-            eventos.add(eventoDestruccion);
-            System.out.println("Enviando Evento_Movimiento DESTRUIDO para elemento " + objetivo.getId());
-        }
-        
-        EnviarActualizaciones(jugadoresSesion, eventos);
-
-        System.out.println("Daño aplicado: objetivo=" + objetivo.getId() + " vida=" + vidaNueva + "/" + vidaActual
-                + " destruido=" + estaDestruido);
-    }
-
-    private Elemento buscarObjetivoImpactado(Municion proyectil, SesionJuego sesion, float radioColision) {
-        if (proyectil == null) {
-            return null;
-        }
-        if (sesion == null) {
-            return null;
-        }
-
-        EntidadJugador disparador = proyectil.getJugador();
-        if (disparador == null) {
-            return null;
-        }
-
-        Map<Integer, Elemento> elementos = sesion.getElementosEnJuego();
-        Elemento objetivoEncontrado = null;
-
-        for (Elemento elemento : elementos.values()) {
-            if (elemento == null) {
-                continue;
-            }
-            if (elemento.getId() == proyectil.getId()) {
-                continue;
-            }
-            if (elemento instanceof Municion) {
-                continue;
-            }
-
-            EntidadJugador propietario = elemento.getJugador();
-            if (propietario == null) {
-                continue;
-            }
-            if (propietario.getId().equals(disparador.getId())) {
-                continue;
-            }
-
-            boolean hayColision = detectarColision(proyectil, elemento, radioColision);
-            if (hayColision) {
-                objetivoEncontrado = elemento;
-                return objetivoEncontrado;
-            }
-        }
-
-        return objetivoEncontrado;
-    }
 
 }
+

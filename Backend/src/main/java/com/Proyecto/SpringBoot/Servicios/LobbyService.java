@@ -21,13 +21,11 @@ public class LobbyService {
     PartidasService partidasService;
 
     // Dado un id de usuario, se obtiene el jugador en el Lobby.
-    Map<String, EntidadJugador> jugadoresEnLobby;
-    private Timer timerLobby;
+    Map<String, EntidadJugador> jugadoresEnLobby = new java.util.Hashtable<>();
+    private Timer timerLobby = new Timer();
 
-    public LobbyService()
-    {
-        jugadoresEnLobby = new java.util.Hashtable<>();
-        this.timerLobby = new Timer();
+        @jakarta.annotation.PostConstruct
+    public void init() {
         this.iniciarTimer();
     }
 
@@ -69,6 +67,10 @@ public class LobbyService {
                 String key1 = (String) jugadoresEnLobby.keySet().toArray()[0];
                 jugadoresParaSesion.add(jugadoresEnLobby.remove(key1));
             }
+
+            // Asignar equipos, al primero se le asigna AEREO, segundo NAVAL
+            jugadoresParaSesion.get(0).setTeam("AEREO");
+            jugadoresParaSesion.get(1).setTeam("NAVAL");
 
             partidasService.crearSesion(jugadoresParaSesion);
             

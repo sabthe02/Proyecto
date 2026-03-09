@@ -43,6 +43,11 @@ public class Dron extends Elemento {
             municion = new Misil(idMunicion, jugador); 
         }
 
+        // La munición comienza inactiva en el hangar del dron
+        if (municion != null) {
+            municion.setEstado(EstadoElemento.INACTIVO);
+        }
+
         municiones.add(municion);
         return municion;
 
@@ -154,21 +159,17 @@ public class Dron extends Elemento {
     public Elemento disparar(Evento_Disparo intencion) {
 
         if (this.getTipo() == TipoElemento.AEREO) {
-
-            if(this.cantidadMunicionesDisponibles() <= 0) {
+            if(this.cantidadMunicionesDisponibles() > 0) {
                 this.municiones.get(0).setUsada(true);
                 return this.municiones.get(0);
             }
-
         } else if (this.getTipo() == TipoElemento.NAVAL) {
-            
             for (Municion municion : municiones) {
                 if (!municion.isUsada()) {
                     municion.setUsada(true);
                     return municion;
                 }
             }
-            
         }
         return null;
     }
@@ -214,8 +215,9 @@ public class Dron extends Elemento {
                     if (municion instanceof Bomba) {
                         ((Bomba) municion).reiniciarVelocidadInicio();
                         ((Bomba) municion).setPosicionZ(Bomba.MAX_ALTURA);
-                        ((Bomba) municion).setEstado(EstadoElemento.INACTIVO);
                     }
+                    // Volver al estado inactivo (en hangar) para Bomba y Misil
+                    municion.setEstado(EstadoElemento.INACTIVO);
                 }
             }
             this.setComenzandoCarga(0); 

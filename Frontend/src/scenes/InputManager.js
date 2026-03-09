@@ -253,32 +253,9 @@ export class InputManager {
 
     procesarDisparo() {
         if (!this.idDronActivo) {
-            console.warn('No hay dron activo para disparar (idDronActivo es null)');
             return;
         }
-        
-        // Verificar el estado del dron antes de permitir disparar
-        // Acceder a entityManager a través de la escena
-        const dronActivo = this.scene.entityManager?.getUnidad(this.idDronActivo);
-        if (dronActivo && dronActivo.estadoActual) {
-            if (dronActivo.estadoActual === 'CARGANDO') {
-                console.warn('No se puede disparar - el dron está CARGANDO (recargando batería)');
-                return;
-            }
-            if (dronActivo.estadoActual === 'INACTIVO') {
-                console.warn('No se puede disparar - el dron está INACTIVO');
-                return;
-            }
-            if (dronActivo.estadoActual === 'DESTRUIDO') {
-                console.warn('No se puede disparar - el dron está DESTRUIDO');
-                return;
-            }
-        }
-        
-        // Disparar enviado
-        
-        // Enviar comando de disparo SIN coordenadas - el backend maneja la lógica de disparo
-        // El backend determinará qué se impacta basándose en Evento_Disparo
+        // Always let backend decide if action is allowed
         this.network.send('DISPARAR', {
             IdDron: this.idDronActivo
         });

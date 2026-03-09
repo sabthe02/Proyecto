@@ -6,12 +6,12 @@ public class Misil extends Municion {
 
     int velocidad;
     float distancia;
-    private float DIS_MAX = 60f;
+    private float DIS_MAX = 1500f;
 
     public Misil(int id, EntidadJugador jugador) {
         super(id, jugador);
-        velocidad = 1;
-        distancia = 60F;
+        velocidad = 50;
+        distancia = DIS_MAX;
     }
 
     public Misil(int id, 
@@ -25,8 +25,8 @@ public class Misil extends Municion {
                 float distancia, 
                 EntidadJugador jugador) {
         super(id, posicionX, posicionY, posicionZ, angulo, vida, estado, jugador);
-        this.velocidad = 1;
-        this.distancia = 60F;
+        this.velocidad = 50;
+        this.distancia = DIS_MAX;
     }
 
     public int getVelocidad() {
@@ -85,8 +85,9 @@ public class Misil extends Municion {
     }
 
     public void calculoDeNuevaPosicion() {
-        float deltaX = (float) Math.cos(this.angulo) * this.velocidad;
-        float deltaY = (float) Math.sin(this.angulo) * this.velocidad;
+        double angleRad = Math.toRadians(this.angulo);
+        float deltaX = (float) (Math.cos(angleRad) * this.velocidad);
+        float deltaY = (float) (Math.sin(angleRad) * this.velocidad);
         this.posicionX += deltaX;
         this.posicionY += deltaY;
         this.distancia = this.distancia - velocidad;

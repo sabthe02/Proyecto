@@ -29,6 +29,17 @@ import com.Proyecto.SpringBoot.Logica.Excepciones.AccionInvalidaException;
 
 @Service
 public class PartidasService implements iPartidaService{
+    public boolean accion_recargar(EntidadJugador jugador, int idDron) {
+        // Lógica de recarga básica: buscar la sesión y delegar a SesionJuego
+        String idSesion = jugadorEnSesion.get(jugador.getId());
+        if (idSesion != null) {
+            SesionJuego sesion = sesionesActivas.get(idSesion);
+            if (sesion != null) {
+                return sesion.accion_recargar(jugador, idDron);
+            }
+        }
+        return false;
+    }
 
     // Dado un id de usuario, se obtiene la sesion en la que esta el jugador.
     Map<String, String> jugadorEnSesion;
@@ -44,6 +55,7 @@ public class PartidasService implements iPartidaService{
 
     private iFachada fachada;
 
+    @Autowired
     public PartidasService() {
         jugadorEnSesion = new java.util.Hashtable<>();
         sesionesActivas = new java.util.Hashtable<>();

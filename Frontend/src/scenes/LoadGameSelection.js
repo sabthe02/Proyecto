@@ -81,16 +81,17 @@ export class LoadGameSelection extends Phaser.Scene {
         // Boton volver
         const backButton = this.add.dom(width / 2, height - 80).createFromHTML(`
             <button id="back-btn" style="
-                padding: 12px 24px;
-                border-radius: 25px;
-                border: none;
-                background: linear-gradient(90deg, #e1f1f158, #e1f1f19a);
-                color: #000;
-                font-size: 18px;
-                font-weight: bold;
-                cursor: pointer;
-                transition: all 0.25s ease;
-                box-shadow: 0 0 10px rgba(18, 18, 18, 0.83);
+                padding:12px 40px;
+                border-radius:25px;
+                border:none;
+                background:linear-gradient(90deg, #e1f1f158, #e1f1f19a);
+                color:#000;
+                font-size:18px;
+                font-weight:bold;
+                cursor:pointer;
+                transition:all 0.25s ease;
+                box-shadow:0 0 10px rgba(18, 18, 18, 0.83);
+                box-sizing:border-box;
             ">Volver</button>
         `);
         backButton.node.style.pointerEvents = 'auto';

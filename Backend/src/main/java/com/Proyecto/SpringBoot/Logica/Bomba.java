@@ -8,11 +8,14 @@ public class Bomba extends Municion {
     float radioExplosion;
     private float gravedad = 0.5f;
     private float velocidadInicio = 0;
+    private float distancia;
+    private final float DIS_MAX = 1500f;
 
     public Bomba(int id, EntidadJugador jugador) {
         super(id, jugador);
         this.peso = 100;
         this.radioExplosion = 5f;
+        this.distancia = DIS_MAX;
     }
 
     public Bomba(int id, 
@@ -46,8 +49,20 @@ public class Bomba extends Municion {
         this.radioExplosion = radioExplosion;
     }
 
+    public float getDistancia() {
+        return distancia;
+    }
+
+    public void calculoDeNuevaPosicion(float speed) {
+        double ang = Math.toRadians(this.angulo);
+        this.posicionX += (float) (Math.cos(ang) * speed);
+        this.posicionY += (float) (Math.sin(ang) * speed);
+        this.distancia -= speed;
+    }
+
     public void reiniciarVelocidadInicio() {
         this.velocidadInicio = 0;
+        this.distancia = DIS_MAX;
     }
 
     @Override

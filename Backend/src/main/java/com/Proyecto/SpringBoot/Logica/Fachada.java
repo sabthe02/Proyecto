@@ -1,211 +1,128 @@
 package com.Proyecto.SpringBoot.Logica;
 
-import java.util.Dictionary;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
+
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.Proyecto.SpringBoot.Datos.JugadoresDAO;
-import com.Proyecto.SpringBoot.Logica.DTO.DronAereoDTO;
-import com.Proyecto.SpringBoot.Logica.DTO.DronNavalDTO;
+
+import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
+import com.Proyecto.SpringBoot.Logica.DTO.CambiosDTO;
+
 import com.Proyecto.SpringBoot.Logica.DTO.EscenarioInicialDTO;
-import com.Proyecto.SpringBoot.Logica.DTO.JugadorDTO;
-import com.Proyecto.SpringBoot.Logica.DTO.PortaDronAereoDTO;
-import com.Proyecto.SpringBoot.Logica.DTO.PortaDronNavalDTO;
+import com.Proyecto.SpringBoot.Logica.DTO.LoginUsuarioDTO;
+import com.Proyecto.SpringBoot.Logica.DTO.MapaDTO;
+import com.Proyecto.SpringBoot.Logica.DTO.MapearDTO;
+
 import com.Proyecto.SpringBoot.Logica.Excepciones.AccionInvalidaException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.ExisteNickNameException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.JugadorNoExisteException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.LobbyException;
-import com.Proyecto.SpringBoot.Modelos.Jugador;
+import com.Proyecto.SpringBoot.Servicios.JugadoresService;
+import com.Proyecto.SpringBoot.Servicios.LobbyService;
+import com.Proyecto.SpringBoot.Servicios.PartidasService;
+
+import jakarta.annotation.PostConstruct;
 
 @Service
 public class Fachada implements iFachada {
 
-    private Timer timerLobby;
 
     @Autowired
-    private JugadoresDAO jugadoresDAO;
+    LobbyService lobbyService;
 
-    //Dado un id de usuario obtenermos el jugador.
-    Dictionary<String, Jugador> usuariosConectados;
+    @Autowired 
+    PartidasService partidasService;
 
-    //Dado un id de usuario, se obtiene el jugador en el Lobby.
-    Map<String, Jugador> jugadoresEnLobby;
+    @Autowired
+    JugadoresService jugadoresService;
 
-    //Dado un id de usuario, se obtiene la sesion en la que esta el jugador.
-    Map<String, String> jugadorEnSesion;
-
-    //Dado el id de una sesion, se obtiene la sesion de juego.
-    Map<String, SesionJuego> sesionesActivas;
 
     iHandler handler;
 
     public Fachada() {
-
-        usuariosConectados = new java.util.Hashtable<>();
-        jugadoresEnLobby = new java.util.Hashtable<>();
-        jugadorEnSesion = new java.util.Hashtable<>();
-        sesionesActivas = new java.util.Hashtable<>();
-        this.timerLobby = new Timer();
-        this.iniciarTimer();
     }
 
-    public void iniciarTimer() {
-        TimerTask tarea = new TimerTask() {
-            @Override
-            public void run() {
-                // Llama al método de la clase
-                ActualizarLobby();
-            }
-        };
 
-        // Ejecutar después de 1 segundo, luego cada 3 segundos
-        timerLobby.schedule(tarea, 1000, 3000);
+    @PostConstruct
+    public void init() {
+        // Este método se ejecuta cuando partidasService YA NO es null
+        this.partidasService.setiFachada(this);
     }
 
-    public void ActualizarLobby() {
+    public LoginUsuarioDTO loginUsuario(String nickName) throws JugadorNoExisteException {
+        EntidadJugador jugador = jugadoresService.loginUsuario(nickName);
+       
+        boolean partidaGuardada = partidasService.existePartidaByJugador(jugador);
 
-        while (sesionesActivas.size() < 10 && jugadoresEnLobby.size() > 1) {
+        LoginUsuarioDTO usuarioDTO = new LoginUsuarioDTO(jugador.getId(), jugador.getNickName(), jugador.getTeam(), partidaGuardada);
+        return usuarioDTO;
+    }
+    public LoginUsuarioDTO crearUsuario(String nickName, String team) throws ExisteNickNameException {
+        
+        EntidadJugador jugador = jugadoresService.crearUsuario(nickName, team);
+        LoginUsuarioDTO usuarioDTO = new LoginUsuarioDTO(jugador.getId(), jugador.getNickName(), jugador.getTeam(), false);
 
-            List<Jugador> jugadoresParaSesion = new java.util.ArrayList<>();
-            String idSesion = "Sesion-" + System.currentTimeMillis();
 
-            for(int i = 0; i < 2; i++) {
-                String key1 = (String) jugadoresEnLobby.keySet().toArray()[0];
-                jugadoresParaSesion.add(jugadoresEnLobby.remove(key1));
-                jugadorEnSesion.put(key1, idSesion);
-            }
+        return usuarioDTO;
+    }
 
-            SesionJuego nuevaSesion = new SesionJuego(idSesion, jugadoresParaSesion, this);
-            sesionesActivas.put(nuevaSesion.getIdSesion(), nuevaSesion);
+    public void desconectarUsuario(String idJugador) throws Exception
+    {
+        EntidadJugador jugador = jugadoresService.obtenerJugadorConectado(idJugador);
+        jugadoresService.desconectarUsuario(jugador);
+        lobbyService.desconectarJugador(jugador);
+        partidasService.desconectarJugador(jugador);
+    }
 
-            nuevaSesion.iniciarSesion();
+    public boolean recuperarPartida(EntidadJugador jugador) {
+        return partidasService.recuperarPartida(jugador);
+    }
+
+    public boolean guardarPartida(EntidadJugador jugador) {
+        return partidasService.recuperarPartida(jugador);
+    }
+
+    public boolean accion_mover(String idJugador, int idElemento, float x, float y, float z, int angulo)
+            throws AccionInvalidaException {
+        return partidasService.accion_mover(jugadoresService.obtenerJugadorConectado(idJugador), idElemento, x, y, z, angulo);
+    }
+
+    // Accion para desplegar un dron desde el portadron
+    public boolean accion_desplegar(String  idJugador, int idPortaDron) throws AccionInvalidaException {
+        return partidasService.accion_desplegar(jugadoresService.obtenerJugadorConectado(idJugador), idPortaDron);
+    }
+
+    public boolean accion_disparar(String idJugador, int idElemento) throws AccionInvalidaException {
+        return partidasService.accion_disparar(jugadoresService.obtenerJugadorConectado(idJugador), idElemento);
+    }
+
+    public void pasarALobby(String idjugador) throws LobbyException {
+        jugadoresService.pasarALobby(jugadoresService.obtenerJugadorConectado(idjugador));
+    }
+
+    @Override
+    public boolean EnviarActualizaciones(List<EntidadJugador> jugadores, List<Evento> acciones) {
+        if (handler != null) {
+            MapearDTO mapeo = new MapearDTO();
+            CambiosDTO cambios = mapeo.mapearCambios(acciones);
+            return handler.enviarAcciones(jugadores, cambios);
         }
-    }
-
-    public Jugador loginUsuario(String nickName) throws JugadorNoExisteException {
-
-        Jugador jugador = null;
-        try {
-            jugador = jugadoresDAO.findByNickName(nickName);
-        } catch (Exception e) {
-            System.err.println("Error al buscar jugador: " + e.getMessage());
-        }
-
-        System.err.println("Buscando jugador con nickname: " + nickName);
-        if (jugador != null) {
-            if (usuariosConectados.get(jugador.getId()) == null) {
-                usuariosConectados.put(jugador.getId(), jugador);
-            }
-
-            return jugador;
-        }
-
-        throw new JugadorNoExisteException("El jugador " + nickName + " no existe");
-    }
-
-    public Jugador crearUsuario(String nickName, String team) throws ExisteNickNameException {
-        if (jugadoresDAO.findByNickName(nickName) != null) {
-            throw new ExisteNickNameException("El NickName " + nickName + " ya existe.");
-        }
-
-        Jugador nuevoJugador = new Jugador();
-
-        nuevoJugador.setNickName(nickName);
-        nuevoJugador.setTeam(team);
-        return jugadoresDAO.save(nuevoJugador);
-    }
-
-    public void desconectarUsuario(String jugadorId) {
-        usuariosConectados.remove(jugadorId);
-        jugadoresEnLobby.remove(jugadorId);
-        jugadorEnSesion.remove(jugadorId);
-        throw new UnsupportedOperationException("No implementado aun");
-    }
-
-    public boolean recuperarPartida() {
-        throw new UnsupportedOperationException("No implementado aun");
-    }
-
-    public boolean guardarPartida() {
-        throw new UnsupportedOperationException("No implementado aun");
-    }
-
-    public boolean accion_mover(Jugador jugador, int idElemento, float x, float y, float z, int angulo) throws AccionInvalidaException {
-        String sesionId = jugadorEnSesion.get(jugador.getId());
-
-        if(sesionId == null) {
-            throw new AccionInvalidaException("El jugador no esta en una sesion activa.");
-        }
-
-        Elemento elemento = sesionesActivas.get(sesionId).getElementosEnJuego().get(idElemento);
-        Evento_Movimiento evento = new Evento_Movimiento(elemento, y, z, angulo);
-        return sesionesActivas.get(sesionId).getAccionesPendientesProcesar().add(evento);
-    }
-
-    public boolean accion_disparar(Jugador jugador, int idElemento) throws AccionInvalidaException {
-        String sesionId = jugadorEnSesion.get(jugador.getId());
-
-        if(sesionId == null) {
-            throw new AccionInvalidaException("El jugador no esta en una sesion activa.");
-        }
-
-        Elemento elemento = sesionesActivas.get(sesionId).getElementosEnJuego().get(idElemento);
-        Evento_Disparo evento = new Evento_Disparo(elemento);
-        return sesionesActivas.get(sesionId).getAccionesPendientesProcesar().add(evento);
-    }
-
-    public boolean pasarALobby(Jugador jugador) throws LobbyException {
-
-        if (jugadoresEnLobby.get(jugador.getId()) != null) {
-            throw new LobbyException("El jugador ya esta en el lobby");
-        }
-
-        if (usuariosConectados.get(jugador.getId()) != null) {
-            jugadoresEnLobby.put(jugador.getId(), jugador);
-            return true;
-        }
-
         return false;
     }
 
     @Override
-    public boolean EnviarActualizaciones(List<Jugador> jugadores, List<Evento> acciones) {
-        return false;
-    }
+    public boolean EnviarInicioPartida(List<PortaDron> portaDrones, Mapa mapa) {
 
-    @Override
-    public boolean EnviarInicioPartida(List<PortaDron> portaDrones) {
+        EscenarioInicialDTO escenarioInicial = new MapearDTO().mapearEscenario(portaDrones);
 
-        EscenarioInicialDTO escenarioInicial = new EscenarioInicialDTO();
-
-        for (PortaDron portaDron : portaDrones) {
-            escenarioInicial.agregarJugador(new JugadorDTO(portaDron.jugador.getId(), portaDron.jugador.getNickName()));
-
-            if(portaDron.tipo == TipoElemento.AEREO)
-            {
-                PortaDronAereoDTO portaD = new PortaDronAereoDTO(portaDron.getId(), portaDron.getPosicionX(),portaDron.getPosicionY(), portaDron.getPosicionZ(), portaDron.getAngulo(), portaDron.getVida(), portaDron.getEstado().toString(), portaDron.getJugador().getNickName());
-                
-                for (Dron dron : portaDron.getDrones()) {
-                    portaD.agregarDron(new DronAereoDTO(dron.getId(), dron.getPosicionX(), dron.getPosicionY(), dron.getPosicionZ(), dron.getAngulo(), dron.getVida(), dron.getEstado().toString(), dron.getBateria()));
-                }
-
-                escenarioInicial.agregarPortaDronAereo(portaD);
-            }else if(portaDron.tipo == TipoElemento.NAVAL)
-            {
-                PortaDronNavalDTO portaD = new PortaDronNavalDTO(portaDron.getId(), portaDron.getPosicionX(),portaDron.getPosicionY(), portaDron.getPosicionZ(), portaDron.getAngulo(), portaDron.getVida(), portaDron.getEstado().toString(), portaDron.getJugador().getNickName());
-                
-                for (Dron dron : portaDron.getDrones()) {
-                    portaD.agregarDron(new DronNavalDTO(dron.getId(), dron.getPosicionX(), dron.getPosicionY(), dron.getPosicionZ(), dron.getAngulo(), dron.getVida(), dron.getEstado().toString(), dron.getBateria()));
-                }
-
-                escenarioInicial.agregarPortaDronNaval(portaD);
-            }
-        }
+        MapaDTO mp = new MapaDTO();
+        mp.setContenido(mapa.getContenido());
+        escenarioInicial.agregarMapa(mp);
 
         if (handler != null) {
 
@@ -220,4 +137,19 @@ public class Fachada implements iFachada {
         this.handler = handler;
     }
 
+    @Override
+    public void EnviarFinPartida(List<EntidadJugador> jugadores, EntidadJugador ganador) {
+         
+        if (handler != null) {
+            List<String> listaJugadores = new ArrayList<>();
+            for (EntidadJugador entidadJugador : jugadores) {
+                listaJugadores.add(entidadJugador.getId());
+            }
+            if(ganador != null)
+                handler.enviarFinPartida(listaJugadores, ganador.getId());
+            else{
+                handler.enviarFinPartida(listaJugadores, "EMPATE");
+            }
+        }
+    }
 }

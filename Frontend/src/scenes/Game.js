@@ -1,211 +1,729 @@
+import { NetworkManager } from './NetworkManager.js';
+import { EntityManager } from './EntityManager.js';
+import { UIManager } from './UIManager.js';
+import { InputManager } from './InputManager.js';
+
 export class Game extends Phaser.Scene {
     constructor() {
         super('Game');
     }
 
     init(data) {
+        // Datos de la partida y jugador
         this.playerTeam = data.team || 'NAVAL';
+        this.playerId = data.playerId || sessionStorage.getItem('playerId') || '';
         this.nickname = data.nickname || 'Player';
-        this.idPartida = null;
-        this.controlMode = 'PORTADRONES';
-        this.activeDron = null;
-        this.unidadesRemotas = new Map();
-        this.visionRange = (this.playerTeam === 'AEREO') ? 250 : 125;
+        this.partidaInicial = data.partidaInicial || null;
+        
+        // Game inicializado
     }
 
     preload() {
+        // Cargado de assets
         this.load.path = 'assets/';
         this.load.image('texturaAgua', 'background/background.jpg');
-        this.load.image('skin_naval', 'portadrones/portadronNaval.png');
-        this.load.image('skin_aereo', 'portadrones/portadronAereo.png');
+        this.load.image('portadrones_aereo', 'portadrones/PortadronAereo.png');
+        this.load.image('portadrones_naval', 'portadrones/portadronNaval.png');
+        this.load.image('dron_aereo', 'drones/dronAereo.svg');
+        this.load.image('dron_naval', 'drones/dronNaval.svg');
+        this.load.image('proyectil_misil', 'effectos/speed.png');
+        this.load.image('proyectil_bomba', 'effectos/fire00.png');
+        
+        // Cargar sprites laterales para ImpactView
+        this.load.image('dron_aereo_lateral', 'drones/AD_lateral.svg');
+        this.load.image('dron_naval_lateral', 'drones/ND_lateral.svg');
+        this.load.image('portadrones_aereo_lateral', 'portadrones/PDAreo_lateral.png');
+        this.load.image('portadrones_naval_lateral', 'portadrones/PDNaval_lateral.png');
+        this.load.image('damage_overlay', 'daño/playerShip1_damage2.png');
+        
+        // Cargar frames de animación de fuego para efectos de explosión
+        for (let i = 0; i < 20; i++) {
+            const frameNum = String(i).padStart(2, '0');
+            this.load.image(`fire${frameNum}`, `effectos/fire${frameNum}.png`);
+        }
     }
 
     create() {
-        console.log("Visualizador de Batalla iniciado - Mapa Infinito");
-
-     
-        this.fondoAgua = this.add.tileSprite(0, 0, window.innerWidth, window.innerHeight, 'texturaAgua');
-        this.fondoAgua.setOrigin(0, 0);
+        // Titulo del juego
+        const width = this.scale.width;
+        const title = this.add.text(width / 2, 20,
+            'Combate Aéreo‑Naval con Drones',
+            {
+                fontSize: '28px',
+                fontStyle: 'bold',
+                fill: '#ffffff',
+                align: 'center',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        )
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(5000)
+        .setShadow(0, 0, '#e1f1f19a', 15, true, true);
+        
+        // Creando escena
+        
+        // Crear animación de explosión desde los frames de fuego
+        if (!this.anims.exists('explosion')) {
+            const explosionFrames = [];
+            for (let i = 0; i < 20; i++) {
+                const frameNum = String(i).padStart(2, '0');
+                explosionFrames.push({ key: `fire${frameNum}` });
+            }
+            this.anims.create({
+                key: 'explosion',
+                frames: explosionFrames,
+                frameRate: 20,
+                repeat: 0
+            });
+        }
+        
+        // Inicializar managers PRIMERO antes de crear elementos visuales
+        this.network = new NetworkManager(this);
+        this.entityManager = new EntityManager(this);
+        this.uiManager = new UIManager(this);
+        this.inputManager = new InputManager(this, this.network, this.playerId, null); // portadronId será configurado en PARTIDA_INICIADA
+        
+        // Conectar InputManager con UIManager para actualizar vista en HUD
+        this.inputManager.configurarUIManager(this.uiManager);
+        
+        // Fondo - tamaño inicial conservador que se actualizará con el mapa real
+        this.fondoAgua = this.add.tileSprite(0, 0, 4000, 4000, 'texturaAgua').setOrigin(0, 0);
         this.fondoAgua.setDepth(-1);
-        this.fondoAgua.setScrollFactor(0); 
-        this.fondoAgua.tileScaleX = 3;
-        this.fondoAgua.tileScaleY = 3;
-        this.fondoAgua.setTint(0x2266cc);
-
         
-        this.misDrones = this.physics.add.group();
-        this.proyectiles = this.physics.add.group();
-        this.visionCircle = this.add.graphics();
-        this.cursors = this.input.keyboard.createCursorKeys();
-
+        // Contenedor de tiles del mapa (renderizado después de PARTIDA_INICIADA)
+        this.mapTiles = null;
+        this.mapaYaRenderizado = false;
+        this.boundsWarningShown = false;
+        this.elementoActivoWarningShown = false; // Flag para control de logs
+        this.worldWidth = 0;
+        this.worldHeight = 0;
         
-        this.configurarUnidadSegunEquipo();
-
-      
-        if (this.unit) {
-            this.cameras.main.startFollow(this.unit, true, 0.05, 0.05);
+        // Procesar datos iniciales de la partida si fueron pasados desde Lobby
+        if (this.partidaInicial) {
+            console.log('Procesando partidaInicial desde Lobby');
+            this.procesarPartidaIniciada(this.partidaInicial);
         }
-
         
-        this.input.keyboard.on('keydown-SPACE', () => {
-            this.solicitarLanzarDron();
-        });
-
-        this.input.on('pointerdown', (pointer) => {
-            if (this.controlMode === 'DRON' && this.activeDron) {
-                this.crearBalaVisual(pointer);
-                this.emitirDisparo();
-            }
-        });
-
-        this.crearInterfazHUD();
-        this.events.on('ACTUALIZAR_PARTIDA', (data) => this.actualizarRealidad(data));
-
-        window.addEventListener('resize', () => {
-            if (this.fondoAgua) {
-                this.fondoAgua.setSize(window.innerWidth, window.innerHeight);
-            }
-        });
-    }
-
-    configurarUnidadSegunEquipo() {
-        if (this.unit) this.unit.destroy();
-
-        const x = window.innerWidth / 2;
-        const y = window.innerHeight / 2;
-        const skin = (this.playerTeam === 'AEREO') ? 'skin_aereo' : 'skin_naval';
+        // Configurar cámara (bounds se actualizarán cuando se renderice el mapa)
+        // Límites iniciales conservadores - ajustados automáticamente por renderizarMapa()
+        this.cameras.main.setBounds(0, 0, 4000, 4000);
+        this.cameras.main.setZoom(0.8); // Zoom out para vista táctica
+        this.cameras.main.setLerp(0.1, 0.1); // Movimiento suave de cámara
         
-        this.unit = this.add.sprite(x, y, skin);
-        this.unit.setDisplaySize(180, 80);
-        this.visionRange = (this.playerTeam === 'AEREO') ? 250 : 125;
+        // Crear botón de salida
+        this.crearBotonSalida();
 
-        this.physics.add.existing(this.unit);
-        if (this.unit.body) {
+        // TEST: Vista lateral con tecla 'i' - mostrar impacto según equipo del jugador
+        this.input.keyboard.on('keydown-I', () => {
+            console.log('[TEST] Tecla I presionada - Disparando vista de impacto para equipo:', this.playerTeam);
             
-            this.unit.body.setCollideWorldBounds(false); 
+            // Determinar datos según el equipo del jugador
+            let datosTest;
+            if (this.playerTeam === 'NAVAL') {
+                // Equipo Naval: mostrar dron/portadron naval golpeado por misil (horizontal)
+                let objetivoTipo;
+                if (Math.random() > 0.5) {
+                    objetivoTipo = 'DRON';
+                } else {
+                    objetivoTipo = 'PORTADRON';
+                }
+                
+                datosTest = {
+                    proyectilTipo: 'MISIL',
+                    objetivoTipo: objetivoTipo,
+                    objetivoEquipo: 'NAVAL',
+                    dañoInfligido: 150,
+                    angulo: 0, // Horizontal desde la izquierda (0° = derecha, proyectil viene del opuesto = izquierda)
+                    targetPosicion: { x: 500, y: 500 },
+                    proyectilPosicion: { x: 100, y: 500 }
+                };
+                console.log('[TEST] Naval: Misil horizontal desde la izquierda');
+            } else {
+                // Equipo Aéreo: mostrar dron/portadron aéreo golpeado por bomba (vertical desde arriba)
+                // En matemáticas estándar: 270° = apuntando hacia abajo, sin(270°) = -1
+                // Con nuestra fórmula corregida (+ sin), esto coloca la bomba sobre el objetivo
+                let objetivoTipo;
+                if (Math.random() > 0.5) {
+                    objetivoTipo = 'DRON';
+                } else {
+                    objetivoTipo = 'PORTADRON';
+                }
+                
+                datosTest = {
+                    proyectilTipo: 'BOMBA',
+                    objetivoTipo: objetivoTipo,
+                    objetivoEquipo: 'AEREO',
+                    dañoInfligido: 200,
+                    angulo: 270, // Matemática estándar: 270° = abajo, sin(270°) = -1, con fórmula +sin = coloca arriba
+                    targetPosicion: { x: 500, y: 500 },
+                    proyectilPosicion: { x: 500, y: 100 }
+                };
+                console.log('[TEST] Aereo: Bomba cayendo desde arriba (ángulo 270°)');
+            }
+            
+            console.log('[TEST] Lanzando ImpactView con datos:', datosTest);
+            this.mostrarVistaImpacto(datosTest);
+        });
+        
+        // Asegurar que el canvas tiene foco para capturar eventos de teclado
+        if (this.game.canvas) {
+            this.game.canvas.focus();
+            console.log('[Game] Canvas enfocado para capturar eventos de teclado');
         }
+        
+        // Escuchar cuando la escena se reanuda (después de ImpactView) para restaurar foco
+        this.events.on('resume', () => {
+            console.log('Escena reanudada - restaurando foco del canvas y teclado');
+            
+            // Restaurar foco del canvas
+            if (this.game.canvas) {
+                this.game.canvas.focus();
+                // Forzar foco con un pequeño delay para asegurar que el navegador lo procese
+                setTimeout(() => {
+                    this.game.canvas.focus();
+                }, 50);
+            }
+            
+            // Asegurar que el teclado esté activo y capturando globalmente
+            if (this.input.keyboard) {
+                this.input.keyboard.enabled = true;
+                this.input.keyboard.enableGlobalCapture();
+                console.log('Teclado reactivado y captura global habilitada');
+            }
+            
+            // Re-habilitar input manager si tiene método de reactivación
+            if (this.inputManager && this.inputManager.reactivar) {
+                this.inputManager.reactivar();
+            }
+        });
+        
+        // Escuchar eventos del juego
+        this.configurarEventListeners();
+        
+        // Manejador de redimensionamiento de ventana
+        window.addEventListener('resize', () => this.manejarRedimension());
     }
 
-    update() {
-        const target = (this.controlMode === 'DRON' && this.activeDron) ? this.activeDron : this.unit;
-        if (!target || !target.x) return;
-
-        let moved = false;
-        const speed = 2.5;
-
+    configurarEventListeners() {
+        // Escuchar PARTIDA_INICIADA desde el Backend
+        this.events.on('PARTIDA_INICIADA', (data) => {
+            console.log('PARTIDA_INICIADA recibida:', data);
+            if (data.datos) {
+                this.procesarPartidaIniciada(data.datos);
+            }
+        });
         
-        if (this.cursors.left.isDown) { 
-            target.x -= speed; 
-            target.angle = 180; 
-            moved = true; 
-        }
-        else if (this.cursors.right.isDown) { 
-            target.x += speed; 
-            target.angle = 0;   
-            moved = true; 
-        }
-
-        if (this.cursors.up.isDown) { 
-            target.y -= speed; 
-            target.angle = -90; 
-            moved = true; 
-        }
-        else if (this.cursors.down.isDown) { 
-            target.y += speed; 
-            target.angle = 90;  
-            moved = true; 
-        }
-
-      
-        if (this.cursors.up.isDown && this.cursors.right.isDown) target.angle = -45;
-        if (this.cursors.up.isDown && this.cursors.left.isDown) target.angle = -135;
-        if (this.cursors.down.isDown && this.cursors.right.isDown) target.angle = 45;
-        if (this.cursors.down.isDown && this.cursors.left.isDown) target.angle = 135;
-
+        // Escuchar RECIBE_IMPACTO para mostrar vista lateral
+        this.events.on('RECIBE_IMPACTO', (data) => {
+            console.log('RECIBE_IMPACTO recibido:', data);
+            this.mostrarVistaImpacto(data);
+        });
         
+        // Escuchar APLICAR_DANO para mostrar vista lateral de impacto
+        // EntityManager también escucha esto, pero Game.js necesita el mostrarVistaImpacto
+        this.events.on('APLICAR_DANO', (data) => {
+            console.log('[Game] APLICAR_DANO recibido:', data);
+            // EntityManager maneja el daño visual, aquí solo verificamos si mostrar ImpactView
+            // (EntityManager llamará a mostrarVistaImpacto si es necesario)
+        });
+        
+        // Escuchar respuesta de guardar partida
+        this.events.on('PARTIDA_GUARDADA_EXITOSO', (data) => {
+            console.log('PARTIDA_GUARDADA_EXITOSO:', data);
+            this.mostrarMensajeExito('Partida guardada con éxito');
+            // Redirigir a GameChoice después de 1.5 segundos
+            this.time.delayedCall(1500, () => {
+                this.scene.start('GameChoice');
+            });
+        });
+        
+        this.events.on('PARTIDA_GUARDADA_FALLIDO', (data) => {
+            console.error('PARTIDA_GUARDADA_FALLIDO:', data);
+            const mensaje = data.mensaje || data.Mensaje || 'Error al guardar la partida, volver a intentar';
+            this.mostrarMensajeError(mensaje);
+        });
+        
+        // Escuchar respuesta de finalizar partida
+        this.events.on('PARTIDA_FINALIZADA_EXITOSO', (data) => {
+            console.log('PARTIDA_FINALIZADA_EXITOSO:', data);
+            // Redirigir a GameOver con resultado empate
+            this.scene.start('GameOver', { result: 'opponent_left' });
+        });
+        
+        this.events.on('PARTIDA_FINALIZADA_FALLIDO', (data) => {
+            console.error('PARTIDA_FINALIZADA_FALLIDO:', data);
+            const mensaje = data.mensaje || data.Mensaje || 'Error al finalizar la partida';
+            this.mostrarMensajeError(mensaje);
+        });
+        
+        // Escuchar mensajes de ERROR genéricos del backend
+        this.events.on('ERROR', (data) => {
+            console.error('ERROR del backend:', data);
+            const mensaje = data.mensaje || data.Mensaje || 'Error en la operación';
+            this.mostrarMensajeError(mensaje);
+        });
+        
+        // Escuchar respuesta de recarga de dron
+        this.events.on('RECARGA_PROCESADA', (data) => {
+            console.log('RECARGA_PROCESADA:', data);
+            // No mostrar mensaje - el feedback visual es el estado CARGANDO del dron
+        });
+        
+        this.events.on('RECARGA_FALLIDA', (data) => {
+            console.warn('RECARGA_FALLIDA:', data);
+            const mensaje = data.mensaje || 'No se pudo recargar. Acércate al portadron.';
+            this.mostrarMensajeError(mensaje);
+        });
+        
+        // Escuchar mensaje de FIN_PARTIDA del backend
+        this.events.on('FIN_PARTIDA', (data) => {
+            console.log('FIN_PARTIDA recibido:', data);
+            const ganadorId = data.ganador;
+            
+            // Determinar resultado para el jugador local
+            let result;
+            if (ganadorId === 'EMPATE') {
+                result = 'tie';
+            } else if (ganadorId === this.playerId) {
+                result = 'win';
+            } else {
+                result = 'loss';
+            }
+            
+            console.log('Transición a GameOver con resultado:', result);
+            this.scene.start('GameOver', { result: result });
+        });
+        
+        // ACTUALIZAR_PARTIDA ya lo escuchan EntityManager y UIManager
+        // InputManager maneja todo el input (clic y tecla R)
+    }
+
+    procesarPartidaIniciada(datosPartida) {
+        // Procesando estado inicial
+        
+        // Renderizar tiles del mapa desde la matriz
+        if (datosPartida.mapa && datosPartida.mapa.contenido) {
+            if (!this.mapaYaRenderizado) {
+                this.renderizarMapa(datosPartida.mapa.contenido);
+                this.mapaYaRenderizado = true;
+            }
+        }
+        if (this.mapaYaRenderizado) {
+            console.warn('Mapa ya renderizado, ignorando llamada duplicada');
+        }
+        
+        // Procesar información del jugador
+        if (datosPartida.listaJugadores) {
+            const jugador = datosPartida.listaJugadores.find(j => j.id === this.playerId);
+            if (jugador) {
+                // Jugador encontrado
+                if (jugador.team) {
+                    this.playerTeam = jugador.team;
+                }
+                
+                // Actualizar el texto de equipo en la UI
+                if (this.uiManager && this.uiManager.equipoTexto) {
+                    this.uiManager.equipoTexto.setText('EQUIPO: ' + this.playerTeam);
+                }
+            }
+        }
+        
+        // Procesar posiciones iniciales de portadrones
+        const portadronesAereos = datosPartida.listaPortaDronesAereos;
+        const portadronesNavales = datosPartida.listaPortaDronesNavales;
+        
+        if (portadronesAereos && portadronesNavales) {
+            const portadrones = [...portadronesAereos, ...portadronesNavales];
+            
+            console.log('=== CONFIGURACION DE PORTADRONES ===');
+            console.log('Portadrones AEREOS:', portadronesAereos.map(p => {
+                const jugId = p.idJugador || p.jugadorId || 'MISSING';
+                return `ID=${p.id} jugador=${jugId}`;
+            }));
+            console.log('Portadrones NAVALES:', portadronesNavales.map(p => {
+                const jugId = p.idJugador || p.jugadorId || 'MISSING';
+                return `ID=${p.id} jugador=${jugId}`;
+            }));
+            console.log('Mi playerId:', this.playerId, 'Mi equipo:', this.playerTeam);
+            
+            // Encontrar el portadrón del jugador
+            let miPortadron = null;
+            let encontrado = false;
+            for (let i = 0; i < portadrones.length && !encontrado; i++) {
+                const p = portadrones[i];
+                const portadronJugadorId = p.idJugador || p.jugadorId;
+                const portadronTipo = p.tipoEquipo || p.tipo; // DTOs usan 'tipo', ACTUALIZAR_PARTIDA usa 'tipoEquipo'
+                const matches = portadronJugadorId === this.playerId;
+                if (matches) {
+                    console.log(`Comparando portadron ID=${p.id} (equipo=${portadronTipo}) jugador=${portadronJugadorId} con mi ID=${this.playerId}: MATCH`);
+                    miPortadron = p;
+                    miPortadron.tipoEquipo = portadronTipo; // Normalizar el campo
+                    encontrado = true;
+                } else {
+                    console.log(`Comparando portadron ID=${p.id} (equipo=${portadronTipo}) jugador=${portadronJugadorId} con mi ID=${this.playerId}: no match`);
+                }
+            }
+            
+            // Fallback: buscar por equipo
+            if (!miPortadron) {
+                console.warn('[WARN] No se encontro portadron por idJugador, intentando por equipo');
+                
+                if (this.playerTeam === 'AEREO') {
+                    let encontradoAereo = false;
+                    for (let i = 0; i < portadronesAereos.length && !encontradoAereo; i++) {
+                        const p = portadronesAereos[i];
+                        if (!p.idJugador && !p.jugadorId) {
+                            miPortadron = p;
+                            encontradoAereo = true;
+                        }
+                    }
+                    if (!miPortadron && portadronesAereos.length > 0) {
+                        miPortadron = portadronesAereos[0];
+                        console.warn('[WARN] AEREO: Usando primer portadron AEREO como fallback');
+                    }
+                } else if (this.playerTeam === 'NAVAL') {
+                    let encontradoNaval = false;
+                    for (let i = 0; i < portadronesNavales.length && !encontradoNaval; i++) {
+                        const p = portadronesNavales[i];
+                        if (!p.idJugador && !p.jugadorId) {
+                            miPortadron = p;
+                            encontradoNaval = true;
+                        }
+                    }
+                    if (!miPortadron && portadronesNavales.length > 0) {
+                        miPortadron = portadronesNavales[0];
+                        console.warn('[WARN] NAVAL: Usando primer portadron NAVAL como fallback');
+                    }
+                }
+            }
+            
+            if (miPortadron) {
+                const jugId = miPortadron.jugadorId || miPortadron.idJugador || 'MISSING';
+                
+                // Normalizar equipo a mayusculas para comparacion
+                let equipoPortadron = '';
+                if (miPortadron.tipoEquipo) {
+                    equipoPortadron = miPortadron.tipoEquipo.toUpperCase();
+                }
+                
+                let miEquipo = '';
+                if (this.playerTeam) {
+                    miEquipo = this.playerTeam.toUpperCase();
+                }
+                
+                if (equipoPortadron !== miEquipo) {
+                    console.error('[ERROR] Portadron del equipo incorrecto:', equipoPortadron, 'esperado:', miEquipo);
+                }
+                
+                // Configurar InputManager
+                this.inputManager.configurarPortadron(miPortadron.id);
+                
+                // Centrar cámara
+                this.cameras.main.centerOn(miPortadron.x, miPortadron.y);
+            } else {
+                console.error('[ERROR] No se encontro portadron para jugador', this.playerId, 'equipo', this.playerTeam);
+                console.error('   Portadrones disponibles:', portadrones.map(p => 
+                    `ID=${p.id} equipo=${p.tipoEquipo} jugador=${p.idJugador || p.jugadorId}`
+                ));
+            }
+        }
+        
+        // EntityManager creará las entidades cuando reciba eventos ACTUALIZAR_PARTIDA
+        // Backend enviará ACTUALIZAR_PARTIDA poco después de PARTIDA_INICIADA
+    }
+    
+    mostrarVistaImpacto(data) {
+        console.log('[Game] mostrarVistaImpacto() llamado con data:', data);
+        
+        // Pausar el juego actual
+        this.scene.pause();
+        console.log('[Game] Escena pausada');
+        
+        // Extraer información - manejar tanto RECIBE_IMPACTO como datos de EntityManager
+        const datosImpacto = {
+            proyectilTipo: data.proyectilTipo || data.tipoProyectil || data.clase || 'MISIL',
+            objetivoTipo: data.objetivoTipo || data.claseObjetivo || 'DRON',
+            objetivoEquipo: data.objetivoEquipo || data.equipoObjetivo || data.tipoEquipo || 'AEREO',
+            dañoInfligido: data.dañoInfligido || data.dano || 0,
+            angulo: data.angulo,
+            targetPosicion: data.targetPosicion,
+            proyectilPosicion: data.proyectilPosicion
+        };
+        
+        console.log('Lanzando ImpactView con datos procesados:', datosImpacto);
+        
+        // Lanzar la escena de impacto lateral
+        try {
+            this.scene.launch('ImpactView', datosImpacto);
+            console.log('[Game] ImpactView lanzado exitosamente');
+        } catch (error) {
+            console.error('ERROR al lanzar ImpactView:', error);
+            // Reanudar el juego si hubo error
+            this.scene.resume();
+        }
+    }
+    
+    renderizarMapa(matriz) {
+        if (this.mapaYaRenderizado) {
+            console.error('LLAMADA DUPLICADA DETECTADA - BLOQUEADA');
+            return;
+        }
+        
+        if (!matriz) {
+            console.warn('No hay matriz de mapa disponible');
+            return;
+        }
+        if (!Array.isArray(matriz)) {
+            console.warn('Matriz no es array');
+            return;
+        }
+        
+        const rows = matriz.length;
+        let cols = 0;
+        if (matriz[0]) {
+            cols = matriz[0].length;
+        }
+        const tileSize = 8;
+        this.worldWidth = cols * tileSize;
+        this.worldHeight = rows * tileSize;
+        
+        // Renderizando mapa unico
+        
+        if (this.mapTiles) {
+            this.mapTiles.destroy();
+        }
+        
+        this.mapTiles = this.add.graphics();
+        
+        const tileColors = {
+            0: 0x1e90ff,
+            1: 0x228b22,
+            2: 0x8b4513
+        };
+        
+        for (let i = 0; i < rows; i++) {
+            for (let j = 0; j < cols; j++) {
+                const tileValue = matriz[i][j];
+                if (tileValue !== 0) {
+                    const color = tileColors[tileValue];
+                    if (color) {
+                        this.mapTiles.fillStyle(color, 1.0);
+                        this.mapTiles.fillRect(j * tileSize, i * tileSize, tileSize, tileSize);
+                    }
+                }
+            }
+        }
+        
+        // Actualizando camera bounds
+        this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
+        
+        // Actualizar fondo de agua para cubrir todo el mapa
         if (this.fondoAgua) {
-            this.fondoAgua.tilePositionX = this.cameras.main.scrollX / 3;
-            this.fondoAgua.tilePositionY = this.cameras.main.scrollY / 3;
-            
+            // Para TileSprite, necesitamos actualizar width y height directamente
+            this.fondoAgua.width = this.worldWidth;
+            this.fondoAgua.height = this.worldHeight;
+            this.fondoAgua.setPosition(0, 0);
+            this.fondoAgua.setOrigin(0, 0);
+            this.fondoAgua.setDepth(-1);
+            // Fondo actualizado
+        }
         
-            this.fondoAgua.tilePositionX += 0.5; 
-            this.fondoAgua.tilePositionY += 0.5;
+        // Asegurar que la cámara cubra todo el mundo
+        const physics = this.physics.world;
+        if (physics) {
+            physics.setBounds(0, 0, this.worldWidth, this.worldHeight);
         }
+        
+        // Mapa renderizado
+    }
 
-        if (moved) {
-            this.dibujarVision();
-            this.enviarMovimiento(target);
+    crearBotonSalida() {
+        // Posionar el botón en la esquina inferior derecha con un margen
+        const exitButton = this.add.dom(this.scale.width - 150, this.scale.height - 50).createFromHTML(`
+            <button id="exitBtn" style="
+                padding: 14px 28px;
+                border-radius: 25px;
+                border: none;
+                background: linear-gradient(90deg, #e1f1f158, #e1f1f19a);
+                color: #000;
+                font-size: 20px;
+                font-weight: bold;
+                cursor: pointer;
+                transition: all 0.25s ease;
+                box-shadow: 0 0 10px rgba(18,18,18,0.83);
+            ">Guardar y salir</button>
+        `);
+        
+        const btn = exitButton.node.querySelector('#exitBtn');
+        
+        // Efectos de hover del botón
+        btn.addEventListener('mouseenter', () => {
+            btn.style.transform = 'scale(1.08)';
+            btn.style.boxShadow = '0 0 25px rgba(18, 18, 18, 0.83)';
+        });
+        btn.addEventListener('mouseleave', () => {
+            btn.style.transform = 'scale(1)';
+            btn.style.boxShadow = '0 0 10px rgba(248, 250, 250, 0.5)';
+        });
+        btn.addEventListener('mousedown', () => {
+            btn.style.transform = 'scale(0.96)';
+        });
+        btn.addEventListener('mouseup', () => {
+            btn.style.transform = 'scale(1.08)';
+        });
+        
+        exitButton.addListener('click');
+        exitButton.on('click', () => {
+            console.log('Botón guardar y salir presionado');
+            this.guardarYSalir();
+        });
+        
+        exitButton.setScrollFactor(0);
+        this.exitButton = exitButton;
+    }
+
+    guardarYSalir() {
+        // Enviar mensaje al backend para guardar la partida
+        const idJugador = parseInt(this.playerId);
+        const mensaje = 'Jugador guardó y salió de la partida';
+        
+        if (!this.network) {
+            console.error('NetworkManager no disponible');
+            this.mostrarMensajeError('Error: conexión no disponible');
+            return;
+        }
+        
+        const enviado = this.network.guardarPartida(idJugador, mensaje);
+        
+        if (!enviado) {
+            console.warn('No se pudo enviar GUARDAR_PARTIDA');
+            this.mostrarMensajeError('Error: no se pudo enviar la solicitud');
+        } else {
+            console.log('GUARDAR_PARTIDA enviado - idJugador:', idJugador);
         }
     }
 
-    actualizarRealidad(data) {
-        const miUnidadData = data.elementos.find(e => e.id === (this.activeDron?.id || "Principal"));
-        this.actualizarHUD(miUnidadData);
-        this.idPartida = data.IdPartida;
-    }
-
-    crearBalaVisual(pointer) {
-        if (!this.activeDron) return;
-        const color = (this.playerTeam === 'AEREO') ? 0xffa500 : 0xff0000;
-        const bala = this.add.circle(this.activeDron.x, this.activeDron.y, 4, color);
-        this.physics.add.existing(bala);
-        const diffX = pointer.worldX - this.activeDron.x;
-        const diffY = pointer.worldY - this.activeDron.y;
-        const angle = Math.atan2(diffY, diffX);
-        const speed = 600;
-        bala.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
-        this.time.delayedCall(1000, () => bala.destroy());
-    }
-
-    dibujarVision() {
-        if (!this.visionCircle || !this.visionRange) return;
-        this.visionCircle.clear();
-        this.visionCircle.fillStyle(0xffffff, 0.15);
-        const target = (this.controlMode === 'DRON' && this.activeDron) ? this.activeDron : this.unit;
-        if (target) this.visionCircle.fillCircle(target.x, target.y, this.visionRange);
-    }
-
-    solicitarLanzarDron() { this.enviarAlSocket({ Tipo: "LANZAR_DRON" }); }
-
-    emitirDisparo() {
-        this.enviarAlSocket({
-            Tipo: "DISPARAR",
-            IdDron: (this.activeDron?.id) || "Dron_Local"
+    mostrarMensajeExito(texto) {
+        const mensaje = this.add.text(
+            this.scale.width / 2,
+            this.scale.height / 2,
+            texto,
+            {
+                fontSize: '32px',
+                fill: '#00ff00',
+                stroke: '#000000',
+                strokeThickness: 6,
+                backgroundColor: '#000000cc',
+                padding: { x: 20, y: 10 }
+            }
+        )
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(10000);
+        
+        // Animación de aparición
+        mensaje.setAlpha(0);
+        this.tweens.add({
+            targets: mensaje,
+            alpha: 1,
+            duration: 500,
+            ease: 'Power2'
         });
     }
 
-    enviarMovimiento(elemento) {
-        this.enviarAlSocket({
-            Tipo: "MOVER_ELEMENTO",
-            idElemento: elemento.id || "Principal",
-            PosicionX: Math.floor(elemento.x),
-            PosicionY: Math.floor(elemento.y),
-            PosicionZ: (this.controlMode === 'DRON') ? 50 : 0,
-            Angulo: Math.floor(elemento.angle)
+    mostrarMensajeError(texto) {
+        const mensaje = this.add.text(
+            this.scale.width / 2,
+            this.scale.height / 2,
+            texto,
+            {
+                fontSize: '24px',
+                fill: '#ff0000',
+                stroke: '#000000',
+                strokeThickness: 6,
+                backgroundColor: '#000000cc',
+                padding: { x: 20, y: 10 },
+                align: 'center'
+            }
+        )
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(10000);
+        
+        // Animación de aparición y desaparición
+        mensaje.setAlpha(0);
+        this.tweens.add({
+            targets: mensaje,
+            alpha: 1,
+            duration: 500,
+            ease: 'Power2',
+            onComplete: () => {
+                this.time.delayedCall(3000, () => {
+                    this.tweens.add({
+                        targets: mensaje,
+                        alpha: 0,
+                        duration: 500,
+                        onComplete: () => mensaje.destroy()
+                    });
+                });
+            }
         });
     }
 
-    enviarAlSocket(json) {
-        if (window.gameSocket && window.gameSocket.readyState === WebSocket.OPEN) {
-            window.gameSocket.send(JSON.stringify(json));
+    update(time, delta) {
+        // Delegar todo el input al InputManager
+        if (this.inputManager) {
+            this.inputManager.update();
         }
-    }
-
-    crearInterfazHUD() {
-        const estilo = { font: 'bold 16px Arial', fill: '#00ff00', backgroundColor: '#000000aa' };
-        this.txtEquipo = this.add.text(20, 20, `EQUIPO: ${this.playerTeam}`, estilo).setScrollFactor(0);
-        this.txtModo = this.add.text(20, 45, `CONTROL: ${this.controlMode}`, estilo).setScrollFactor(0);
-        this.txtVida = this.add.text(20, window.innerHeight - 80, "VIDA: ---", { ...estilo, fill: '#ff0000' }).setScrollFactor(0);
-        this.txtBateria = this.add.text(20, window.innerHeight - 55, "BATERÍA: ---", { ...estilo, fill: '#ffff00' }).setScrollFactor(0);
-        this.txtMunicion = this.add.text(20, window.innerHeight - 30, "MUNICIÓN: ---", { ...estilo, fill: '#00ffff' }).setScrollFactor(0);
-        this.txtLatencia = this.add.text(window.innerWidth - 150, 20, "LATENCIA: --ms", { font: '12px Arial', fill: '#aaaaaa' }).setScrollFactor(0);
-    }
-
-    actualizarHUD(datosUnidad) {
-        if (!datosUnidad) return;
-        if (this.txtVida) this.txtVida.setText(`VIDA: ${datosUnidad.vida}`);
-        if (this.txtBateria) this.txtBateria.setText(`BATERÍA: ${datosUnidad.bateria}%`);
-        if (this.txtMunicion) this.txtMunicion.setText(`MUNICIÓN: ${datosUnidad.municion}`);
-        if (this.txtModo) this.txtModo.setText(`CONTROL: ${this.controlMode}`);
+        
+        // Validar bounds de la cámara (deshabilitado - demasiado verbose)
+        // if (this.mapaYaRenderizado && this.worldWidth && this.worldHeight && !this.boundsWarningShown) {
+        //     const currentBounds = this.cameras.main.getBounds();
+        //     if (currentBounds.width !== this.worldWidth || currentBounds.height !== this.worldHeight) {
+        //         this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
+        //         this.boundsWarningShown = true;
+        //     }
+        // }
+        
+        // Seguir al elemento activo con la cámara
+        if (this.inputManager && this.inputManager.elementoActivo !== null && this.inputManager.elementoActivo !== undefined) {
+            const elementoActivo = this.entityManager.getUnidad(this.inputManager.elementoActivo);
+            if (elementoActivo) {
+                // Solo seguir elementos que pertenecen al jugador
+                let elementoJugadorId = elementoActivo.idJugador;
+                if (!elementoJugadorId) {
+                    elementoJugadorId = elementoActivo.jugadorId;
+                }
+                
+                if (elementoJugadorId === this.playerId) {
+                    // Verificar que la cámara está disponible antes de usarla
+                    if (this.cameras && this.cameras.main) {
+                        // Seguir suavemente
+                        this.cameras.main.startFollow(elementoActivo, false);
+                    } else {
+                        console.warn(' Cámara no disponible (probablemente escena pausada)');
+                    }
+                } else {
+                    console.error(`Intentando seguir elemento enemigo! ID=${this.inputManager.elementoActivo} jugador=${elementoJugadorId} (yo soy ${this.playerId})`);
+                    // No seguir elementos enemigos - resetear a portadron del jugador
+                    if (this.inputManager.idPortadron !== null && this.inputManager.idPortadron !== undefined) {
+                        this.inputManager.elementoActivo = this.inputManager.idPortadron;
+                        this.inputManager.vistaActual = 'PORTADRON';
+                        if (this.inputManager.uiManager) {
+                            this.inputManager.uiManager.actualizarVista('PORTADRON');
+                        }
+                    }
+                }
+            } else {
+                // Elemento activo no existe aún en EntityManager
+                // Esto es normal al inicio - esperar a que llegue ACTUALIZAR_PARTIDA
+                if (!this.elementoActivoWarningShown) {
+                    console.warn(`[Game.update] Esperando que elemento ${this.inputManager.elementoActivo} sea creado por EntityManager...`);
+                    this.elementoActivoWarningShown = true;
+                }
+            }
+        }
     }
 }

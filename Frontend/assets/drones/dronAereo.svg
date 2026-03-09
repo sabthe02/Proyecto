@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bodyGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#9be7ff"/>
+      <stop offset="100%" stop-color="#2b6cb0"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" fill="none"/>
+
+  <!-- Arms -->
+  <line x1="72" y1="72" x2="184" y2="184" stroke="#4a5568" stroke-width="10" stroke-linecap="round"/>
+  <line x1="184" y1="72" x2="72" y2="184" stroke="#4a5568" stroke-width="10" stroke-linecap="round"/>
+
+  <!-- Rotors -->
+  <circle cx="64" cy="64" r="26" fill="#1a202c"/>
+  <circle cx="192" cy="64" r="26" fill="#1a202c"/>
+  <circle cx="64" cy="192" r="26" fill="#1a202c"/>
+  <circle cx="192" cy="192" r="26" fill="#1a202c"/>
+  <circle cx="64" cy="64" r="16" fill="#38b2ac"/>
+  <circle cx="192" cy="64" r="16" fill="#38b2ac"/>
+  <circle cx="64" cy="192" r="16" fill="#38b2ac"/>
+  <circle cx="192" cy="192" r="16" fill="#38b2ac"/>
+
+  <!-- Body -->
+  <ellipse cx="128" cy="128" rx="46" ry="34" fill="url(#bodyGrad)" stroke="#1a365d" stroke-width="6"/>
+  <rect x="112" y="92" width="32" height="72" rx="14" fill="#e6fffa" opacity="0.55"/>
+
+  <!-- Camera -->
+  <circle cx="128" cy="168" r="11" fill="#111827"/>
+  <circle cx="128" cy="168" r="5" fill="#63b3ed"/>
+</svg>

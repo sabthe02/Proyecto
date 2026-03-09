@@ -1,3 +1,5 @@
+import { NetworkManager } from './NetworkManager.js';
+
 export class GameChoice extends Phaser.Scene {
 
     constructor() {
@@ -5,7 +7,10 @@ export class GameChoice extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('background', 'assets/background.png');
+        if (this.textures.exists('menu_background')) {
+            this.textures.remove('menu_background');
+        }
+        this.load.image('menu_background', 'assets/background.png');
     }
 
     create() {
@@ -13,7 +18,7 @@ export class GameChoice extends Phaser.Scene {
         const height = this.scale.height;
 
         // Fondo
-        this.bg = this.add.image(width / 2, height / 2, 'background');
+        this.bg = this.add.image(width / 2, height / 2, 'menu_background');
         this.bg.setDisplaySize(width, height);
         this.tweens.add({
             targets: this.bg,
@@ -49,10 +54,13 @@ export class GameChoice extends Phaser.Scene {
         this.statusText = this.add.text(20, 20, '', { fontSize: '16px', fill: '#ffffff' }).setScrollFactor(0);
         this.errorText = this.add.text(width / 2, height / 2 + 150, '', { fontSize: '18px', fill: '#ff6b6b', align: 'center' }).setOrigin(0.5);
 
+        // Verificar si el jugador tiene partidas guardadas
+        const partidaGuardada = sessionStorage.getItem('partidaGuardada') === 'true';
+
         // botones
         const containerHTML = `
             <div style="display:flex;flex-direction:column;align-items:center;gap:18px;">
-                <button id="recargar" style="padding:14px 28px;border-radius:25px;border:none;background:linear-gradient(90deg, #e1f1f158, #e1f1f19a);color:#000;font-size:20px;font-weight:bold;cursor:pointer;transition:all 0.25s ease;box-shadow:0 0 10px rgba(18,18,18,0.83);">Recargar partida guardada</button>
+                <button id="recargar" style="padding:14px 28px;border-radius:25px;border:none;background:linear-gradient(90deg, #e1f1f158, #e1f1f19a);color:#000;font-size:20px;font-weight:bold;cursor:pointer;transition:all 0.25s ease;box-shadow:0 0 10px rgba(18,18,18,0.83);display:${partidaGuardada ? 'block' : 'none'};">Recargar partida guardada</button>
                 <button id="lobby" style="padding:14px 28px;border-radius:25px;border:none;background:linear-gradient(90deg, #e1f1f158, #e1f1f19a);color:#000;font-size:20px;font-weight:bold;cursor:pointer;transition:all 0.25s ease;box-shadow:0 0 10px rgba(18,18,18,0.83);">Ir al lobby</button>
             </div>
         `;
@@ -63,8 +71,10 @@ export class GameChoice extends Phaser.Scene {
         const recargarBtn = dom.node.querySelector('#recargar');
         const lobbyBtn = dom.node.querySelector('#lobby');
 
+        // Agregar animaciones solo a botones visibles
+        const botonesVisibles = partidaGuardada ? [recargarBtn, lobbyBtn] : [lobbyBtn];
 
-        [recargarBtn, lobbyBtn].forEach(btn => {
+        botonesVisibles.forEach(btn => {
             btn.addEventListener('mouseenter', () => {
                 btn.style.transform = 'scale(1.08)';
                 btn.style.boxShadow = '0 0 25px rgba(18, 18, 18, 0.83)';
@@ -81,64 +91,46 @@ export class GameChoice extends Phaser.Scene {
             });
         });
 
-        // Recargar partida
-        recargarBtn.addEventListener('click', () => {
-            window.location.reload(); // Falta!!!
-        });
+        // Recargar partida (solo si el boton es visible)
+        if (partidaGuardada) {
+            recargarBtn.addEventListener('click', () => {
+                this.scene.start('LoadGameSelection');
+            });
+        }
 
-        // WebSocket - usa la conexion global creada en Greeting.js para evitar reconexiones innecesarias
-        this.socket = window.gameSocket;
+        // Initialize NetworkManager (crea/reusa conexión WebSocket)
+        this.network = new NetworkManager(this);
+        this.socket = this.network.socket;
         this.pendingLobbyRequest = false;
 
-        this.socket.onopen = () => {
-            console.log('[GameChoice] WebSocket conectado');
-        };
+        // Escucha mensajes del NetworkManager para manejar eventos relacionados con la partida y el lobby
+        this.events.on('PARTIDA_INICIADA', (data) => {
+            console.log('PARTIDA INICIADA! datos:', data);
+            const extras = {
+                playerId: sessionStorage.getItem('playerId') || '',
+                nickname: sessionStorage.getItem('nickname') || 'Player',
+                partidaInicial: data.datos
+            };
+            this.scene.start('Game', extras);
+        });
 
-        this.socket.onerror = (err) => {
-            console.error('[GameChoice] WebSocket error', err);
-        };
-
-        this.socket.onclose = (ev) => {
-            console.warn('[GameChoice] WebSocket cerrado', ev);
-        };
-
-        this.socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            console.log('[GameChoice] WS onmessage:', data);
-            
-            let tipo = '';
-            if (data.tipo) {
-                tipo = String(data.tipo);
+        this.events.on('PASAR_LOBBY_EXITOSO', (data) => {
+            console.log('Paso al lobby exitosamente:', data);
+            if (this.statusText) {
+                this.statusText.setText('Entrando al lobby...');
             }
+            this.errorText.setText('');
+            this.pendingLobbyRequest = false;
+            this.scene.start('Lobby');
+        });
 
-            // Handle match start (may arrive while still in GameChoice waiting for PASAR_LOBBY_EXITOSO)
-            if (tipo === 'PARTIDA_INICIADA') {
-                console.log('¡PARTIDA INICIADA! Rival:', data.rival);
-                this.scene.start('Start');
-                return;
-            }
-
-            // Handle lobby response
-            if (tipo === 'PASAR_LOBBY_EXITOSO') {
-                console.log('Paso al lobby exitosamente:', data);
-                if (this.statusText) {
-                    this.statusText.setText('Entrando al lobby...');
-                }
-                this.errorText.setText('');
-                this.pendingLobbyRequest = false;
-                this.scene.start('Lobby');
-                return;
-            }
-
-            if (tipo === 'PASAR_LOBBY_FALLIDO') {
-                console.error('Error al pasar al lobby:', data);
-                const msg = data.mensaje || 'Error al pasar al lobby';
-                this.errorText.setText(msg);
-                this.pendingLobbyRequest = false;
-                lobbyBtn.disabled = false;
-                return;
-            }
-        };
+        this.events.on('PASAR_LOBBY_FALLIDO', (data) => {
+            console.error('Error al pasar al lobby:', data);
+            const msg = data.mensaje || 'Error al pasar al lobby';
+            this.errorText.setText(msg);
+            this.pendingLobbyRequest = false;
+            lobbyBtn.disabled = false;
+        });
 
         // Si se pasa al lobby, se manda mensaje al servidor para avisar que el jugador quiere entrar al lobby (y el servidor responde con PASAR_LOBBY_EXITOSO o PASAR_LOBBY_FALLIDO)
         lobbyBtn.addEventListener('click', () => {
@@ -149,18 +141,20 @@ export class GameChoice extends Phaser.Scene {
             lobbyBtn.disabled = true;
             this.errorText.setText('');
 
-            const mensaje = {
-                tipo: 'PASAR_LOBBY'
-            };
-
-            if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-                console.log('[GameChoice] Enviando PASAR_LOBBY');
-                this.socket.send(JSON.stringify(mensaje));
-            } else {
-                console.warn('[GameChoice] Socket no esta abierto');
+            // Usar NetworkManager
+            if (!this.network) {
+                this.network = new NetworkManager(this);
+            }
+            
+            const enviado = this.network.pasarLobby();
+            
+            if (!enviado) {
+                console.warn('Socket no esta abierto');
                 this.errorText.setText('Error: conexion no disponible');
                 this.pendingLobbyRequest = false;
                 lobbyBtn.disabled = false;
+            } else {
+                console.log('PASAR_LOBBY enviado');
             }
         });
     }

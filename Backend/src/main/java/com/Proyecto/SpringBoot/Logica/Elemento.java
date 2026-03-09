@@ -1,6 +1,7 @@
 package com.Proyecto.SpringBoot.Logica;
 
-import com.Proyecto.SpringBoot.Modelos.Jugador;
+import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public abstract class Elemento {
 
@@ -10,7 +11,8 @@ public abstract class Elemento {
     float posicionZ;
     Integer angulo;
     Integer vida;
-    Jugador jugador;
+    EntidadJugador jugador;
+    public static final float MAX_ALTURA = 100;
 
     EstadoElemento estado;
 
@@ -18,32 +20,38 @@ public abstract class Elemento {
         id = 0;
         posicionX = 0f;
         posicionY = 0f;
-        posicionZ = 0f;
+        posicionZ = MAX_ALTURA;
         angulo = 0;
         vida = 100;
         estado = EstadoElemento.ACTIVO;
         jugador = null;
     }
 
-    public Elemento(int id, Jugador jugador) {
+    public Elemento(int id, EntidadJugador jugador) {
         this.id = id;
         this.jugador = jugador;
         posicionX = 0f;
         posicionY = 0f;
-        posicionZ = 0f;
+        posicionZ = MAX_ALTURA;
         angulo = 0;
         vida = 100;
         estado = EstadoElemento.ACTIVO;
     }
 
-    public Elemento(int id, Float posicionX, Float posicionY, float posicionZ, Integer angulo, Integer vida,
-            EstadoElemento estado,  Jugador jugador) {
+    public Elemento(int id,
+            float posicionX2,
+            float posicionY2,
+            float posicionZ,
+            Integer angulo,
+            Integer vida,
+            EstadoElemento estado,
+            EntidadJugador jugador) {
         this.id = id;
-        this.posicionX = posicionX;
-        this.posicionY = posicionY;
+        this.posicionX = posicionX2;
+        this.posicionY = posicionY2;
         this.posicionZ = posicionZ;
         this.angulo = angulo;
-        this.vida = vida;
+        this.vida = 100;
         this.estado = estado;
         this.jugador = jugador;
     }
@@ -76,6 +84,8 @@ public abstract class Elemento {
         return estado;
     }
 
+
+
     public void setPosicionX(Float posicionX) {
         this.posicionX = posicionX;
     }
@@ -100,14 +110,38 @@ public abstract class Elemento {
         this.estado = estado;
     }
 
-        public Jugador getJugador() {
-            return jugador;
+    public EntidadJugador getJugador() {
+        return jugador;
+    }
+
+    public void setJugador(EntidadJugador jugador) {
+        this.jugador = jugador;
+    }
+    
+    public String getIdJugador() {
+        if (jugador != null) {
+            return jugador.getId(); // Para que se serialice el ID del jugador en lugar del objeto completo
         }
+        return null;
+    }
 
-        public void setJugador(Jugador jugador) {
-            this.jugador = jugador;
-        }
+    public float getMAX_ALTURA() {
+        return MAX_ALTURA;
+    }
 
+   
 
+    public abstract void moverse(Evento_Movimiento intencion); 
+
+    public abstract void recibeImpacto(Evento_Movimiento intencion);
+
+    protected abstract TipoElemento getTipo();
+
+    protected abstract int getBateria();
+
+    public int cantidadMunicionesDisponibles() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'cantidadMunicionesDisponibles'");
+    }
 
 }

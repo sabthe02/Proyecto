@@ -1,3 +1,5 @@
+import { NetworkManager } from './NetworkManager.js';
+
 export class Greeting extends Phaser.Scene {
 
     constructor() {
@@ -5,7 +7,10 @@ export class Greeting extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('background', 'assets/background.png');
+        if (this.textures.exists('menu_background')) {
+            this.textures.remove('menu_background');
+        }
+        this.load.image('menu_background', 'assets/background.png');
     }
 
     create() {
@@ -14,7 +19,7 @@ export class Greeting extends Phaser.Scene {
         const width = this.scale.width;
         const height = this.scale.height;
 
-        this.bg = this.add.image(width / 2, height / 2, 'background');
+        this.bg = this.add.image(width / 2, height / 2, 'menu_background');
         this.bg.setDisplaySize(width, height);
 
         this.tweens.add({
@@ -102,7 +107,7 @@ export class Greeting extends Phaser.Scene {
 
     
 
-        // botones - Registro y Login
+        // botones
         const buttonsContainer = this.add.dom(width / 2 + 47, height / 2 + 70).createFromHTML(`
             <div style="display:flex;flex-direction:row;align-items:center;gap:8px;width:260px;">
                 <button id="registro" style="
@@ -195,87 +200,90 @@ export class Greeting extends Phaser.Scene {
         });
 
         // Mensaje de error
-        this.statusText = this.add.text(20, 20, '', { fontSize: '16px', fill: '#ffffff' }).setScrollFactor(0);
-
-        // WebSocket - store globally so it persists across scenes
-        if (!window.gameSocket) {
-            window.gameSocket = new WebSocket("ws://localhost:8080/ws");
-        }
-        this.socket = window.gameSocket;
-
-        this.socket.onopen = () => {
-            console.log("WebSocket conectado");
-        };
-
-        this.socket.onerror = (err) => {
-            console.error('WebSocket error', err);
-        };
-
-        this.socket.onclose = (ev) => {
-            console.warn('WebSocket cerrado', ev);
-        };
+        this.statusText = this.add.text(20, 20, '', { 
+            fontSize: '16px', 
+            fill: '#ffffff' 
+        }).setScrollFactor(0);
 
 
-        this.socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
+        // Inicializar NetworkManager
+        this.network = new NetworkManager(this);
+        this.socket = this.network.socket;
 
-            console.log('Web Socket al mandar mensaje:', data);
+        // Listen to events emitted by NetworkManager instead of overwriting socket handlers
+        this.events.on('JUGADOR_CREADO', (data) => {
+            console.log('Registro exitoso:', data);
             this.pendingRegistration = false;
-
-            let tipo = '';
-            if (data.tipo) {
-                tipo = String(data.tipo);
+            if (data.nickname) {
+                sessionStorage.setItem('nickname', data.nickname);
             }
-
-            // Solo navegar a GameChoice si el mensaje indica un registro/login exitoso o paso exitoso al lobby
-            if (tipo === 'JUGADOR_CREADO' || tipo === 'LOGIN_EXITOSO' || tipo === 'PASAR_LOBBY_EXITOSO') {
-                console.log('Registro/login exitoso:', data);
-                if (this.statusText) 
-                    {
-                        this.statusText.setText('Registro OK — entrando');
-                    }
-                this.scene.start('GameChoice');
-                return;
+            if (data.id) {
+                sessionStorage.setItem('playerId', data.id);
             }
-
-            // Manejar errores de registro/login y otros errores relacionados
-            if (tipo === 'REGISTRO_FALLIDO' || tipo.endsWith('_FALLIDO') || tipo === 'ERROR') {
-                console.error('Registro fallido desde servidor:', data);
-                const msg = data.mensaje || 'Registro fallido';
-          
-                try {
-                    if (this.formContainer && this.formContainer.node) {
-                        const domErr = this.formContainer.node.querySelector('#error-msg');
-                        if (domErr) {
-                            domErr.textContent = msg;
-                        }
-                        const inputEl = this.formContainer.node.querySelector('#nickname');
-                        if (inputEl) {
-                            inputEl.style.borderColor = '#ff6b6b';
-                            inputEl.style.boxShadow = '0 0 6px rgba(255,107,107,0.6)';
-                        }
-                    }
-                } catch (e) { 
-                    console.warn('No se pudo establecer el mensaje de error DOM:', e); 
-                }
-
-                if (this.statusText) {
-                    this.statusText.setText('Error al registrar');
-                }
-
-                if (this.registroBtn) {
-                    this.registroBtn.disabled = false;
-                }
-                if (this.loginBtn) {
-                    this.loginBtn.disabled = false;
-                }
-
-                return;
+            if (this.statusText) {
+                this.statusText.setText('Registro OK — entrando');
             }
+            this.scene.start('GameChoice');
+        });
 
-            // Mensajes no manejados específicamente
-            console.log('Mensaje no manejado por Greeting:', tipo, data);
-        };
+        this.events.on('LOGIN_EXITOSO', (data) => {
+            console.log('Login exitoso:', data);
+            this.pendingRegistration = false;
+            if (data.nickname) {
+                sessionStorage.setItem('nickname', data.nickname);
+            }
+            if (data.id) {
+                sessionStorage.setItem('playerId', data.id);
+            }
+            if (data.partidaGuardada !== undefined) {
+                sessionStorage.setItem('partidaGuardada', data.partidaGuardada.toString());
+            }
+            if (this.statusText) {
+                this.statusText.setText('Login OK — entrando');
+            }
+            this.scene.start('GameChoice');
+        });
+
+        this.events.on('REGISTRO_FALLIDO', (data) => {
+            console.error('Registro fallido:', data);
+            this.handleError(data.mensaje || 'Registro fallido');
+        });
+
+        this.events.on('LOGIN_FALLIDO', (data) => {
+            console.error('Login fallido:', data);
+            this.handleError(data.mensaje || 'Login fallido');
+        });
+    }
+
+    handleError(mensaje) {
+        this.pendingRegistration = false;
+        
+        try {
+            if (this.formContainer && this.formContainer.node) {
+                const domErr = this.formContainer.node.querySelector('#error-msg');
+                if (domErr) {
+                    domErr.textContent = mensaje;
+                }
+                const inputEl = this.formContainer.node.querySelector('#nickname');
+                if (inputEl) {
+                    inputEl.style.borderColor = '#ff6b6b';
+                    inputEl.style.boxShadow = '0 0 6px rgba(255,107,107,0.6)';
+                }
+            }
+        } catch (e) { 
+            console.warn('No se pudo establecer el mensaje de error DOM:', e); 
+        }
+
+        if (this.statusText) {
+            this.statusText.setText('Error: ' + mensaje);
+        }
+
+        if (this.registroBtn) {
+            this.registroBtn.disabled = false;
+        }
+        if (this.loginBtn) {
+            this.loginBtn.disabled = false;
+        }
     }
 
      update() {
@@ -285,26 +293,25 @@ export class Greeting extends Phaser.Scene {
     irAGameChoice(tipo = 'REGISTRAR_JUGADOR') {
         const nickname = this.nicknameInput.value;
 
-        const mensaje = {
-            tipo: tipo,
-            nickname: nickname
-        };
-
-        console.log('irAGameChoice():', mensaje, 'socketState=', this.socket && this.socket.readyState);
+        console.log('irAGameChoice():', tipo, 'nickname=', nickname, 'socketState=', this.socket && this.socket.readyState);
 
         this.pendingRegistration = true;
 
-        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-            console.log('Socket abierto — enviando mensaje');
-            this.socket.send(JSON.stringify(mensaje));
-        } else if (this.socket) {
+        // Usar NetworkManager para enviar mensajes
+        const enviado = tipo === 'REGISTRAR_JUGADOR' 
+            ? this.network.registrarJugador(nickname, 'AEREO')
+            : this.network.loginJugador(nickname);
+        
+        if (!enviado && this.socket) {
             console.log('Socket no abierto — enviar al abrir');
             this.socket.addEventListener('open', () => {
                 console.log('Socket abrio — enviando mensaje');
-                this.socket.send(JSON.stringify(mensaje));
+                if (tipo === 'REGISTRAR_JUGADOR') {
+                    this.network.registrarJugador(nickname, 'AEREO');
+                } else {
+                    this.network.loginJugador(nickname);
+                }
             }, { once: true });
-        } else {
-            console.warn('WebSocket no inicializado');
         }
     }
 }

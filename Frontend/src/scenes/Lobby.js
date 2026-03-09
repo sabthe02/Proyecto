@@ -1,3 +1,5 @@
+import { NetworkManager } from './NetworkManager.js';
+
 export class Lobby extends Phaser.Scene {
 
     constructor() {
@@ -5,7 +7,10 @@ export class Lobby extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('background', 'assets/background.png');
+        if (this.textures.exists('menu_background')) {
+            this.textures.remove('menu_background');
+        }
+        this.load.image('menu_background', 'assets/background.png');
     }
 
     create() {
@@ -13,7 +18,7 @@ export class Lobby extends Phaser.Scene {
         const height = this.scale.height;
 
         // Fondo
-        this.bg = this.add.image(width / 2, height / 2, 'background');
+        this.bg = this.add.image(width / 2, height / 2, 'menu_background');
         this.bg.setDisplaySize(width, height);
         this.tweens.add({
             targets: this.bg,
@@ -66,53 +71,43 @@ export class Lobby extends Phaser.Scene {
         // Status text
         this.statusText = this.add.text(20, 20, 'Conectado', { fontSize: '16px', fill: '#90EE90' }).setScrollFactor(0);
 
-        // WebSocket
-        this.socket = window.gameSocket;
+        // Initialize NetworkManager
+        this.network = new NetworkManager(this);
+        this.socket = this.network.socket;
 
-        this.socket.onopen = () => {
-            console.log('[Lobby] WebSocket conectado');
-            this.statusText.setText('Conectado - esperando oponente');
-        };
-
-        this.socket.onerror = (err) => {
-            console.error('[Lobby] WebSocket error', err);
-        };
-
-        this.socket.onclose = () => {
-            console.warn('[Lobby] WebSocket cerrado');
-        };
-
-        this.socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            console.log('[Lobby] WS onmessage:', data);
-
-            let tipo = '';
-            if (data.tipo) {
-                tipo = String(data.tipo);
+        // Listen to events from NetworkManager
+        this.events.on('PARTIDA_INICIADA', (data) => {
+            console.log('Juego iniciando:', data);
+            this.statusText.setText('Iniciando juego...');
+            
+            // Extraer el equipo del jugador desde listaJugadores
+            const playerId = sessionStorage.getItem('playerId') || '';
+            let playerTeam = 'NAVAL'; // Default
+            
+            if (data.datos && data.datos.listaJugadores) {
+                const jugador = data.datos.listaJugadores.find(j => j.id === playerId);
+                if (jugador && jugador.team) {
+                    playerTeam = jugador.team;
+                    console.log('Equipo del jugador extraido:', playerTeam);
+                }
             }
+            
+            this.scene.start('Game', {
+                playerId: playerId,
+                nickname: sessionStorage.getItem('nickname') || 'Player',
+                team: playerTeam,
+                partidaInicial: data.datos
+            });
+        });
 
-            // Cuando el servidor indica que el juego va a iniciar, navegamos a la escena del juego
-            if (tipo === 'PARTIDA_INICIADA') {
-                console.log('Juego iniciando:', data);
-                this.statusText.setText('Iniciando juego...');
-                // Navigar a la escena del juego
-                this.scene.start('Start');
-                return;
-            }
+        this.events.on('OPONENTE_ENCONTRADO', (data) => {
+            console.log('Oponente encontrado:', data);
+            this.statusText.setText('Oponente encontrado - iniciando...');
+        });
 
-            // Cuando se encuentra un contrincante
-            if (tipo === 'OPONENTE_ENCONTRADO') {//// QUE MENSAJE ME VA A MANDAR EL SERVIDOR PARA AVISAR DE ESTO????
-                console.log('Oponente encontrado:', data);
-                this.statusText.setText('Oponente encontrado - iniciando...');
-                return;
-            }
-
-            // Manejo errores
-            if (tipo === 'ERROR') {
-                console.error('Error en lobby:', data);
-                return;
-            }
-        };
+        this.events.on('ERROR', (data) => {
+            console.error('Error en lobby:', data);
+        });
     }
 
     update() {

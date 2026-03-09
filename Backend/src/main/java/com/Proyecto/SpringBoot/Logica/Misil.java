@@ -1,23 +1,32 @@
 package com.Proyecto.SpringBoot.Logica;
 
-import com.Proyecto.SpringBoot.Modelos.Jugador;
+import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 
 public class Misil extends Municion {
 
     int velocidad;
     float distancia;
+    private float DIS_MAX = 60f;
 
-    public Misil(int id, Jugador jugador) {
+    public Misil(int id, EntidadJugador jugador) {
         super(id, jugador);
         velocidad = 1;
-        distancia = 1;
+        distancia = 60F;
     }
 
-    public Misil(int id, Float posicionX, Float posicionY, float posicionZ, Integer angulo, Integer vida,
-            EstadoElemento estado, int velocidad, float distancia, Jugador jugador) {
+    public Misil(int id, 
+                Float posicionX, 
+                Float posicionY, 
+                float posicionZ, 
+                Integer angulo, 
+                Integer vida,
+                EstadoElemento estado, 
+                int velocidad, 
+                float distancia, 
+                EntidadJugador jugador) {
         super(id, posicionX, posicionY, posicionZ, angulo, vida, estado, jugador);
-        this.velocidad = velocidad;
-        this.distancia = distancia;
+        this.velocidad = 1;
+        this.distancia = 60F;
     }
 
     public int getVelocidad() {
@@ -35,6 +44,52 @@ public class Misil extends Municion {
     public void setDistancia(float distancia) {
         this.distancia = distancia;
     }
-    
+
+    public void moverse(Evento_Movimiento intencion) {
+
+        Misil misil = (Misil) intencion.getElemento();
+        this.posicionX = misil.posicionX;
+        this.posicionY = misil.posicionY;
+        this.posicionZ = misil.posicionZ;
+        this.distancia = this.distancia - velocidad;
+        if (this.distancia <= 0) {
+            this.setEstado(EstadoElemento.INACTIVO);
+        }
+
+    }
+
+    @Override
+    public void recibeImpacto(Evento_Movimiento intencion) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'recibeImpacto'");
+    }
+
+    @Override
+    protected TipoElemento getTipo() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getTipo'");
+    }
+
+    @Override
+    protected int getBateria() {
+        return 0;
+    }
+
+    public float getDIS_MAX() {
+        return DIS_MAX;
+    }
+
+    public void mover(Evento_Movimiento eventoMovimientoMisil) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'mover'");
+    }
+
+    public void calculoDeNuevaPosicion() {
+        float deltaX = (float) Math.cos(this.angulo) * this.velocidad;
+        float deltaY = (float) Math.sin(this.angulo) * this.velocidad;
+        this.posicionX += deltaX;
+        this.posicionY += deltaY;
+        this.distancia = this.distancia - velocidad;
+    }
 
 }

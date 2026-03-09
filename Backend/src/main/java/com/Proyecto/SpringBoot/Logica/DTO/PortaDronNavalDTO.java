@@ -12,12 +12,15 @@ public class PortaDronNavalDTO {
     int vida;
     String estado;
     String nickName;
+    String jugadorId;
 
     String tipo = "Naval";
+    String clase = "PORTADRON";
 
     List<DronNavalDTO> listaDrones;
 
-    public PortaDronNavalDTO(int id, float x, float y, float z, int angulo, int vida, String estado, String nickName) {
+    public PortaDronNavalDTO(int id, float x, float y, float z, int angulo, int vida, String estado, String nickName,
+            String jugadorId) {
         this.id = id;
         this.x = x;
         this.y = y;
@@ -26,6 +29,7 @@ public class PortaDronNavalDTO {
         this.vida = vida;
         this.estado = estado;
         this.nickName = nickName;
+        this.jugadorId = jugadorId;
 
         listaDrones = new ArrayList<>();
     }
@@ -94,6 +98,22 @@ public class PortaDronNavalDTO {
         return tipo;
     }
 
+    public String getNickName() {
+        return nickName;
+    }
+
+    public String getJugadorId() {
+        return jugadorId;
+    }
+
+    public void setNickName(String nickName) {
+        this.nickName = nickName;
+    }
+
+    public void setJugadorId(String jugadorId) {
+        this.jugadorId = jugadorId;
+    }
+
     public void setTipo(String tipo) {
         this.tipo = tipo;
     }
@@ -104,6 +124,10 @@ public class PortaDronNavalDTO {
 
     public void setListaDrones(List<DronNavalDTO> listaDrones) {
         this.listaDrones = listaDrones;
+    }
+
+    public String getClase() {
+        return clase;
     }
 
 }

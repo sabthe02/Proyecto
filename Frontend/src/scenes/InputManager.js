@@ -10,6 +10,7 @@ export class InputManager {
         this.idPortadron = portadronId; // ID del portadrón del jugador
         this.idDronActivo = null; // ID del dron desplegado activo
         this.elementoActivo = portadronId; // Elemento actualmente controlado
+        this.dronEnRecarga = null; // ID del dron que acaba de ser recargado (para evitar race condition)
         
         // InputManager inicializado
         
@@ -128,14 +129,28 @@ export class InputManager {
                     idActual = parseInt(this.idDronActivo);
                 }
                 
-                if (idActual !== dronActivoId) {
+                // Ignorar el dron que acabamos de recargar hasta que el backend confirme el cambio de estado
+                const esElDronRecargado = this.dronEnRecarga !== null && parseInt(this.dronEnRecarga) === dronActivoId;
+                
+                if (!esElDronRecargado && idActual !== dronActivoId) {
                     this.idDronActivo = dronActivo.id;
+                    this.dronEnRecarga = null;
                     this.elementoActivo = dronActivo.id;
                     
                     // Auto-cambiar a vista dron tras despliegue
                     if (this.vistaActual === 'PORTADRON') {
                         this.cambiarVista();
                     }
+                }
+            }
+            
+            // Limpiar dronEnRecarga cuando el backend confirma que ya no está ACTIVO
+            if (this.dronEnRecarga !== null) {
+                const dronRecargado = gameData.elementos?.find(e =>
+                    String(e.id) === String(this.dronEnRecarga) && e.estado === 'ACTIVO'
+                );
+                if (!dronRecargado) {
+                    this.dronEnRecarga = null;
                 }
             }
             
@@ -151,13 +166,21 @@ export class InputManager {
                     console.log(`Dron ${this.idDronActivo} DESTRUIDO - volviendo a PORTADRON`);
                     this.idDronActivo = null;
                     
-                    // Si estábamos en vista dron, volver a portadrón
-                    if (this.vistaActual === 'DRON') {
-                        this.vistaActual = 'PORTADRON';
-                        this.elementoActivo = this.idPortadron;
-                        if (this.uiManager) {
-                            this.uiManager.actualizarVista('PORTADRON');
+                    // Si la batería se agotó, esperar 1500ms para que la animación de caída se vea
+                    const porBateria = miDronActual.bateria !== undefined && miDronActual.bateria <= 0;
+                    const cambiarVista = () => {
+                        if (this.vistaActual === 'DRON') {
+                            this.vistaActual = 'PORTADRON';
+                            this.elementoActivo = this.idPortadron;
+                            if (this.uiManager) {
+                                this.uiManager.actualizarVista('PORTADRON');
+                            }
                         }
+                    };
+                    if (porBateria) {
+                        this.scene.time.delayedCall(1500, cambiarVista);
+                    } else {
+                        cambiarVista();
                     }
                 }
                 // Si el dron no está en este update o está en cualquier otro estado, mantener vista actual
@@ -274,6 +297,9 @@ export class InputManager {
         }
         
         console.log(`Recargando dron ${this.idDronActivo} - cambiando a vista PORTADRON`);
+        
+        // Recordar qué dron se recargó para evitar que la race condition lo reactive
+        this.dronEnRecarga = this.idDronActivo;
         
         // Enviar comando de recarga al backend
         this.network.send('RECARGAR', {

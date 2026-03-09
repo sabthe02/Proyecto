@@ -163,6 +163,13 @@ export class Drone extends Phaser.GameObjects.Container {
     }
 
     morir(razon) {
+        // Mostrar explosión en la posición actual del dron (sin importar la razón)
+        const explosion = this.scene.add.sprite(this.x, this.y, 'fire00');
+        explosion.setScale(2);
+        explosion.setDepth(10000);
+        explosion.play('explosion');
+        explosion.on('animationcomplete', () => explosion.destroy());
+
         if (razon === 'bateria') {
             // Animación de caída/hundimiento por batería agotada
             let deltaAngulo;
@@ -194,23 +201,6 @@ export class Drone extends Phaser.GameObjects.Container {
             }
         } else {
             // Animación de explosión por combate
-            const explosion = this.scene.add.sprite(this.x, this.y, 'proyectil_bomba');
-            explosion.setScale(1.5);
-            explosion.setTint(0xff6600);
-            explosion.setDepth(10000);
-            let frame = 0;
-            this.scene.time.addEvent({
-                delay: 50,
-                repeat: 19,
-                callback: () => {
-                    if (frame < 20 && explosion.active) {
-                        explosion.setTexture('fire' + String(frame).padStart(2, '0'));
-                        frame++;
-                    } else if (explosion.active) {
-                        explosion.destroy();
-                    }
-                }
-            });
             this.scene.tweens.add({
                 targets: explosion,
                 alpha: 0,

@@ -60,6 +60,10 @@ public class Bomba extends Municion {
         this.distancia -= speed;
     }
 
+    public void setDistanciaMaxima(float distanciaMaxima) {
+        this.distancia = distanciaMaxima;
+    }
+
     public void reiniciarVelocidadInicio() {
         this.velocidadInicio = 0;
         this.distancia = DIS_MAX;

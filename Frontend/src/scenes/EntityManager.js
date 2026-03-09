@@ -123,19 +123,7 @@ export class EntityManager {
         }
         
         if (unidad.clase === 'DRON' || unidad.clase === 'PORTADRON') {
-            // Marcar el proyectil más cercano como causante para que no explote en el mapa
-            for (let [id, entidad] of this.unidades.entries()) {
-                if (entidad.clase === 'MISIL' || entidad.clase === 'BOMBA') {
-                    const distancia = Phaser.Math.Distance.Between(
-                        entidad.x, entidad.y, unidad.x, unidad.y
-                    );
-                    if (distancia < 200) {
-                        entidad.causedImpact = true;
-                    }
-                }
-            }
-            
-            // Mostrar número de daño sobre la unidad antes de pausar la escena
+            // Mostrar número de daño sobre la unidad
             if (unidad.mostrarDano) {
                 unidad.mostrarDano(dano);
             }
@@ -171,8 +159,11 @@ export class EntityManager {
                 proyectilPosicion: null
             };
             
+            // Esperar 500ms para que la explosión del proyectil se vea antes de pausar la escena
             if (this.scene.mostrarVistaImpacto) {
-                this.scene.mostrarVistaImpacto(datosImpacto);
+                this.scene.time.delayedCall(500, () => {
+                    this.scene.mostrarVistaImpacto(datosImpacto);
+                });
             }
         }
     }

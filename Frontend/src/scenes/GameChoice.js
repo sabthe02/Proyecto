@@ -91,10 +91,15 @@ export class GameChoice extends Phaser.Scene {
             });
         });
 
-        // Recargar partida (solo si el boton es visible)
+        // Recargar partida guardada: envía RECARGAR_PARTIDA al backend
         if (partidaGuardada) {
             recargarBtn.addEventListener('click', () => {
-                this.scene.start('LoadGameSelection');
+                recargarBtn.disabled = true;
+                this.errorText.setText('');
+                if (!this.network) {
+                    this.network = new NetworkManager(this);
+                }
+                this.network.recargarPartida();
             });
         }
 
@@ -104,6 +109,21 @@ export class GameChoice extends Phaser.Scene {
         this.pendingLobbyRequest = false;
 
         // Escucha mensajes del NetworkManager para manejar eventos relacionados con la partida y el lobby
+        this.events.on('PARTIDA_RECARGADA_EXITOSO', () => {
+            console.log('Partida encontrada, esperando PARTIDA_INICIADA...');
+            if (this.statusText) {
+                this.statusText.setText('Partida encontrada, cargando...');
+            }
+        });
+
+        this.events.on('PARTIDA_RECARGADA_FALLIDO', (data) => {
+            const msg = (data && data.mensaje) ? data.mensaje : 'No se encontró partida guardada.';
+            this.errorText.setText(msg);
+            if (recargarBtn) {
+                recargarBtn.disabled = false;
+            }
+        });
+
         this.events.on('PARTIDA_INICIADA', (data) => {
             console.log('PARTIDA INICIADA! datos:', data);
             const extras = {

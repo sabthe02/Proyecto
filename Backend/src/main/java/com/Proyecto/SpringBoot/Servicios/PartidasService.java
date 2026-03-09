@@ -95,33 +95,27 @@ public class PartidasService implements iPartidaService{
 
     public boolean recuperarPartida(EntidadJugador jugador) {
 
-        // recupero todas las partidas del usuario
+        // Buscar todas las partidas guardadas del jugador
         List<EntidadSesion> listaSesiones = sesionDAO.buscarSesionesPorNombreJugador(jugador.getNickName());
-        EntidadSesion entidad = null;
-
-        // si encuentro una partida que tenga todos los usuarios conectados (sin estar
-        // en el lobby), se inicia automaticamente
-        boolean encontre = false;
-        int i = 0;
-        while (!encontre && i < listaSesiones.size()) {
-            entidad = listaSesiones.get(i);
-
-            boolean estan = true;
-            int j = 0;
-
-            while (estan && j < entidad.getListaJugadores().size()) {
-                //estan = usuariosConectados.get(entidad.getListaJugadores().get(j).getId()) != null;
-            }
-
-            if (j < entidad.getListaJugadores().size()) {
-                encontre = true;
-            }
+        if (listaSesiones == null || listaSesiones.isEmpty()) {
+            return false;
         }
 
-        if (encontre) {
-            SesionJuego sesion = new MapeoSesion().mapearEntidadSesion(entidad);
+        // Tomar la partida más reciente
+        EntidadSesion entidad = listaSesiones.get(listaSesiones.size() - 1);
 
+        // Restaurar la sesión de juego con el mapeador
+        SesionJuego sesion = new MapeoSesion().mapearEntidadSesion(entidad);
+        sesion.setNotificadorPartida(this);
+
+        // Registrar a todos los jugadores de la sesión restaurada
+        for (EntidadJugador j : entidad.getListaJugadores()) {
+            jugadorEnSesion.put(j.getId(), sesion.getIdSesion());
         }
+        sesionesActivas.put(sesion.getIdSesion(), sesion);
+
+        // Inicia la sesión (envía PARTIDA_INICIADA a todos los jugadores)
+        sesion.iniciarSesion();
 
         return true;
     }

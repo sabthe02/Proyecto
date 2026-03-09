@@ -33,6 +33,7 @@ public class SesionJuego extends GameLoop {
         }
         elementosEnJuego = new java.util.Hashtable<Integer, Elemento>();
         accionesPendientesEnviar = new java.util.ArrayList<Evento>();
+        accionesPendientesProcesar = new ArrayList<>();
     }
 
     private PortaDron crearPortaDronParaJugador(EntidadJugador jugador) {
@@ -142,7 +143,7 @@ public class SesionJuego extends GameLoop {
 
         // Enviar estado inicial del juego (elementos creados)
         List<EntidadJugador> jugadores = new java.util.ArrayList<>(elementosJugadores.keySet());
-        /* 
+        
         List<Evento> estadoInicial = new java.util.ArrayList<>();
 
         // Crear eventos de movimiento para todos los elementos creados
@@ -165,7 +166,7 @@ public class SesionJuego extends GameLoop {
 
         System.out.println("Enviando ACTUALIZAR_PARTIDA con " + estadoInicial.size() + " eventos");
         boolean enviado = notificadorPartida.EnviarActualizaciones(jugadores, estadoInicial);
-        System.out.println("ACTUALIZAR_PARTIDA enviado=" + enviado);*/
+        System.out.println("ACTUALIZAR_PARTIDA enviado=" + enviado);
 
     }
 
@@ -218,10 +219,18 @@ public class SesionJuego extends GameLoop {
         
         if (tipoEvento.equals("Evento_Movimiento")) {
             Evento_Movimiento eventoMovimiento = (Evento_Movimiento) intencion;
-            Dron dron = (Dron) elementosEnJuego.get(intencion.getIdElemento());
-            if (dron.getEstado() != EstadoElemento.ACTIVO || dron.getBateria() <= 0 || dron.getVida() <= 0) {
+
+            Elemento dron = (Elemento) elementosEnJuego.get(intencion.getIdElemento());
+            if (dron.getEstado() != EstadoElemento.ACTIVO ||  dron.getVida() <= 0) {
                 return;
             }
+
+            if(dron instanceof Dron)
+            {
+                if(dron.getBateria() <= 0)
+                    return;
+            }
+
             eventoMovimiento.habilitar();
             return;
         }
@@ -277,7 +286,7 @@ public class SesionJuego extends GameLoop {
         if (tipoEvento.equals("Evento_Movimiento")) {
             if (accion.estaHabilitado()) {
                 Evento_Movimiento eventoMovimiento = (Evento_Movimiento) accion;
-                Dron dron = (Dron) elementosEnJuego.get(accion.getIdElemento());
+                Elemento dron = (Elemento) elementosEnJuego.get(accion.getIdElemento());
                 dron.moverse(eventoMovimiento);
             }
             this.accionesPendientesEnviar.add(accion);

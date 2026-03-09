@@ -51,7 +51,11 @@ public abstract class Elemento {
         this.posicionY = posicionY2;
         this.posicionZ = posicionZ;
         this.angulo = angulo;
-        this.vida = 100;
+        if (vida != null) {
+            this.vida = vida;
+        } else {
+            this.vida = 100;
+        }
         this.estado = estado;
         this.jugador = jugador;
     }

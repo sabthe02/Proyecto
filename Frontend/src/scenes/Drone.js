@@ -1,84 +1,46 @@
 export class Drone extends Phaser.GameObjects.Container {
-    constructor(scene, datos) {
-        
-        super(scene, datos.posicionX, datos.posicionY);
-        
+    constructor(scene, data) {
+        super(scene, data.x || data.posicionX, data.y || data.posicionY);
         this.id = data.id;
-        this.clase = 'DRON';
-        this.tipoEquipo = data.tipoEquipo;
-        
-        let estadoInicial;
-        if (data.estado) {
-            estadoInicial = data.estado;
-        } else {
-            estadoInicial = 'INACTIVO';
-        }
-        this.estadoActual = estadoInicial;
-        
-        // Para saber a quién pertenece
-        let idJugadorInicial;
-        if (data.idJugador) {
-            idJugadorInicial = data.idJugador;
-        } else if (data.jugadorId) {
-            idJugadorInicial = data.jugadorId;
-        } else {
-            idJugadorInicial = null;
-        }
-        this.idJugador = idJugadorInicial;
-        
-        this.jugadorId = this.idJugador; // Alias para compatibilidad
-        this.portadronPadreId = data.portadronPadreId; // Si está en un portadrón
-        
-        // Backend usa MAX_BATERIA = 1000 ticks
-        // Inicializar con el valor conocido del backend
-        this.bateriaMax = 1000;
-
-        let skin;
-        if (this.tipoEquipo === 'AEREO') {
-            skin = 'dron_aereo';
-        } else {
-            skin = 'dron_naval';
-        }
-        
+        this.clase = data.clase || 'DRON';
+        this.tipoEquipo = data.tipoEquipo || data.tipo || '';
+        this.estadoActual = data.estado;
+        this.bateria = data.bateria;
+        this.municionDisponible = data.municionDisponible;
+        this.jugadorId = data.jugadorId || data.idJugador;
+        this.nickName = data.nickName;
+        this.portadronPadreId = data.portadronPadreId;
+        this.z = data.z;
+        // Backend no serializa bateriaMax — usar constante MAX_BATERIA = 1000
+        this.bateriaMax = data.bateriaMax || 1000;
+        let skin = (this.tipoEquipo === 'AEREO') ? 'dron_aereo' : 'dron_naval';
         this.sprite = scene.add.sprite(0, 0, skin);
-        // Escalar drones
-        let escala;
-        if (this.tipoEquipo === 'AEREO') {
-            escala = 0.3;
-        } else {
-            escala = 0.25;
-        }
+        let escala = (this.tipoEquipo === 'AEREO') ? 0.3 : 0.25;
         this.sprite.setScale(escala);
-        this.add(this.sprite); // Lo metemos al contenedor
-        
-        // Drones por encima de portadrones
-        let zInicial;
-        if (data.z) {
-            zInicial = data.z;
-        } else {
-            zInicial = 0;
-        }
-        this.setDepth(300 + zInicial);
-
-        // Etiqueta
+        this.add(this.sprite);
+        this.setDepth(300 + (this.z || 0));
         this.label = scene.add.text(0, -45, `ID: ${this.id}`, { fontSize: '12px' }).setOrigin(0.5);
         this.add(this.label);
-
-        // Barra de batería - asegurar que esté en la capa superior del contenedor
         this.barras = scene.add.graphics();
-        this.barras.setDepth(10); // Depth relativo dentro del contenedor
+        this.barras.setDepth(10);
         this.add(this.barras);
-
-        // Si el dron está INACTIVO o CARGANDO, ocultarlo (está dentro del portadrón)
         if (this.estadoActual === 'INACTIVO' || this.estadoActual === 'CARGANDO') {
             this.setVisible(false);
         }
-        
         scene.add.existing(this);
     }
 
-
     actualizarDesdeServidor(data) {
+        // Sincronizar propiedades desde el servidor
+        this.estadoActual = data.estado;
+        this.bateria = data.bateria;
+        this.municionDisponible = data.municionDisponible;
+        this.nickName = data.nickName;
+        if (data.bateriaMax !== undefined) {
+            this.bateriaMax = data.bateriaMax;
+        } else if (!this.bateriaMax) {
+            this.bateriaMax = 1000;
+        }
         // Animar movimiento suavemente en lugar de salto instantaneo
         this.scene.tweens.add({
             targets: this,
@@ -89,19 +51,7 @@ export class Drone extends Phaser.GameObjects.Container {
             ease: 'Linear'
         });
         
-        // Actualizar dueño si cambia
-        if (data.idJugador !== undefined || data.jugadorId !== undefined) {
-            let nuevoIdJugador;
-            if (data.idJugador) {
-                nuevoIdJugador = data.idJugador;
-            } else if (data.jugadorId) {
-                nuevoIdJugador = data.jugadorId;
-            } else {
-                nuevoIdJugador = this.idJugador;
-            }
-            this.idJugador = nuevoIdJugador;
-            this.jugadorId = this.idJugador;
-        }
+
         
         // Actualizar profundidad según altitud
         let zActual;
@@ -212,48 +162,68 @@ export class Drone extends Phaser.GameObjects.Container {
         this.barras.fillRect(barX, barY, bateriaPorcentaje * barWidth, barHeight);
     }
 
-    morir() {
-        // Dron destruido
-        console.trace('[Drone] Rastreo de llamada a morir()');
-
-        // Crear explosión en la posición del dron
-        const explosion = this.scene.add.sprite(this.x, this.y, 'proyectil_bomba');
-        explosion.setScale(1.5);
-        explosion.setTint(0xff6600); // Tinta naranja/rojo para explosión
-        explosion.setDepth(10000); // Encima de todo
-
-        // Animar la explosión con los frames de fuego
-        let frame = 0;
-        const explosionTimer = this.scene.time.addEvent({
-            delay: 50,
-            repeat: 19,
-            callback: () => {
-                if (frame < 20 && explosion.active) {
-                    explosion.setTexture('fire' + String(frame).padStart(2, '0'));
-                    frame++;
-                } else {
+    morir(razon) {
+        if (razon === 'bateria') {
+            // Animación de caída/hundimiento por batería agotada
+            let deltaAngulo;
+            if (this.tipoEquipo === 'AEREO') {
+                deltaAngulo = 90; // El dron aéreo cae girando
+            } else {
+                deltaAngulo = 30; // El dron naval se hunde levemente inclinado
+            }
+            let deltaY;
+            if (this.tipoEquipo === 'AEREO') {
+                deltaY = 250; // Cae hacia abajo
+            } else {
+                deltaY = 80; // Se hunde suavemente
+            }
+            this.scene.tweens.add({
+                targets: this,
+                y: this.y + deltaY,
+                alpha: 0,
+                angle: this.angle + deltaAngulo,
+                duration: 1500,
+                ease: 'Power2',
+                onComplete: () => {
+                    this.destroy();
+                }
+            });
+            // Toast de batería agotada (espacio de pantalla)
+            if (this.scene.mostrarMensajeError) {
+                this.scene.mostrarMensajeError('Dron destruido por batería agotada');
+            }
+        } else {
+            // Animación de explosión por combate
+            const explosion = this.scene.add.sprite(this.x, this.y, 'proyectil_bomba');
+            explosion.setScale(1.5);
+            explosion.setTint(0xff6600);
+            explosion.setDepth(10000);
+            let frame = 0;
+            this.scene.time.addEvent({
+                delay: 50,
+                repeat: 19,
+                callback: () => {
+                    if (frame < 20 && explosion.active) {
+                        explosion.setTexture('fire' + String(frame).padStart(2, '0'));
+                        frame++;
+                    } else if (explosion.active) {
+                        explosion.destroy();
+                    }
+                }
+            });
+            this.scene.tweens.add({
+                targets: explosion,
+                alpha: 0,
+                scale: 2.0,
+                duration: 1000,
+                onComplete: () => {
                     if (explosion.active) {
                         explosion.destroy();
                     }
                 }
-            }
-        });
-
-        // Tween de desvanecimiento
-        this.scene.tweens.add({
-            targets: explosion,
-            alpha: 0,
-            scale: 2.0,
-            duration: 1000,
-            onComplete: () => {
-                if (explosion.active) {
-                    explosion.destroy();
-                }
-            }
-        });
-
-        // Destruir el dron
-        this.destroy();
+            });
+            this.destroy();
+        }
     }
 
     mostrarDano(cantidad) {

@@ -71,11 +71,11 @@ export class Lobby extends Phaser.Scene {
         // Status text
         this.statusText = this.add.text(20, 20, 'Conectado', { fontSize: '16px', fill: '#90EE90' }).setScrollFactor(0);
 
-        // Initialize NetworkManager
+        // Initializar NetworkManager
         this.network = new NetworkManager(this);
         this.socket = this.network.socket;
 
-        // Listen to events from NetworkManager
+        // Escuchar eventos del backend
         this.events.on('PARTIDA_INICIADA', (data) => {
             console.log('Juego iniciando:', data);
             this.statusText.setText('Iniciando juego...');

@@ -36,6 +36,10 @@ public class SesionJuego extends GameLoop {
         accionesPendientesProcesar = new java.util.ArrayList<Evento>();
     }
 
+    public void setNotificadorPartida(iPartidaService notificadorPartida) {
+        this.notificadorPartida = notificadorPartida;
+    }
+
     private PortaDron crearPortaDronParaJugador(EntidadJugador jugador) {
         TipoElemento tipoJugador = obtenerTipoElementoJugador(jugador);
         
@@ -296,7 +300,10 @@ public class SesionJuego extends GameLoop {
                 if (municion != null) {
                     municion.setPosicionX(dronDisparador.getPosicionX());
                     municion.setPosicionY(dronDisparador.getPosicionY());
-                    municion.setAngulo(calcularAnguloHaciaEnemigo(dronDisparador));
+                    float[] trayectoria = calcularTrayectoriaHaciaEnemigo(dronDisparador);
+                    municion.setAngulo((int) trayectoria[0]);
+                    // Usar el rango fijo del proyectil (DIS_MAX) - no ampliar por distancia al objetivo
+                    // El proyectil alcanza solo lo que está dentro de su rango (1500 unidades)
                     municion.setEstado(EstadoElemento.ACTIVO);
                     elementosEnJuego.put(municion.getId(), municion);
                     Evento_Movimiento evMun = new Evento_Movimiento(municion,
@@ -404,7 +411,8 @@ public class SesionJuego extends GameLoop {
         return this.ganadorID;
     }
 
-    private int calcularAnguloHaciaEnemigo(Dron origen) {
+    // Calcula ángulo y distancia hacia el enemigo más cercano
+    private float[] calcularTrayectoriaHaciaEnemigo(Dron origen) {
         TipoElemento tipoOrigen = origen.getTipo();
         Elemento objetivo = null;
         float menorDistancia = Float.MAX_VALUE;
@@ -413,7 +421,8 @@ public class SesionJuego extends GameLoop {
             if (el instanceof Dron) tipoEl = ((Dron) el).getTipo();
             else if (el instanceof PortaDron) tipoEl = ((PortaDron) el).getTipo();
             if (tipoEl == null || tipoEl == tipoOrigen) continue;
-            if (el.getEstado() == EstadoElemento.DESTRUIDO) continue;
+            // Solo considerar elementos ACTIVO como objetivos
+            if (el.getEstado() != EstadoElemento.ACTIVO) continue;
             float dx = el.getPosicionX() - origen.getPosicionX();
             float dy = el.getPosicionY() - origen.getPosicionY();
             float dist = (float) Math.sqrt(dx * dx + dy * dy);
@@ -422,10 +431,16 @@ public class SesionJuego extends GameLoop {
                 objetivo = el;
             }
         }
-        if (objetivo == null) return 0;
+        if (objetivo == null) return new float[]{0f, 5000f};
         float dx = objetivo.getPosicionX() - origen.getPosicionX();
         float dy = objetivo.getPosicionY() - origen.getPosicionY();
-        return (int) Math.toDegrees(Math.atan2(dy, dx));
+        float angulo = (float) Math.toDegrees(Math.atan2(dy, dx));
+        // El proyectil viaja la distancia exacta al objetivo + margen de 500 unidades
+        return new float[]{angulo, menorDistancia + 500f};
+    }
+
+    private int calcularAnguloHaciaEnemigo(Dron origen) {
+        return (int) calcularTrayectoriaHaciaEnemigo(origen)[0];
     }
 
     @Override
@@ -553,6 +568,11 @@ public class SesionJuego extends GameLoop {
                 ((Misil) municion).calculoDeNuevaPosicion();
                 if (((Misil) municion).getDistancia() <= 0) {
                     municion.setEstado(EstadoElemento.DESTRUIDO);
+                    // Notificar al frontend que el misil fue destruido (falló)
+                    Evento_Movimiento evDestruido = new Evento_Movimiento(municion,
+                        municion.getPosicionX(), municion.getPosicionY(), municion.getAngulo());
+                    evDestruido.habilitar();
+                    accionesPendientesEnviar.add(evDestruido);
                     alcanzado = true;
                 }
             } else if (municion instanceof Bomba) {
@@ -560,6 +580,11 @@ public class SesionJuego extends GameLoop {
                 ((Bomba) municion).calculoDeNuevaPosicion(speed);
                 if (((Bomba) municion).getDistancia() <= 0) {
                     municion.setEstado(EstadoElemento.DESTRUIDO);
+                    // Notificar al frontend que la bomba fue destruida (falló)
+                    Evento_Movimiento evDestruido = new Evento_Movimiento(municion,
+                        municion.getPosicionX(), municion.getPosicionY(), municion.getAngulo());
+                    evDestruido.habilitar();
+                    accionesPendientesEnviar.add(evDestruido);
                     alcanzado = true;
                 }
             }
@@ -604,6 +629,11 @@ public class SesionJuego extends GameLoop {
                                     eventoDano.habilitar();
                                     accionesPendientesEnviar.add(eventoDano);
                                     municion.setEstado(EstadoElemento.DESTRUIDO);
+                                    // Notificar al frontend que el proyectil fue destruido (impactó)
+                                    Evento_Movimiento evImpacto = new Evento_Movimiento(municion,
+                                        municion.getPosicionX(), municion.getPosicionY(), municion.getAngulo());
+                                    evImpacto.habilitar();
+                                    accionesPendientesEnviar.add(evImpacto);
                                     impacto = true;
                                 }
                             }

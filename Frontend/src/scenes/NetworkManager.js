@@ -128,6 +128,10 @@ export class NetworkManager {
         });
     }
 
+    recargarPartida() {
+        return this.send('RECARGAR_PARTIDA');
+    }
+
     guardarPartida(idJugador, mensaje) {
         return this.send('GUARDAR_PARTIDA', {
             idJugador: idJugador,

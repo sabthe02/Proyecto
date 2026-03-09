@@ -248,7 +248,7 @@ public class Fachada implements iFachada {
 
         proyectil.setEstado(EstadoElemento.DESTRUIDO);
 
-        Evento_AplicarDano eventoDano = new Evento_AplicarDano(objetivo, danoInfligido, vidaNueva, estaDestruido,
+        Evento_AplicarDanoTest eventoDano = new Evento_AplicarDanoTest(objetivo, danoInfligido, vidaNueva, estaDestruido,
                 claseProyectil);
         List<Evento> eventos = new java.util.ArrayList<>();
         eventos.add(eventoDano);

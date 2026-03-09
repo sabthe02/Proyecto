@@ -15,6 +15,8 @@ public class PortaDronAereoDTO {
     String jugadorId;
 
     String tipo = "Aereo";
+        String clase = "PORTADRON";
+
 
     List<DronAereoDTO> listaDrones;
 
@@ -124,5 +126,8 @@ public class PortaDronAereoDTO {
 
     public void setListaDrones(List<DronAereoDTO> listaDrones) {
         this.listaDrones = listaDrones;
+    }
+    public String getClase() {
+        return clase;
     }
 }

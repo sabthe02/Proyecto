@@ -5,23 +5,18 @@ import java.util.Dictionary;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import com.Proyecto.SpringBoot.Logica.Evento;
-import com.Proyecto.SpringBoot.Logica.Evento_AplicarDano;
 import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
-import com.Proyecto.SpringBoot.Logica.Bomba;
-import com.Proyecto.SpringBoot.Logica.Dron;
-import com.Proyecto.SpringBoot.Logica.Elemento;
 import com.Proyecto.SpringBoot.Logica.Fachada;
-import com.Proyecto.SpringBoot.Logica.Misil;
-import com.Proyecto.SpringBoot.Logica.Municion;
-import com.Proyecto.SpringBoot.Logica.PortaDron;
 import com.Proyecto.SpringBoot.Logica.iHandler;
+import com.Proyecto.SpringBoot.Logica.DTO.CambiosDTO;
 import com.Proyecto.SpringBoot.Logica.DTO.EscenarioInicialDTO;
 import com.Proyecto.SpringBoot.Logica.DTO.JugadorDTO;
+import com.Proyecto.SpringBoot.Logica.DTO.LoginUsuarioDTO;
 import com.Proyecto.SpringBoot.Logica.Excepciones.ExisteNickNameException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.LobbyException;
 
@@ -36,7 +31,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
     @Autowired
     Fachada fachada;
 
-    Dictionary<WebSocketSession, EntidadJugador> usuariosConectadosbySocket;
+    Dictionary<WebSocketSession, LoginUsuarioDTO> usuariosConectadosbySocket;
     Dictionary<String, WebSocketSession> usuariosConectadosbyIdJugador;
 
     @PostConstruct
@@ -64,7 +59,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
             response.put("tipo", "ERROR");
             response.put("mensaje", "El mensaje no es un JSON válido.");
             response.put("mensaje_recibido", message.getPayload());
-            sendMessageSafely(session, new TextMessage(response.toString()));
+            sendMessageSafely(session, response);
             return;
         }
 
@@ -75,7 +70,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
         if (tipo == null) {
             response.put("tipo", "ERROR");
             response.put("mensaje", "El mensaje no contiene un campo 'tipo' válido.");
-            sendMessageSafely(session, new TextMessage(response.toString()));
+            sendMessageSafely(session, response);
             return;
         }
 
@@ -83,13 +78,12 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
             response = RegistrarJugador(session, node);
         } else if (tipo.equals("LOGIN_JUGADOR")) {
             response = LoginJugador(session, node);
-            
 
         } else if (tipo.equals("PASAR_LOBBY")) {
             if (usuariosConectadosbySocket.get(session) == null) {
                 response.put("tipo", "ERROR");
                 response.put("mensaje", "El jugador no ha iniciado sesión.");
-                sendMessageSafely(session, new TextMessage(response.toString()));
+                sendMessageSafely(session, response);
                 return;
             }
             response = pasarLobby(session, node);
@@ -97,7 +91,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
             if (usuariosConectadosbySocket.get(session) == null) {
                 response.put("tipo", "ERROR");
                 response.put("mensaje", "El jugador no ha iniciado sesión.");
-                sendMessageSafely(session, new TextMessage(response.toString()));
+                sendMessageSafely(session, response);
                 return;
             }
             response = procesarMovimiento(session, node);
@@ -105,7 +99,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
             if (usuariosConectadosbySocket.get(session) == null) {
                 response.put("tipo", "ERROR");
                 response.put("mensaje", "El jugador no ha iniciado sesión.");
-                sendMessageSafely(session, new TextMessage(response.toString()));
+                sendMessageSafely(session, response);
                 return;
             }
             response = procesarDespliegue(session, node);
@@ -113,18 +107,10 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
             if (usuariosConectadosbySocket.get(session) == null) {
                 response.put("tipo", "ERROR");
                 response.put("mensaje", "El jugador no ha iniciado sesión.");
-                sendMessageSafely(session, new TextMessage(response.toString()));
+                sendMessageSafely(session, response);
                 return;
             }
             response = procesarDisparo(session, node);
-        } else if (tipo.equals("RECARGAR")) {
-            if (usuariosConectadosbySocket.get(session) == null) {
-                response.put("tipo", "ERROR");
-                response.put("mensaje", "El jugador no ha iniciado sesión.");
-                sendMessageSafely(session, new TextMessage(response.toString()));
-                return;
-            }
-            response = procesarRecarga(session, node);
         } else if (tipo.equals("PING")) {
             // Responder a PING con PONG para medir latencia
             response.put("tipo", "PONG");
@@ -135,20 +121,37 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
             response.put("tipo", "ERROR");
             response.put("mensaje", "Tipo de mensaje no reconocido: " + tipo);
         }
-        sendMessageSafely(session, new TextMessage(response.toString()));
+
+        sendMessageSafely(session, response);
     }
+
+    /*
+     * private void enviarMensaje(WebSocketSession session, ObjectNode response) {
+     * 
+     * try {
+     * synchronized (session) {
+     * String s = response.toString();
+     * session.sendMessage(new TextMessage(s));
+     * }
+     * } catch (IOException e) {
+     * // TODO Auto-generated catch block
+     * e.printStackTrace();
+     * }
+     * 
+     * }
+     */
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         // Puse esto porque no me estaba conectando
-        EntidadJugador jugador = usuariosConectadosbySocket.get(session);
-        
+        LoginUsuarioDTO jugador = usuariosConectadosbySocket.get(session);
+
         // Remover el jugador de ambas tablas de conexión
         usuariosConectadosbySocket.remove(session);
         if (jugador != null) {
             usuariosConectadosbyIdJugador.remove(jugador.getId());
             try {
-                fachada.desconectarUsuario(jugador);
+                fachada.desconectarUsuario(jugador.getId());
             } catch (Exception e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -158,190 +161,35 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
         System.out.println("Cliente desconectado: " + session.getId());
     }
 
-    //Envía un mensaje de forma segura sincronizando en la sesión para evitar
-    //error cuando múltiples threads intentan enviar mensajes simultáneamente a la misma sesión
-
-    private void sendMessageSafely(WebSocketSession session, TextMessage message) throws IOException {
-        if (session == null || !session.isOpen()) {
-            return;
-        }
-        synchronized (session) {
-            session.sendMessage(message);
-        }
-    }
-
     @Override
-    public boolean enviarAcciones(List<EntidadJugador> jugadores, List<Evento> acciones) {
-        if (jugadores == null || acciones == null || acciones.isEmpty()) {
-            return false;
-        }
-       
-        ObjectNode response = new ObjectMapper().createObjectNode();
+    public boolean enviarAcciones(List<EntidadJugador> jugadores, CambiosDTO cambios) {
+
         ObjectMapper mapper = new ObjectMapper();
+        mapper.clearCaches();
         ObjectNode sobre = mapper.createObjectNode();
-        ObjectNode datos = mapper.createObjectNode();
-        tools.jackson.databind.node.ArrayNode elementos = mapper.createArrayNode();
-
-        for (Evento accion : acciones) {
-            if (accion == null) {
-                continue;
-            }
-// por fa corregir si está mal!!!
-            if (accion instanceof Evento_AplicarDano) {
-                Evento_AplicarDano eventoDano = (Evento_AplicarDano) accion;
-                Elemento objetivo = eventoDano.getElemento();
-                
-                if (objetivo == null) {
-                    continue;
-                }
-                
-                ObjectNode mensajeDano = mapper.createObjectNode();
-                mensajeDano.put("tipo", "APLICAR_DANO");
-                mensajeDano.put("idObjetivo", objetivo.getId());
-                mensajeDano.put("dano", eventoDano.getDano());
-                mensajeDano.put("vidaRestante", eventoDano.getVidaRestante());
-                mensajeDano.put("estaDestruido", eventoDano.isEstaDestruido());
-                mensajeDano.put("claseProyectil", eventoDano.getClaseProyectil());
-                
-                String jsonDano = "";
-                try {
-                    jsonDano = mapper.writeValueAsString(mensajeDano);
-                } catch (Exception e) {
-                    System.err.println("Error serializando Evento_AplicarDano: " + e.getMessage());
-                    continue;
-                }
-                
-                for (EntidadJugador jugador : jugadores) {
-                    if (jugador == null) {
-                        continue;
-                    }
-                    
-                    try {
-                        WebSocketSession session = usuariosConectadosbyIdJugador.get(jugador.getId());
-                        if (session != null && session.isOpen()) {
-                            sendMessageSafely(session, new TextMessage(jsonDano));
-                            System.out.println("APLICAR_DANO enviado a jugador:" + jugador.getId() + " objetivo:" + objetivo.getId());
-                        }
-                    } catch (Exception e) {
-                        System.err.println("Error enviando APLICAR_DANO a jugador:" + jugador.getId() + ": " + e.getMessage());
-                    }
-                }
-                
-                continue;
-            }
-
-            Elemento elemento = accion.getElemento();
-            if (elemento == null) {
-                continue;
-            }
-
-            ObjectNode jsonElemento = mapper.createObjectNode();
-            jsonElemento.put("id", elemento.getId());
-            jsonElemento.put("x", elemento.getPosicionX());
-            jsonElemento.put("y", elemento.getPosicionY());
-            jsonElemento.put("z", elemento.getPosicionZ());
-            jsonElemento.put("angulo", elemento.getAngulo());
-            jsonElemento.put("vida", elemento.getVida());
-            jsonElemento.put("estado", elemento.getEstado().toString());
-            
-            // Agregar idJugador para identificar a quién pertenece cada elemento
-            if (elemento.getIdJugador() != null) {
-                jsonElemento.put("idJugador", elemento.getIdJugador());
-            }
-
-            if (elemento instanceof PortaDron) {
-                PortaDron porta = (PortaDron) elemento;
-                jsonElemento.put("clase", "PORTADRON");
-                jsonElemento.put("tipoEquipo", porta.getTipo().toString());
-                
-                // Enviar listaDrones
-                tools.jackson.databind.node.ArrayNode listaDronesArray = mapper.createArrayNode();
-                if (porta.getDrones() != null) {
-                    for (Dron dronHijo : porta.getDrones()) {
-                        if (dronHijo != null) {
-                            ObjectNode dronInfo = mapper.createObjectNode();
-                            dronInfo.put("id", dronHijo.getId());
-                            dronInfo.put("estado", dronHijo.getEstado().toString());
-                            listaDronesArray.add(dronInfo);
-                        }
-                    }
-                }
-                jsonElemento.set("listaDrones", listaDronesArray);
-            } else if (elemento instanceof Dron) {
-                Dron dron = (Dron) elemento;
-                jsonElemento.put("clase", "DRON");
-                jsonElemento.put("tipoEquipo", dron.getTipo().toString());
-                jsonElemento.put("bateria", dron.getBateria());
-
-                int municionDisponible = 0;
-                String tipoMunicion = "MISIL";
-                if (dron.getTipo().toString().equals("AEREO")) {
-                    tipoMunicion = "BOMBA";
-                }
-                if (dron.getMuniciones() != null) {
-                    for (Municion municion : dron.getMuniciones()) {
-                        if (municion == null) {
-                            continue;
-                        }
-                        if (!municion.isUsada()) {
-                            municionDisponible++;
-                        }
-                        if (municion instanceof Bomba) {
-                            tipoMunicion = "BOMBA";
-                        } else if (municion instanceof Misil) {
-                            tipoMunicion = "MISIL";
-                        }
-                    }
-                }
-
-                jsonElemento.put("municionDisponible", municionDisponible);
-                jsonElemento.put("tipoMunicion", tipoMunicion);
-            } else if (elemento instanceof Misil) {
-                Misil misil = (Misil) elemento;
-                jsonElemento.put("clase", "MISIL");
-                jsonElemento.put("velocidad", misil.getVelocidad());
-                jsonElemento.put("alcance", misil.getDistancia());
-            } else if (elemento instanceof Bomba) {
-                Bomba bomba = (Bomba) elemento;
-                jsonElemento.put("clase", "BOMBA");
-                jsonElemento.put("radioExplosion", bomba.getRadioExplosion());
-            }
-
-            elementos.add(jsonElemento);
-        }
-
-        if (elementos.isEmpty()) {
-            return false;
-        }
-
-        datos.set("elementos", elementos);
         sobre.put("tipo", "ACTUALIZAR_PARTIDA");
-        sobre.set("datos", datos);
-        String jsonFinal = mapper.writeValueAsString(sobre);
+        sobre.set("datos", mapper.valueToTree(cambios));
 
-        boolean enviado = false;
         for (EntidadJugador jugador : jugadores) {
-            if (jugador == null) {
-                continue;
-            }
-
             try {
                 WebSocketSession session = usuariosConectadosbyIdJugador.get(jugador.getId());
                 if (session != null && session.isOpen()) {
-                    sendMessageSafely(session, new TextMessage(jsonFinal));
-                    enviado = true;
+                    sendMessageSafely(session, sobre);
+
                     System.out.println("ACTUALIZAR_PARTIDA enviado a jugador:" + jugador.getId());
                 } else {
-                    System.out.println("No se envio ACTUALIZAR_PARTIDA a jugador:" + jugador.getId() + " (session nula o cerrada)");
+                    System.out.println("No se envio ACTUALIZAR_PARTIDA a jugador:" + jugador.getId()
+                            + " (session nula o cerrada)");
                 }
             } catch (Exception e) {
-                response.put("tipo", "ERROR");
-                response.put("mensaje", "Error al procesar al enviar la accion: " + e.getMessage());
-                System.err.println("Error enviando ACTUALIZAR_PARTIDA a jugador:" + jugador.getId() + ": " + e.getMessage());
+
+                System.err.println(
+                        "Error enviando ACTUALIZAR_PARTIDA a jugador:" + jugador.getId() + ": " + e.getMessage());
             }
         }
 
-        return enviado;
+        return true;
+
     }
 
     private ObjectNode procesarDespliegue(WebSocketSession session, JsonNode node) {
@@ -350,15 +198,10 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
         try {
             int idPortaDron = node.get("IdPortaDron").asInt();
 
-            if (idPortaDron < 0) {
-                response.put("tipo", "ERROR");
-                response.put("mensaje", "ID de portadrón inválido.");
-                return response;
-            }
+            System.out.println("DESPLEGAR recibido -> jugador=" + usuariosConectadosbySocket.get(session).getId()
+                    + " idPortaDron=" + idPortaDron);
 
-            System.out.println("DESPLEGAR recibido -> jugador=" + usuariosConectadosbySocket.get(session).getId() + " idPortaDron=" + idPortaDron);
-
-            boolean resultado = fachada.accion_desplegar(usuariosConectadosbySocket.get(session), idPortaDron);
+            boolean resultado = fachada.accion_desplegar(usuariosConectadosbySocket.get(session).getId(), idPortaDron);
 
             if (resultado) {
                 response.put("tipo", "DESPLIEGUE_PROCESADO");
@@ -379,9 +222,11 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
 
     private ObjectNode procesarDisparo(WebSocketSession session, JsonNode node) {
         ObjectNode response = new ObjectMapper().createObjectNode();
-//Sabine metió mano acá, esto hay que cambiarlo luego cuando se implemente GameLoop, 
-// se debería encolar y mandar en cada tick, ahora está mandando mensajes directamente 
-// para probar si el Frontend los agarra
+        // Sabine metió mano acá, esto hay que cambiarlo luego cuando se implemente
+        // GameLoop,
+        // se debería encolar y mandar en cada tick, ahora está mandando mensajes
+        // directamente
+        // para probar si el Frontend los agarra
         try {
             int idElemento = -1;
             if (node.has("IdDron") && !node.get("IdDron").isNull()) {
@@ -396,9 +241,10 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
                 return response;
             }
 
-            System.out.println("DISPARAR recibido -> jugador=" + usuariosConectadosbySocket.get(session).getId() + " idDron=" + idElemento);
+            System.out.println("DISPARAR recibido -> jugador=" + usuariosConectadosbySocket.get(session).getId()
+                    + " idDron=" + idElemento);
 
-            boolean resultado = fachada.accion_disparar(usuariosConectadosbySocket.get(session), idElemento);
+            boolean resultado = fachada.accion_disparar(usuariosConectadosbySocket.get(session).getId(), idElemento);
 
             if (resultado) {
                 response.put("tipo", "DISPARO_PROCESADO");
@@ -417,46 +263,14 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
         return response;
     }
 
-    private ObjectNode procesarRecarga(WebSocketSession session, JsonNode node) {
-        ObjectNode response = new ObjectMapper().createObjectNode();
-
-        try {
-            int idDron = node.has("IdDron") ? node.get("IdDron").asInt() : 
-                         node.has("idDron") ? node.get("idDron").asInt() : -1;
-
-            if (idDron < 0) {
-                response.put("tipo", "ERROR");
-                response.put("mensaje", "Falta IdDron para procesar la recarga.");
-                return response;
-            }
-
-            System.out.println("RECARGAR recibido -> jugador=" + usuariosConectadosbySocket.get(session).getId() + " idDron=" + idDron);
-
-            boolean resultado = fachada.accion_recargar(usuariosConectadosbySocket.get(session), idDron);
-
-            if (resultado) {
-                response.put("tipo", "RECARGA_PROCESADA");
-                System.out.println("RECARGA_PROCESADA -> idDron=" + idDron);
-            } else {
-                response.put("tipo", "RECARGA_FALLIDA");
-                response.put("mensaje", "No se pudo procesar la recarga. Verifica que el dron esté sobre el portadron.");
-                System.out.println("RECARGA_FALLIDA -> idDron=" + idDron);
-            }
-        } catch (Exception e) {
-            response.put("tipo", "ERROR");
-            response.put("mensaje", "Error al procesar la recarga: " + e.getMessage());
-            System.err.println("ERROR en procesarRecarga: " + e.getMessage());
-        }
-
-        return response;
-    }
-
     private ObjectNode procesarMovimiento(WebSocketSession session, JsonNode node) {
         ObjectNode response = new ObjectMapper().createObjectNode();
-        
-        // Sabine metió mano acá, esto va a tener que cambiar luego cuando se implemente GameLoop
-        // Se debería encolar y mandar en cada tick, ahora está mandando mensajes directamente 
-        //para probar si el Frontend los agarra
+
+        // Sabine metió mano acá, esto va a tener que cambiar luego cuando se implemente
+        // GameLoop
+        // Se debería encolar y mandar en cada tick, ahora está mandando mensajes
+        // directamente
+        // para probar si el Frontend los agarra
         try {
             int idElemento = node.get("idElemento").asInt();
             float x = node.get("PosicionX").floatValue();
@@ -464,12 +278,16 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
             float z = node.get("PosicionZ").floatValue();
             int angulo = node.get("Angulo").asInt();
 
-            System.out.println("MOVER_ELEMENTO recibido -> jugador=" + usuariosConectadosbySocket.get(session).getId() + " idElemento=" + idElemento + " x=" + x + " y=" + y + " z=" + z + " angulo=" + angulo);
+            System.out.println("MOVER_ELEMENTO recibido -> jugador=" + usuariosConectadosbySocket.get(session).getId()
+                    + " idElemento=" + idElemento + " x=" + x + " y=" + y + " z=" + z + " angulo=" + angulo);
 
-            boolean resultado = fachada.accion_mover(usuariosConectadosbySocket.get(session), idElemento, x, y, z, angulo);
+            boolean resultado = fachada.accion_mover(usuariosConectadosbySocket.get(session).getId(), idElemento, x, y,
+                    z,
+                    angulo);
 
             if (resultado) {
-                response.put("tipo", "MOVIMIENTO_PROCESADO"); // esto luego significa que está encolado y con próximo tick se ejecuta
+                response.put("tipo", "MOVIMIENTO_PROCESADO"); // esto luego significa que está encolado y con próximo
+                                                              // tick se ejecuta
                 System.out.println("MOVIMIENTO_PROCESADO -> idElemento=" + idElemento);
             } else {
                 response.put("tipo", "MOVIMIENTO_FALLIDO");
@@ -489,7 +307,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
         ObjectNode response = new ObjectMapper().createObjectNode();
 
         try {
-            fachada.pasarALobby(usuariosConectadosbySocket.get(session));
+            fachada.pasarALobby(usuariosConectadosbySocket.get(session).getId());
             response.put("tipo", "PASAR_LOBBY_EXITOSO");
         } catch (LobbyException e) {
             response.put("tipo", "PASAR_LOBBY_FALLIDO");
@@ -501,22 +319,22 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
     }
 
     private ObjectNode RegistrarJugador(WebSocketSession session, JsonNode node) throws Exception {
-       
+
         JsonNode nicknameNode = node.has("nickname") ? node.get("nickname") : node.get("NickName");
         JsonNode teamNode = node.has("team") ? node.get("team") : node.get("Team");
-        
+
         if (nicknameNode == null || teamNode == null) {
             ObjectNode errorResponse = new ObjectMapper().createObjectNode();
             errorResponse.put("tipo", "REGISTRO_FALLIDO");
             errorResponse.put("mensaje", "Faltan campos requeridos: nickname y team");
             return errorResponse;
         }
-        
+
         String nickname = nicknameNode.asString();
         String team = teamNode.asString();
         ObjectNode response = new ObjectMapper().createObjectNode();
 
-        EntidadJugador nuevoJugador = null;
+        LoginUsuarioDTO nuevoJugador = null;
 
         try {
             nuevoJugador = fachada.crearUsuario(nickname, team);
@@ -536,30 +354,28 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
     private ObjectNode LoginJugador(WebSocketSession session, JsonNode node) throws Exception {
         // Handle both lowercase and capitalized field names for compatibility
         JsonNode nicknameNode = node.has("nickname") ? node.get("nickname") : node.get("NickName");
-        
+
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode response = mapper.createObjectNode();
-        
+
         if (nicknameNode == null) {
             response.put("tipo", "LOGIN_FALLIDO");
             response.put("mensaje", "Falta campo requerido: nickname");
             return response;
         }
-        
+
         String nickname = nicknameNode.asString();
 
-        EntidadJugador jugador = null;
-        
         try {
-            jugador = fachada.loginUsuario(nickname);
 
-            usuariosConectadosbySocket.put(session, jugador);
-            usuariosConectadosbyIdJugador.put(jugador.getId(), session);
-            System.err.println("Jugador " + jugador.getNickName() + " ha iniciado sesión con ID: " + jugador.getId());
+            LoginUsuarioDTO login = fachada.loginUsuario(nickname);
+            response = mapper.valueToTree(login);
+
+            usuariosConectadosbySocket.put(session, login);
+            usuariosConectadosbyIdJugador.put(login.getId(), session);
+            System.err.println("Jugador " + login.getNickName() + " ha iniciado sesión con ID: " + login.getId());
 
             response.put("tipo", "LOGIN_EXITOSO");
-            response.put("id", jugador.getId());
-            response.put("nickname", jugador.getNickName());
         } catch (Exception JugadorNoExisteException) {
 
             response.put("tipo", "LOGIN_FALLIDO");
@@ -571,6 +387,15 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
 
     }
 
+    private void sendMessageSafely(WebSocketSession session, ObjectNode message) throws IOException {
+        if (session == null || !session.isOpen()) {
+            return;
+        }
+        synchronized (session) {
+            session.sendMessage(new TextMessage(message.toString()));
+        }
+    }
+
     @Override
     public boolean enviarInicioPartida(EscenarioInicialDTO partida) {
 
@@ -579,13 +404,12 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
         JsonNode datos = mapper.valueToTree(partida);
         sobre.put("tipo", "PARTIDA_INICIADA");
         sobre.set("datos", datos);
-        String jsonFinal = mapper.writeValueAsString(sobre);
 
         for (JugadorDTO jugador : partida.getListaJugadores()) {
             try {
                 WebSocketSession session = usuariosConectadosbyIdJugador.get(jugador.getId());
-                sendMessageSafely(session, new TextMessage(jsonFinal));
-            } catch (IOException e) {
+                sendMessageSafely(session, sobre);
+            } catch (Exception e) {
                 System.err.println("Error al enviar mensaje al jugador: " + e.getMessage());
             }
         }
@@ -594,27 +418,25 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
     }
 
     @Override
-    public boolean enviarFinPartida(List<Jugador> jugadores, String ganadorId) {
+    public boolean enviarFinPartida(List<String> jugadores, String ganadorId) {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode sobre = mapper.createObjectNode();
         sobre.put("tipo", "FIN_PARTIDA");
         sobre.put("ganador", ganadorId);
-        
-        String jsonFinal;
+
         try {
-            jsonFinal = mapper.writeValueAsString(sobre);
-            
-            for (Jugador jugador : jugadores) {
+
+            for (String jugador : jugadores) {
                 try {
-                    WebSocketSession session = usuariosConectadosbyIdJugador.get(jugador.getId());
+                    WebSocketSession session = usuariosConectadosbyIdJugador.get(jugador);
                     if (session != null && session.isOpen()) {
-                        sendMessageSafely(session, new TextMessage(jsonFinal));
+                        sendMessageSafely(session, sobre);
                     }
                 } catch (Exception e) {
-                    System.err.println("Error al enviar FIN_PARTIDA al jugador " + jugador.getId() + ": " + e.getMessage());
+                    System.err.println("Error al enviar FIN_PARTIDA al jugador " + jugador + ": " + e.getMessage());
                 }
             }
-            
+
             return true;
         } catch (Exception e) {
             System.err.println("Error creando mensaje FIN_PARTIDA: " + e.getMessage());

@@ -1,7 +1,10 @@
 package com.Proyecto.SpringBoot.Logica;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import org.hibernate.action.internal.EntityAction;
 
 import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 import com.Proyecto.SpringBoot.Logica.Excepciones.PartidaException;
@@ -15,7 +18,7 @@ public class SesionJuego extends GameLoop {
     private List<Evento> accionesPendientesProcesar;
     private List<EntidadJugador> jugadores;
     private Mapa mapa;
-    private String ganadorID;
+    private EntidadJugador ganadorJuego = null;
 
     private iPartidaService notificadorPartida;
 
@@ -30,7 +33,6 @@ public class SesionJuego extends GameLoop {
         }
         elementosEnJuego = new java.util.Hashtable<Integer, Elemento>();
         accionesPendientesEnviar = new java.util.ArrayList<Evento>();
-        accionesPendientesProcesar = new java.util.ArrayList<Evento>();
     }
 
     private PortaDron crearPortaDronParaJugador(EntidadJugador jugador) {
@@ -64,11 +66,13 @@ public class SesionJuego extends GameLoop {
 
     public void iniciarSesion() {
         // Recorro la lista de jugadores y les creo los portadrones y drones.
-        for (int h = 0; h < elementosJugadores.size(); h++) {
-            EntidadJugador jugador = (EntidadJugador) elementosJugadores.keySet().toArray()[h];
-            System.out.println("iniciarSesion - Jugador: " + jugador.getNickName() + ", Team: " + jugador.getTeam());
-            TipoElemento tipoJugador = obtenerTipoElementoJugador(jugador);
-            System.out.println("Tipo asignado: " + tipoJugador);
+        for (int h = 0; h < jugadores.size(); h++) {
+
+            EntidadJugador jugador = (EntidadJugador) jugadores.get(h);
+
+            TipoElemento tipoJugador = TipoElemento.AEREO;
+            if ((h + 1) % 2 == 0)
+                tipoJugador = TipoElemento.NAVAL;
 
             if (tipoJugador == TipoElemento.AEREO) {
                 // Debe resistir 6 impactos de misil
@@ -124,8 +128,8 @@ public class SesionJuego extends GameLoop {
                     j++;
                 }
             }
-        }
 
+        }
         List<PortaDron> portaDrones = new java.util.ArrayList<PortaDron>();
         elementosJugadores.forEach((jugador, portaDron) -> {
             portaDrones.add(portaDron);
@@ -133,12 +137,13 @@ public class SesionJuego extends GameLoop {
 
         notificadorPartida.EnviarInicioPartida(portaDrones, mapa);
 
+        iniciar();
+
+
         // Enviar estado inicial del juego (elementos creados)
         List<EntidadJugador> jugadores = new java.util.ArrayList<>(elementosJugadores.keySet());
+        /* 
         List<Evento> estadoInicial = new java.util.ArrayList<>();
-
-        System.out.println("=== ESTADO INICIAL DEL JUEGO ===");
-        System.out.println("Total elementos en juego: " + elementosEnJuego.size());
 
         // Crear eventos de movimiento para todos los elementos creados
         elementosEnJuego.forEach((id, elemento) -> {
@@ -160,12 +165,8 @@ public class SesionJuego extends GameLoop {
 
         System.out.println("Enviando ACTUALIZAR_PARTIDA con " + estadoInicial.size() + " eventos");
         boolean enviado = notificadorPartida.EnviarActualizaciones(jugadores, estadoInicial);
-        System.out.println("ACTUALIZAR_PARTIDA enviado=" + enviado);
-        
-        // GameLoop maneja el ciclo de juego y las actualizaciones por tick, 
-        // las acciones de los jugadores se procesan inmediatamente via WebSocket 
-        // y se agregan a la cola de eventos del GameLoop
-        iniciar(); // Comenzar el ciclo de tick de 30ms
+        System.out.println("ACTUALIZAR_PARTIDA enviado=" + enviado);*/
+
     }
 
     public String getIdSesion() {
@@ -184,49 +185,30 @@ public class SesionJuego extends GameLoop {
         return accionesPendientesEnviar;
     }
 
-    public List<Evento> getAccionesPendientesProcesar() {
-        return accionesPendientesProcesar;
-    }
+   
 
-    public Elemento getElemento(int idElemento) throws PartidaException
-    {
+    public Elemento getElemento(int idElemento) throws PartidaException {
         Elemento el = elementosEnJuego.get(idElemento);
 
-        if(el == null)
-        {
+        if (el == null) {
             throw new PartidaException("El elemento " + idElemento + " no existe en la partida.");
         }
 
         return el;
     }
 
-    @Override
-    protected void render() {
-        // Llamado en cada tick por GameLoop - enviar actualizaciones a los clientes
-        // Solo enviar si hay eventos pendientes (cambios a comunicar)
-        if (!accionesPendientesEnviar.isEmpty()) {
-            List<Jugador> jugadoresSesion = new java.util.ArrayList<>(elementosJugadores.keySet());
-            List<Evento> eventosParaEnviar = new java.util.ArrayList<>(accionesPendientesEnviar);
-            
-            // Enviar todos los eventos pendientes a los clientes
-            fachada.EnviarActualizaciones(jugadoresSesion, eventosParaEnviar);
-            
-            // Limpiar la cola después de enviar
-            accionesPendientesEnviar.clear();
-        }
-    }
-    
     public boolean agregarEvento(Evento ev) {
-        // Usa la cola de eventos del padre para integración con GameLoop
-        agregarEventoEntrada(ev);
+        accionesPendientesProcesar.add(ev);
         return true;
     }
 
     @Override
-    protected void render()
-    {
-        notificadorPartida.EnviarActualizaciones(jugadores, accionesPendientesEnviar);
-        accionesPendientesEnviar.clear();
+    protected void render() {
+        if(accionesPendientesEnviar.size()>0)
+        {
+            notificadorPartida.EnviarActualizaciones(jugadores, accionesPendientesEnviar);
+            accionesPendientesEnviar.clear();
+        }
     }
 
     @Override
@@ -360,51 +342,29 @@ public class SesionJuego extends GameLoop {
     }
 
     public boolean finalizarSesion() {
-        boolean finalizo = false;
+        List<EntidadJugador> jugadorGanador = new ArrayList<>();
+        List<EntidadJugador> jugadorPerdedor = new ArrayList<>();
+
         for (PortaDron portaDron : elementosJugadores.values()) {
-            if (portaDron.getEstado() == EstadoElemento.DESTRUIDO
-                    && portaDron.cantidadDronesDestruidos() <= portaDron.drones.size()) {
-                finalizo = true;
+            if (portaDron.getEstado() == EstadoElemento.DESTRUIDO && portaDron.cantidadDronesDestruidos() <= portaDron.drones.size()) {
+                jugadorPerdedor.add(portaDron.getJugador());
+            }else
+            {
+                jugadorGanador.add(portaDron.getJugador());
             }
         }
-        if (finalizo) {
-            for (EntidadJugador jugador : elementosJugadores.keySet()) {
-                PortaDron portaDron = elementosJugadores.get(jugador);
-                if (portaDron.getEstado() != EstadoElemento.DESTRUIDO) {
-                    setGanador(jugador.getId());
-                    break;
-                }
-            } else {
-                // Portadron vivo - el equipo sigue en juego
-                jugadorGanador = jugador;
-            }
-        }
-        
-        // Victoria: solo un equipo queda con capacidad de combate
-        if (equiposPerdedores >= elementosJugadores.size() - 1) {
-            if (jugadorGanador != null) {
-                setGanador(jugadorGanador.getId());
-                System.out.println("Ganador determinado: " + jugadorGanador.getNickName() + " (ID: " + jugadorGanador.getId() + ")");
-                return true;
-            }
-            
-            // Empate si todos perdieron
-            if (equiposPerdedores == elementosJugadores.size()) {
-                System.out.println("Empate: todos los equipos eliminados");
-                return true;
-            }
+
+        if (jugadorGanador.size() == 1) {
+            setGanador(jugadorGanador.get(0));
+            return true;
         }
         
         // Juego continua
         return false;
     }
 
-    private void setGanador(String idJugadorGanador) {
-        this.ganadorID = idJugadorGanador;
-    }
-
-    private String getGanador() {
-        return this.ganadorID;
+    private void setGanador(EntidadJugador jugador) {
+        this.ganadorJuego = jugador;
     }
 
     @Override
@@ -416,7 +376,9 @@ public class SesionJuego extends GameLoop {
         // Procesar eventos pendientes de la cola local (para compatibilidad con WebSocket)
         while (!accionesPendientesProcesar.isEmpty()) {
             Evento accion = accionesPendientesProcesar.remove(0);
+
             // Procesar el evento usando el manejador existente
+            processInput(accion);
             update(accion);
         }
         
@@ -498,7 +460,7 @@ public class SesionJuego extends GameLoop {
         }
         
         // Manejar destrucción de portadrones - destruir todos sus drones INACTIVO y CARGANDO
-        for (Map.Entry<Jugador, PortaDron> entrada : elementosJugadores.entrySet()) {
+        for (Map.Entry<EntidadJugador, PortaDron> entrada : elementosJugadores.entrySet()) {
             PortaDron portaDron = entrada.getValue();
             
             if (portaDron.getEstado() == EstadoElemento.DESTRUIDO) {
@@ -524,16 +486,17 @@ public class SesionJuego extends GameLoop {
         
         // Verificar condiciones de victoria cada tick
         if (finalizarSesion()) {
-            String ganador = getGanador();
-            if (ganador != null) {
-                System.out.println("Sesion finalizada - Ganador: " + ganador);
-                fachada.EnviarFinPartida(ganador);
+            
+            if (ganadorJuego != null) {
+                System.out.println("Sesion finalizada - Ganador: " + ganadorJuego.getNickName());
+                notificadorPartida.EnviarFinPartida(jugadores, ganadorJuego);
             } else {
                 System.out.println("Sesion finalizada - Empate");
-                fachada.EnviarFinPartida("EMPATE");
+                notificadorPartida.EnviarFinPartida(jugadores, null);
             }
             stopGameLoop();
         }
     }
 
+   
 }

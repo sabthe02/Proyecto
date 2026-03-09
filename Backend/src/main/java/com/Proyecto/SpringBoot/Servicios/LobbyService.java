@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 import com.Proyecto.SpringBoot.Logica.Excepciones.LobbyException;
 
+import jakarta.annotation.PostConstruct;
+
 @Service
 public class LobbyService {
 
@@ -28,6 +30,12 @@ public class LobbyService {
     {
         jugadoresEnLobby = new java.util.Hashtable<>();
         this.timerLobby = new Timer();
+        
+    }
+
+    @PostConstruct
+    private void init()
+    {
         this.iniciarTimer();
     }
 
@@ -59,6 +67,8 @@ public class LobbyService {
 
     public void actualizarLobby() {
         //System.out.println("Se actualiza lobby");
+
+        
 
         while (partidasService.getSesionesActivas() < 10 && jugadoresEnLobby.size() > 1) {
 

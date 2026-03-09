@@ -1,5 +1,6 @@
 package com.Proyecto.SpringBoot.Logica;
 
+import java.security.Timestamp;
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -9,30 +10,21 @@ public abstract class GameLoop {
     private volatile boolean corriendo = false;
     EstadoJuego estadoJuego;
     private Thread gameThread;
-    private final ConcurrentLinkedQueue<Evento> colaEventosEntrada;
 
     public GameLoop() {
         estadoJuego = EstadoJuego.INICIANDO;
-        colaEventosEntrada = new ConcurrentLinkedQueue<>();
     }
 
-    public void iniciar() {
+    protected void iniciar() {
         if (!corriendo) {
             estadoJuego = EstadoJuego.INICIANDO;
             corriendo = true;
             gameThread = new Thread(this::processGameLoop);
             gameThread.start();
-            // run();
         }
     }
 
-    /*
-     * public void run() {
-     * estadoJuego = EstadoJuego.EN_JUEGO;
-     * gameThread = new Thread(this::processGameLoop);
-     * gameThread.start();
-     * }
-     */
+    
 
     public void stopGameLoop() {
         corriendo = false;
@@ -43,11 +35,9 @@ public abstract class GameLoop {
         return estadoJuego == EstadoJuego.EN_JUEGO;
     }
 
-    public void agregarEventoEntrada(Evento evento) {
-        colaEventosEntrada.add(evento);
-    }
+    
 
-    protected abstract void update(long tiempoTranscurrido);
+    protected abstract void update(long deltaTime);
 
     protected abstract void processInput(Evento accion);
 
@@ -63,13 +53,6 @@ public abstract class GameLoop {
             long tiempoTranscurrido = ahora - ultimoTick;
             if (tiempoTranscurrido >= TICK) {
 
-                // pROCESAMOS TODOS LOS EVENTOS DE ENTRADA QUE HAYAN LLEGADO
-                Evento evento;
-                while ((evento = colaEventosEntrada.poll()) != null) {
-                    processInput(evento);
-                }
-
-                // ACTUALIZAMOS EL ESTADO DEL JUEGO
                 update(tiempoTranscurrido);
 
                 // RENDERIZAMOS EL JUEGO

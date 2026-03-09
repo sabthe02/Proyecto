@@ -155,7 +155,7 @@ public class Dron extends Elemento {
 
         if (this.getTipo() == TipoElemento.AEREO) {
 
-            if(this.cantidadMunicionesDisponibles() <= 0) {
+            if(this.cantidadMunicionesDisponibles() > 0) {
                 this.municiones.get(0).setUsada(true);
                 return this.municiones.get(0);
             }

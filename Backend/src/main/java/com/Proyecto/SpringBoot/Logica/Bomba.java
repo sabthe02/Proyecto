@@ -75,4 +75,8 @@ public class Bomba extends Municion {
         return 0;
     }
 
+    public float getVelocidadInicio() {
+        return velocidadInicio;
+    }
+
 }

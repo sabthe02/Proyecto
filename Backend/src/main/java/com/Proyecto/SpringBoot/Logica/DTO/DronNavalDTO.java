@@ -18,13 +18,14 @@ public class DronNavalDTO {
     String estado;
     String clase = "DRON";
     int bateria;
+    int rangoVision;
     String tipo = "Naval";
     String tipoMunicion = "MISIL";
     int municionDisponible;
 
     List<MisilDTO> listaMisiles;
 
-    public DronNavalDTO(int id, float x, float y, float z, int angulo, int vida, String estado, int bateria) {
+    public DronNavalDTO(int id, float x, float y, float z, int angulo, int vida, String estado, int bateria, int rangoVision) {
         this.id = id;
         this.x = x;
         this.y = y;
@@ -33,6 +34,7 @@ public class DronNavalDTO {
         this.vida = vida;
         this.estado = estado;
         this.bateria = bateria;
+        this.rangoVision= rangoVision;
         this.tipoMunicion = "MISIL";
         this.municionDisponible = 0;
         listaMisiles = new ArrayList<>();
@@ -170,5 +172,9 @@ public class DronNavalDTO {
     public String getClase() {
         return clase;
     }
+
+    public int getRangoVision() {
+    return rangoVision;
+}
 
 }

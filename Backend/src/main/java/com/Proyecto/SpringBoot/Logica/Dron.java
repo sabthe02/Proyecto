@@ -13,6 +13,7 @@ public class Dron extends Elemento {
     public static final int MAX_BATERIA = 1000;
     private int recargaPorTick = 1;
     private long comenzandoCarga = 0;
+    private int rangoVision;
 
     public Dron(int id,
             Float posicionX,
@@ -28,9 +29,15 @@ public class Dron extends Elemento {
             EntidadJugador jugador) {
         super(id, posicionX, posicionY, posicionZ, angulo, vida, estado, jugador);
 
-        municiones = new java.util.ArrayList<Municion>();
+        municiones = new java.util.ArrayList<Municion>(); 
         this.bateria = MAX_BATERIA;
         this.tipo = tipo;
+
+        if (tipo == TipoElemento.AEREO) {
+             this.rangoVision = 200;
+            } else {
+                 this.rangoVision = 100;
+            }
 
     }
 
@@ -75,6 +82,10 @@ public class Dron extends Elemento {
             }
             i++;
         }
+    }
+
+      public int getRangoVision() {
+        return rangoVision;
     }
 
     public TipoElemento getTipo() {
@@ -238,6 +249,10 @@ public class Dron extends Elemento {
         this.setVida(0);
         this.setEstado(EstadoElemento.DESTRUIDO);
     }
+
+    public void setRangoVision(int rangoVision) {
+    this.rangoVision = rangoVision;
+}
 
     public long getComenzandoCarga() {
         return comenzandoCarga;

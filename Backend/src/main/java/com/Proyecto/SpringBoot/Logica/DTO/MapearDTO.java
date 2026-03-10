@@ -28,7 +28,7 @@ public class MapearDTO {
                 for (Dron dron : portaDron.getDrones()) {
                     DronAereoDTO dronDTO = new DronAereoDTO(dron.getId(), dron.getPosicionX(), dron.getPosicionY(),
                             dron.getPosicionZ(), dron.getAngulo(), dron.getVida(), dron.getEstado().toString(),
-                            dron.getBateria());
+                            dron.getBateria(),dron.getRangoVision());
                     dronDTO.cargarMunicionesDesdeDron(dron);
                     portaD.agregarDron(dronDTO);
                 }
@@ -43,7 +43,7 @@ public class MapearDTO {
                 for (Dron dron : portaDron.getDrones()) {
                     DronNavalDTO dronDTO = new DronNavalDTO(dron.getId(), dron.getPosicionX(), dron.getPosicionY(),
                             dron.getPosicionZ(), dron.getAngulo(), dron.getVida(), dron.getEstado().toString(),
-                            dron.getBateria());
+                            dron.getBateria(), dron.getRangoVision());
                     dronDTO.cargarMunicionesDesdeDron(dron);
                     portaD.agregarDron(dronDTO);
                 }
@@ -67,10 +67,10 @@ public class MapearDTO {
                 if(dron.getTipo() == TipoElemento.AEREO)
                 {
 
-                    DronAereoDTO dDTO = new DronAereoDTO(dron.getId(), dron.getPosicionX(), dron.getPosicionY(), dron.getPosicionZ(),dron.getAngulo(), dron.getVida(), dron.getEstado().toString(), dron.getBateria());
+                    DronAereoDTO dDTO = new DronAereoDTO(dron.getId(), dron.getPosicionX(), dron.getPosicionY(), dron.getPosicionZ(),dron.getAngulo(), dron.getVida(), dron.getEstado().toString(), dron.getBateria(), dron.getRangoVision());
                     cambios.insertarElemento(dDTO);
                 }else{
-                    DronNavalDTO dDTO = new DronNavalDTO(dron.getId(), dron.getPosicionX(), dron.getPosicionY(), dron.getPosicionZ(),dron.getAngulo(), dron.getVida(), dron.getEstado().toString(), dron.getBateria());
+                    DronNavalDTO dDTO = new DronNavalDTO(dron.getId(), dron.getPosicionX(), dron.getPosicionY(), dron.getPosicionZ(),dron.getAngulo(), dron.getVida(), dron.getEstado().toString(), dron.getBateria(), dron.getRangoVision());
                     cambios.insertarElemento(dDTO);
                 }
             }else if(evento.getElemento() instanceof PortaDron)

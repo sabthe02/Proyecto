@@ -20,10 +20,11 @@ int id;
     String clase = "DRON";
     String tipoMunicion = "BOMBA";
     int municionDisponible;
+    int rangoVision; 
 
     List<BombaDTO> listaBombas;
 
-    public DronAereoDTO(int id, float x, float y, float z, int angulo, int vida, String estado, int bateria) {
+    public DronAereoDTO(int id, float x, float y, float z, int angulo, int vida, String estado, int bateria, int rangoVision) {
         this.id = id;
         this.x = x;
         this.y = y;
@@ -32,6 +33,7 @@ int id;
         this.vida = vida;
         this.estado = estado;
         this.bateria = bateria;
+        this.rangoVision = rangoVision;
         tipoMunicion = "BOMBA";
         municionDisponible = 0;
         listaBombas = new ArrayList<>();
@@ -165,7 +167,9 @@ int id;
         this.listaBombas = listaBombas;
     }
 
-    
+    public int getRangoVision() {
+    return rangoVision;
+}
 
       public String getClase()
         {return clase;}

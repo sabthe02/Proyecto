@@ -106,20 +106,14 @@ export class Projectile extends Phaser.GameObjects.Sprite {
     }
     
     destruir() {
-        console.log(`[Projectile ${this.id}] destruir() llamado - clase:${this.clase}, causedImpact:${this.causedImpact}, pos:(${Math.round(this.x)},${Math.round(this.y)})`);
+        console.log(`[Projectile ${this.id}] destruir() - clase:${this.clase}, pos:(${Math.round(this.x)},${Math.round(this.y)})`);
         
-        // Solo mostrar animación de explosión en Game.js si el proyectil FALLÓ (no golpeó dron/portadron)
-        // Si golpeó algo, ImpactView manejará el efecto visual
-        if (!this.causedImpact) {
-            // Crear efecto de explosión - por encima de proyectiles
-            this.scene.add.sprite(this.x, this.y, 'fire00')
-                .setScale(2)
-                .setDepth(500) // Por encima de proyectiles para que se vea
-                .play({ key: 'explosion', frameRate: 20, repeat: 0 })
-                .once('animationcomplete', function() {
-                    this.destroy();
-                });
-        }
+        // Mostrar explosión en la posición del proyectil
+        const explosion = this.scene.add.sprite(this.x, this.y, 'fire00');
+        explosion.setScale(2);
+        explosion.setDepth(500);
+        explosion.play('explosion');
+        explosion.on('animationcomplete', () => explosion.destroy());
         
         this.destroy();
     }

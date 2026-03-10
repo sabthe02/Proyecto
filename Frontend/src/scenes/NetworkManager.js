@@ -40,11 +40,15 @@ export class NetworkManager {
             if (data.tipo !== 'ACTUALIZAR_PARTIDA' && data.tipo !== 'MOVIMIENTO_PROCESADO') {
                 // Mensaje: tipo
             } else if (data.tipo === 'ACTUALIZAR_PARTIDA') {
-                // Log reducido para ACTUALIZAR_PARTIDA (solo # de elementos)
-                const numElementos = data.datos?.elementos?.length || 0;
-                // Actualizar partida
+                // Backend sends datos.elementos with 'clase' field (DRON, PORTADRON, MISIL, BOMBA)
+                const elementos = data.datos?.elementos || [];
+                console.log(`ACTUALIZAR_PARTIDA: ${elementos.length} elementos recibidos`);
+                if (this.scene && this.scene.events) {
+                    this.scene.events.emit('ACTUALIZAR_PARTIDA', data);
+                }
+                return;
             }
-            
+
             // Emitir evento en la escena
             if (this.scene && this.scene.events) {
                 this.scene.events.emit(data.tipo, data);
@@ -122,6 +126,10 @@ export class NetworkManager {
             idJugador: idJugador,
             Mensaje: mensaje
         });
+    }
+
+    recargarPartida() {
+        return this.send('RECARGAR_PARTIDA');
     }
 
     guardarPartida(idJugador, mensaje) {

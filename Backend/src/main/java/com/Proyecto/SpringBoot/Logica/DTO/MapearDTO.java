@@ -68,11 +68,9 @@ public class MapearDTO {
                 {
 
                     DronAereoDTO dDTO = new DronAereoDTO(dron.getId(), dron.getPosicionX(), dron.getPosicionY(), dron.getPosicionZ(),dron.getAngulo(), dron.getVida(), dron.getEstado().toString(), dron.getBateria(), dron.getRangoVision());
-                    dDTO.cargarMunicionesDesdeDron(dron);
                     cambios.insertarElemento(dDTO);
                 }else{
                     DronNavalDTO dDTO = new DronNavalDTO(dron.getId(), dron.getPosicionX(), dron.getPosicionY(), dron.getPosicionZ(),dron.getAngulo(), dron.getVida(), dron.getEstado().toString(), dron.getBateria(), dron.getRangoVision());
-                    dDTO.cargarMunicionesDesdeDron(dron);
                     cambios.insertarElemento(dDTO);
                 }
             }else if(evento.getElemento() instanceof PortaDron)

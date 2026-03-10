@@ -7,7 +7,12 @@ export class Drone extends Phaser.GameObjects.Container {
         this.estadoActual = data.estado;
         this.bateria = data.bateria;
         this.municionDisponible = data.municionDisponible;
-        this.municionMax = data.municionMax;
+        // El primer valor recibido es munición completa (dron recién desplegado) → usarlo como máximo
+        if (data.municionDisponible !== undefined && data.municionDisponible > 0) {
+            this.municionMax = data.municionDisponible;
+        } else {
+            this.municionMax = null;
+        }
         this.jugadorId = data.jugadorId || data.idJugador;
         this.nickName = data.nickName;
         this.portadronPadreId = data.portadronPadreId;
@@ -44,7 +49,16 @@ export class Drone extends Phaser.GameObjects.Container {
         this.estadoActual = data.estado;
         this.bateria = data.bateria;
         this.municionDisponible = data.municionDisponible;
-        if (data.municionMax !== undefined) this.municionMax = data.municionMax;
+        // Actualizar municionMax solo si el nuevo valor es mayor (recarga aumenta munición)
+        if (data.municionDisponible !== undefined) {
+            let maxActual = 0;
+            if (this.municionMax !== null && this.municionMax !== undefined) {
+                maxActual = this.municionMax;
+            }
+            if (data.municionDisponible > maxActual) {
+                this.municionMax = data.municionDisponible;
+            }
+        }
         this.nickName = data.nickName;
         if (data.bateriaMax !== undefined) {
             this.bateriaMax = data.bateriaMax;
@@ -230,7 +244,7 @@ export class Drone extends Phaser.GameObjects.Container {
     }
 
     mostrarDano(cantidad) {
-        // Chequeo de seguridad: asegurar que el sprite aún existe (no destruido)
+        // Asegurar que el sprite aún existe (no destruido)
         if (!this.sprite || !this.sprite.active) {
             console.warn(`[Drone ${this.id}] mostrarDano llamado pero sprite ya fue destruido`);
             return;
@@ -253,7 +267,7 @@ export class Drone extends Phaser.GameObjects.Container {
             strokeThickness: 4
         }).setOrigin(0.5).setDepth(200);
         
-        // Animatar el texto flotando hacia arriba
+        // Animar el texto flotando hacia arriba
         this.scene.tweens.add({
             targets: damageText,
             y: damageText.y - 50,

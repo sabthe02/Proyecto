@@ -23,7 +23,7 @@ public class MapearDTO {
                 PortaDronAereoDTO portaD = new PortaDronAereoDTO(portaDron.getId(), portaDron.getPosicionX(),
                         portaDron.getPosicionY(), portaDron.getPosicionZ(), portaDron.getAngulo(), portaDron.getVida(),
                         portaDron.getEstado().toString(), portaDron.getJugador().getNickName(),
-                        portaDron.getJugador().getId());
+                        portaDron.getJugador().getId(), portaDron.getRangoVision());
 
                 for (Dron dron : portaDron.getDrones()) {
                     DronAereoDTO dronDTO = new DronAereoDTO(dron.getId(), dron.getPosicionX(), dron.getPosicionY(),
@@ -38,7 +38,7 @@ public class MapearDTO {
                 PortaDronNavalDTO portaD = new PortaDronNavalDTO(portaDron.getId(), portaDron.getPosicionX(),
                         portaDron.getPosicionY(), portaDron.getPosicionZ(), portaDron.getAngulo(), portaDron.getVida(),
                         portaDron.getEstado().toString(), portaDron.getJugador().getNickName(),
-                        portaDron.getJugador().getId());
+                        portaDron.getJugador().getId(), portaDron.getRangoVision());
 
                 for (Dron dron : portaDron.getDrones()) {
                     DronNavalDTO dronDTO = new DronNavalDTO(dron.getId(), dron.getPosicionX(), dron.getPosicionY(),
@@ -68,9 +68,11 @@ public class MapearDTO {
                 {
 
                     DronAereoDTO dDTO = new DronAereoDTO(dron.getId(), dron.getPosicionX(), dron.getPosicionY(), dron.getPosicionZ(),dron.getAngulo(), dron.getVida(), dron.getEstado().toString(), dron.getBateria(), dron.getRangoVision());
+                    dDTO.cargarMunicionesDesdeDron(dron);
                     cambios.insertarElemento(dDTO);
                 }else{
                     DronNavalDTO dDTO = new DronNavalDTO(dron.getId(), dron.getPosicionX(), dron.getPosicionY(), dron.getPosicionZ(),dron.getAngulo(), dron.getVida(), dron.getEstado().toString(), dron.getBateria(), dron.getRangoVision());
+                    dDTO.cargarMunicionesDesdeDron(dron);
                     cambios.insertarElemento(dDTO);
                 }
             }else if(evento.getElemento() instanceof PortaDron)
@@ -79,10 +81,10 @@ public class MapearDTO {
                 if(pDron.getTipo() == TipoElemento.AEREO)
                 {
 
-                    PortaDronAereoDTO dDTO = new PortaDronAereoDTO(pDron.getId(), pDron.getPosicionX(), pDron.getPosicionY(), pDron.getPosicionZ(),pDron.getAngulo(), pDron.getVida(), pDron.getEstado().toString(), pDron.getJugador().getNickName(), pDron.getJugador().getId());
+                    PortaDronAereoDTO dDTO = new PortaDronAereoDTO(pDron.getId(), pDron.getPosicionX(), pDron.getPosicionY(), pDron.getPosicionZ(),pDron.getAngulo(), pDron.getVida(), pDron.getEstado().toString(), pDron.getJugador().getNickName(), pDron.getJugador().getId(), pDron.getRangoVision());
                     cambios.insertarElemento(dDTO);
                 }else{
-                    PortaDronNavalDTO dDTO = new PortaDronNavalDTO(pDron.getId(), pDron.getPosicionX(), pDron.getPosicionY(), pDron.getPosicionZ(),pDron.getAngulo(), pDron.getVida(), pDron.getEstado().toString(), pDron.getJugador().getNickName(), pDron.getJugador().getId());
+                    PortaDronNavalDTO dDTO = new PortaDronNavalDTO(pDron.getId(), pDron.getPosicionX(), pDron.getPosicionY(), pDron.getPosicionZ(),pDron.getAngulo(), pDron.getVida(), pDron.getEstado().toString(), pDron.getJugador().getNickName(), pDron.getJugador().getId(), pDron.getRangoVision());
                     cambios.insertarElemento(dDTO);
                 }
 

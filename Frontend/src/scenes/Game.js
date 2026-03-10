@@ -62,7 +62,7 @@ export class Game extends Phaser.Scene {
         )
         .setOrigin(0.5)
         .setScrollFactor(0)
-        .setDepth(5000)
+        .setDepth(9000)
         .setShadow(0, 0, '#e1f1f19a', 15, true, true);
         
         // Creando escena
@@ -102,6 +102,21 @@ export class Game extends Phaser.Scene {
         this.elementoActivoWarningShown = false; // Flag para control de logs
         this.worldWidth = 0;
         this.worldHeight = 0;
+
+        // Niebla de guerra en espacio mundo (scrollFactor por defecto = 1)
+        // El overlay cubre el mapa completo; los círculos de visión se dibujan en coordenadas mundo.
+        // Con ambos objetos en world-space la máscara se alinea perfectamente sin hacer cálculos de cámara.
+        this.fogOverlay = this.add.graphics();
+        this.fogOverlay.fillStyle(0x000000, 0.92);
+        this.fogOverlay.fillRect(0, 0, 8000, 8000); // provisional hasta que renderizarMapa() ajuste los límites exactos
+        this.fogOverlay.setDepth(8500);
+        this.fogVisionGfx = this.add.graphics();
+        this.fogVisionGfx.setVisible(false);
+        const fogMask = this.fogVisionGfx.createGeometryMask();
+        fogMask.invertAlpha = true;
+        this.fogOverlay.setMask(fogMask);
+        // Factor de escala visual para el radio de visión (ajustar a gusto)
+        this.fogVisionScale = 2.5;
         
         // Procesar datos iniciales de la partida si fueron pasados desde Lobby
         if (this.partidaInicial) {
@@ -397,21 +412,13 @@ export class Game extends Phaser.Scene {
             }
             
             if (miPortadron) {
-                const jugId = miPortadron.jugadorId || miPortadron.idJugador || 'MISSING';
-                
-                // Normalizar equipo a mayusculas para comparacion
-                let equipoPortadron = '';
-                if (miPortadron.tipoEquipo) {
-                    equipoPortadron = miPortadron.tipoEquipo.toUpperCase();
-                }
-                
-                let miEquipo = '';
-                if (this.playerTeam) {
-                    miEquipo = this.playerTeam.toUpperCase();
-                }
-                
-                if (equipoPortadron !== miEquipo) {
-                    console.error('Portadron del equipo incorrecto:', equipoPortadron, 'esperado:', miEquipo);
+                // El portadron que coincide con el jugador es la fuente de verdad del equipo
+                const equipoPortadron = (miPortadron.tipoEquipo || '').toUpperCase();
+                if (equipoPortadron) {
+                    this.playerTeam = equipoPortadron;
+                    if (this.uiManager && this.uiManager.equipoTexto) {
+                        this.uiManager.equipoTexto.setText('EQUIPO: ' + this.playerTeam);
+                    }
                 }
                 
                 // Configurar InputManager
@@ -435,31 +442,69 @@ export class Game extends Phaser.Scene {
             ...(portadronesAereos || []),
             ...(portadronesNavales || [])
         ];
+        const miEquipoUpper = this.playerTeam ? this.playerTeam.toUpperCase() : '';
         for (const p of todasPortadrones) {
             const tipoEquipo = (p.tipo || p.tipoEquipo || 'NAVAL').toUpperCase();
+            // Solo crear entidades del propio equipo (niebla de guerra)
+            if (tipoEquipo !== miEquipoUpper) {
+                continue;
+            }
             const idJugador = p.jugadorId || p.idJugador || null;
             // Add portadron element
             const listaDrones = [];
             const drones = p.listaDrones || [];
+            // Registrar ownership de TODOS los drones (incluso CARGANDO) para detección posterior
+            if (!this.droneJugadorMap) this.droneJugadorMap = new Map();
             for (const d of drones) {
                 listaDrones.push({ id: d.id, estado: d.estado });
+                if (idJugador) this.droneJugadorMap.set(String(d.id), String(idJugador));
+            }
+            // Calcular rango de visión del portadron (mismo que el dron del equipo)
+            let rangoVisionPortadron;
+            if (p.rangoVision !== undefined) {
+                rangoVisionPortadron = p.rangoVision;
+            } else if (tipoEquipo === 'AEREO') {
+                rangoVisionPortadron = 200;
+            } else {
+                rangoVisionPortadron = 100;
             }
             elementos.push({
                 id: p.id, x: p.x, y: p.y, z: p.z || 0,
                 angulo: p.angulo || 0, vida: p.vida, vidaMax: p.vida, estado: p.estado,
                 idJugador: idJugador, clase: 'PORTADRON',
-                tipoEquipo: tipoEquipo, listaDrones: listaDrones
+                tipoEquipo: tipoEquipo, listaDrones: listaDrones,
+                rangoVision: rangoVisionPortadron
             });
-            // Add drone elements
+            // Agregar solo drones ACTIVOS (los CARGANDO no se muestran en mapa)
             for (const d of drones) {
+                if (d.estado && d.estado !== 'ACTIVO') continue;
                 const dronTipoEquipo = (d.tipo || tipoEquipo).toUpperCase();
+                // Calcular rango de visión del dron
+                let rangoVisionDron;
+                if (d.rangoVision !== undefined) {
+                    rangoVisionDron = d.rangoVision;
+                } else if (dronTipoEquipo === 'AEREO') {
+                    rangoVisionDron = 200;
+                } else {
+                    rangoVisionDron = 100;
+                }
+                // Calcular tipo de munición del dron
+                let tipoMunicion;
+                if (d.tipoMunicion !== undefined) {
+                    tipoMunicion = d.tipoMunicion;
+                } else if (dronTipoEquipo === 'AEREO') {
+                    tipoMunicion = 'BOMBA';
+                } else {
+                    tipoMunicion = 'MISIL';
+                }
                 elementos.push({
                     id: d.id, x: d.x, y: d.y, z: d.z || 0,
                     angulo: d.angulo || 0, vida: d.vida, estado: d.estado,
                     idJugador: idJugador, clase: 'DRON',
                     tipoEquipo: dronTipoEquipo, bateria: d.bateria || 0,
                     municionDisponible: d.municionDisponible || 0,
-                    tipoMunicion: d.tipoMunicion || (dronTipoEquipo === 'AEREO' ? 'BOMBA' : 'MISIL')
+                    tipoMunicion: tipoMunicion,
+                    rangoVision: rangoVisionDron
                 });
             }
         }
@@ -553,6 +598,13 @@ export class Game extends Phaser.Scene {
         
         // Actualizando camera bounds
         this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
+
+        // Ajustar overlay de niebla al tamaño exacto del mapa
+        if (this.fogOverlay) {
+            this.fogOverlay.clear();
+            this.fogOverlay.fillStyle(0x000000, 0.92);
+            this.fogOverlay.fillRect(0, 0, this.worldWidth, this.worldHeight);
+        }
         
         // Actualizar fondo de agua para cubrir todo el mapa
         if (this.fondoAgua) {
@@ -712,19 +764,32 @@ export class Game extends Phaser.Scene {
         if (this.inputManager) {
             this.inputManager.update();
         }
-    
-        
+
+        // Actualizar niebla de guerra: redibujar círculos de visión en coordenadas mundo
+        // El overlay y la máscara son world-space, no hace falta ajuste de cámara
+        if (this.fogVisionGfx && this.entityManager && this.playerId) {
+            this.fogVisionGfx.clear();
+            this.fogVisionGfx.fillStyle(0xffffff, 1);
+            for (const [, unidad] of this.entityManager.unidades) {
+                const jugadorId = unidad.jugadorId || unidad.idJugador
+                    || this.droneJugadorMap?.get(String(unidad.id));
+                if (String(jugadorId) !== String(this.playerId)) continue;
+                if (!unidad.rangoVision || unidad.estadoActual === 'DESTRUIDO') continue;
+                this.fogVisionGfx.fillCircle(unidad.x, unidad.y, unidad.rangoVision * this.fogVisionScale);
+            }
+        }
         // Seguir al elemento activo con la cámara
         if (this.inputManager && this.inputManager.elementoActivo !== null && this.inputManager.elementoActivo !== undefined) {
             const elementoActivo = this.entityManager.getUnidad(this.inputManager.elementoActivo);
             if (elementoActivo) {
                 // Solo seguir elementos que pertenecen al jugador
-                let elementoJugadorId = elementoActivo.idJugador;
+                let elementoJugadorId = elementoActivo.idJugador || elementoActivo.jugadorId;
+                // Fallback: DTOs de ACTUALIZAR_PARTIDA no incluyen idJugador; consultar el mapa de ownership registrado desde PARTIDA_INICIADA
                 if (!elementoJugadorId) {
-                    elementoJugadorId = elementoActivo.jugadorId;
+                    elementoJugadorId = this.droneJugadorMap?.get(String(this.inputManager.elementoActivo));
                 }
-                
-                if (String(elementoJugadorId) === String(this.playerId)) {
+
+                if (elementoJugadorId && String(elementoJugadorId) === String(this.playerId)) {
                     // Verificar que la cámara está disponible antes de usarla
                     if (this.cameras && this.cameras.main) {
                         // Seguir suavemente

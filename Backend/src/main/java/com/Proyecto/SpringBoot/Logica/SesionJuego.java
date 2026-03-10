@@ -21,7 +21,11 @@ public class SesionJuego extends GameLoop {
     private EntidadJugador ganadorJuego = null;
 
     private iPartidaService notificadorPartida;
-
+/////////////////////////
+    public void setNotificadorPartida(iPartidaService notificadorPartida) {
+        this.notificadorPartida = notificadorPartida;
+    }
+////////////////////////
     public SesionJuego(String idSesion, List<EntidadJugador> jugadores, iPartidaService notificadorPartida) {
         this.mapa = new Mapa();
         this.idSesion = idSesion;
@@ -39,7 +43,7 @@ public class SesionJuego extends GameLoop {
     private PortaDron crearPortaDronParaJugador(EntidadJugador jugador) {
         TipoElemento tipoJugador = obtenerTipoElementoJugador(jugador);
         
-        // Calcular HP segun tipo:
+        // Calcular vida segun tipo:
         // AEREO: atacado por misiles (50 dano) - debe resistir 6 misiles = 6 * 50 = 300
         // NAVAL: atacado por bombas (100 dano) - debe resistir 3 bombas = 3 * 100 = 300
         int vidaPortadron;
@@ -277,7 +281,6 @@ public class SesionJuego extends GameLoop {
             return;
         }
         
-        System.out.println("Acción desconocida: " + intencion.getClass().getSimpleName());
     }
 
     private void update(Evento accion) {

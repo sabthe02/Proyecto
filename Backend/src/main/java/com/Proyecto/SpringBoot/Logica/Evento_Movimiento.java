@@ -1,5 +1,7 @@
 package com.Proyecto.SpringBoot.Logica;
 
+import org.jspecify.annotations.Nullable;
+
 public class Evento_Movimiento extends Evento {
 
     float nuevaPosX;
@@ -57,7 +59,12 @@ public class Evento_Movimiento extends Evento {
         this.nuevoAngulo = nuevoAngulo;
     }
 
+    public Integer getBateria() {
+        return bateria;
+    }
+
     public void setBateria(Integer bateria) {
         this.bateria = bateria;
     }
+
 }

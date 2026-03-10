@@ -113,10 +113,15 @@ export class InputManager {
             const gameData = data.datos || data;
             
             // Solo drones que pertenecen a ESTE jugador
-            const misDrones = gameData.elementos?.filter(e => 
-                e.clase === 'DRON' && 
-                (e.idJugador === this.playerId || e.jugadorId === this.playerId)
-            ) || [];
+            // Los DTOs del backend no incluyen idJugador en actualizaciones, se busca en EntityManager como fallback
+            const misDrones = gameData.elementos?.filter(e => {
+                if (e.clase !== 'DRON') return false;
+                if (e.idJugador === this.playerId || e.jugadorId === this.playerId) return true;
+                const unidad = this.scene.entityManager?.unidades?.get(e.id);
+                if (unidad && String(unidad.idJugador || unidad.jugadorId) === String(this.playerId)) return true;
+                // Mapa de ownership construido desde PARTIDA_INICIADA (fuente autoritativa)
+                return this.scene.droneJugadorMap?.get(String(e.id)) === String(this.playerId);
+            }) || [];
             
             // Buscar algún dron ACTIVO del jugador
             const dronActivo = misDrones.find(e => e.estado === 'ACTIVO');
@@ -157,7 +162,7 @@ export class InputManager {
             // Solo limpiar idDronActivo y cambiar vista si el dron fue DESTRUIDO
             // NO cambiar vista si el dron simplemente no está en este update incremental
             if (this.idDronActivo !== null) {
-                const miDronActual = gameData.elementos?.find(e => e.id === this.idDronActivo);
+                const miDronActual = gameData.elementos?.find(e => String(e.id) === String(this.idDronActivo));
                 
                 // Solo actuar si el dron ESTÁ presente en este update Y está DESTRUIDO
                 // Ignorar si el dron no está en el update (puede ser un update incremental)

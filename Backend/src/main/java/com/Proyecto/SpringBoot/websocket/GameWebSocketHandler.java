@@ -111,6 +111,22 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
                 return;
             }
             response = procesarDisparo(session, node);
+        } else if (tipo.equals("RECARGAR")) {
+            if (usuariosConectadosbySocket.get(session) == null) {
+                response.put("tipo", "ERROR");
+                response.put("mensaje", "El jugador no ha iniciado sesión.");
+                sendMessageSafely(session, response);
+                return;
+            }
+            response = procesarRecarga(session, node);
+        } else if (tipo.equals("RECARGAR_PARTIDA")) {
+            if (usuariosConectadosbySocket.get(session) == null) {
+                response.put("tipo", "ERROR");
+                response.put("mensaje", "El jugador no ha iniciado sesión.");
+                sendMessageSafely(session, response);
+                return;
+            }
+            response = procesarRecargaPartida(session, node);
         } else if (tipo.equals("PING")) {
             // Responder a PING con PONG para medir latencia
             response.put("tipo", "PONG");
@@ -260,6 +276,53 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
             System.err.println("ERROR en procesarDisparo: " + e.getMessage());
         }
 
+        return response;
+    }
+
+    private ObjectNode procesarRecarga(WebSocketSession session, JsonNode node) {
+        ObjectNode response = new ObjectMapper().createObjectNode();
+        try {
+            int idDron = node.has("IdDron") ? node.get("IdDron").asInt() :
+                         node.has("idDron") ? node.get("idDron").asInt() : -1;
+            if (idDron < 0) {
+                response.put("tipo", "ERROR");
+                response.put("mensaje", "Falta IdDron para procesar la recarga.");
+                return response;
+            }
+            System.out.println("RECARGAR recibido -> jugador=" + usuariosConectadosbySocket.get(session).getId() + " idDron=" + idDron);
+            boolean resultado = fachada.accion_recargar(usuariosConectadosbySocket.get(session).getId(), idDron);
+            if (resultado) {
+                response.put("tipo", "RECARGA_PROCESADA");
+                System.out.println("RECARGA_PROCESADA -> idDron=" + idDron);
+            } else {
+                response.put("tipo", "RECARGA_FALLIDA");
+                response.put("mensaje", "No se pudo procesar la recarga. Verifica que el dron esté sobre el portadron.");
+                System.out.println("RECARGA_FALLIDA -> idDron=" + idDron);
+            }
+        } catch (Exception e) {
+            response.put("tipo", "ERROR");
+            response.put("mensaje", "Error al procesar la recarga: " + e.getMessage());
+            System.err.println("ERROR en procesarRecarga: " + e.getMessage());
+        }
+        return response;
+    }
+
+    private ObjectNode procesarRecargaPartida(WebSocketSession session, JsonNode node) {
+        ObjectNode response = new ObjectMapper().createObjectNode();
+        try {
+            String idJugador = usuariosConectadosbySocket.get(session).getId();
+            boolean resultado = fachada.recuperarPartida(idJugador);
+            if (resultado) {
+                response.put("tipo", "PARTIDA_RECARGADA_EXITOSO");
+            } else {
+                response.put("tipo", "PARTIDA_RECARGADA_FALLIDO");
+                response.put("mensaje", "No se encontró una partida guardada.");
+            }
+        } catch (Exception e) {
+            response.put("tipo", "PARTIDA_RECARGADA_FALLIDO");
+            response.put("mensaje", "Error al recuperar la partida: " + e.getMessage());
+            System.err.println("ERROR en procesarRecargaPartida: " + e.getMessage());
+        }
         return response;
     }
 

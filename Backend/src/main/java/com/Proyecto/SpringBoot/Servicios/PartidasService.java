@@ -18,6 +18,7 @@ import com.Proyecto.SpringBoot.Logica.Evento;
 import com.Proyecto.SpringBoot.Logica.Evento_DesplegarDron;
 import com.Proyecto.SpringBoot.Logica.Evento_Disparo;
 import com.Proyecto.SpringBoot.Logica.Evento_Movimiento;
+import com.Proyecto.SpringBoot.Logica.Evento_Recarga;
 import com.Proyecto.SpringBoot.Logica.Mapa;
 import com.Proyecto.SpringBoot.Logica.Misil;
 import com.Proyecto.SpringBoot.Logica.Municion;
@@ -29,16 +30,20 @@ import com.Proyecto.SpringBoot.Logica.Excepciones.AccionInvalidaException;
 
 @Service
 public class PartidasService implements iPartidaService{
-    public boolean accion_recargar(EntidadJugador jugador, int idDron) {
-        // Lógica de recarga básica: buscar la sesión y delegar a SesionJuego
-        String idSesion = jugadorEnSesion.get(jugador.getId());
-        if (idSesion != null) {
-            SesionJuego sesion = sesionesActivas.get(idSesion);
+
+    public boolean accion_recargar(EntidadJugador jugador, int idDron) throws AccionInvalidaException {
+        boolean actualizado = false;
+        if (validar_accion(jugador)) {
+            String sesionId = jugadorEnSesion.get(jugador.getId());
+            SesionJuego sesion = sesionesActivas.get(sesionId);
             if (sesion != null) {
-                return sesion.accion_recargar(jugador, idDron);
+                Evento_Recarga er = new Evento_Recarga();
+                er.setElemento(sesion.getElemento(idDron));
+                er.habilitar();
+                actualizado = sesion.agregarEvento(er);
             }
         }
-        return false;
+        return actualizado;
     }
 
     // Dado un id de usuario, se obtiene la sesion en la que esta el jugador.

@@ -103,7 +103,7 @@ export class GameChoice extends Phaser.Scene {
             });
         }
 
-        // Initialize NetworkManager (crea/reusa conexión WebSocket)
+        // Initializar NetworkManager (crea/reusa conexión WebSocket)
         this.network = new NetworkManager(this);
         this.socket = this.network.socket;
         this.pendingLobbyRequest = false;

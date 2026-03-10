@@ -15,6 +15,14 @@ export class Portadrones extends Phaser.GameObjects.Container {
         if (data.vidaMax !== undefined) {
             this.vidaMax = data.vidaMax;
         }
+        // Rango de visión: del servidor si disponible, sino valor por defecto según equipo (igual que el dron)
+        if (data.rangoVision !== undefined) {
+            this.rangoVision = data.rangoVision;
+        } else if (this.tipoEquipo === 'AEREO') {
+            this.rangoVision = 200;
+        } else {
+            this.rangoVision = 100;
+        }
         this.setDepth(200 + (this.z || 0));
         const config = this.obtenerConfiguracion();
         this.sprite = scene.add.sprite(0, 0, config.textura);
@@ -95,16 +103,17 @@ export class Portadrones extends Phaser.GameObjects.Container {
 
         
         // Backend envía listaDrones array - contar solo los no destruidos
-        let dronesCount = 0;
-        if (data.listaDrones) {
+        // Solo actualizar si el datos contiene listaDrones (ACTUALIZAR_PARTIDA incremental puede omitirlo)
+        if (data.listaDrones !== undefined) {
+            let dronesCount = 0;
             for (let i = 0; i < data.listaDrones.length; i++) {
                 if (data.listaDrones[i].estado !== 'DESTRUIDO') {
                     dronesCount++;
                 }
             }
+            this.dronesEnPortadron = dronesCount;
+            this.labelHangar.setText(`DRONES EN PORTADRONES: ${dronesCount}`);
         }
-        
-        this.labelHangar.setText(`DRONES EN PORTADRONES: ${dronesCount}`);
         this.dibujarBarras(data.vida);
     }
 

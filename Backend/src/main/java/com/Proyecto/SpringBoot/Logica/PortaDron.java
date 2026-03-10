@@ -8,6 +8,7 @@ public class PortaDron extends Elemento {
 
     List<Dron> drones;
     TipoElemento tipo;
+    private int rangoVision;
 
     public PortaDron(int id,
             Float posicionX,
@@ -24,6 +25,16 @@ public class PortaDron extends Elemento {
         super(id, posicionX, posicionY, posicionZ, angulo, vida, estado, jugador);
         drones = new java.util.ArrayList<Dron>();
         this.tipo = tipo;
+        // El rango de visión es igual al del dron del mismo equipo
+        if (tipo == TipoElemento.AEREO) {
+            this.rangoVision = 200;
+        } else {
+            this.rangoVision = 100;
+        }
+    }
+
+    public int getRangoVision() {
+        return rangoVision;
     }
 
     public void AgregarDron(Dron dron) {

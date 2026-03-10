@@ -29,8 +29,7 @@ public class Evento_MovimientoTest {
         assertEquals(10f, evento.getNuevaPosX());
         assertEquals(20f, evento.getNuevaPosY());
         assertEquals(90, evento.getNuevoAngulo());
-        assertEquals(1000, evento.getBateria());
-    }
+        assertEquals(1000, evento.getBateria());    }
 
     @Test
     void setNuevaPosX_cambiaValor() {

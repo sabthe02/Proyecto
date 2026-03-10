@@ -101,6 +101,14 @@ public class Fachada implements iFachada {
         return partidasService.accion_disparar(jugadoresService.obtenerJugadorConectado(idJugador), idElemento);
     }
 
+    public boolean accion_recargar(String idJugador, int idDron) throws AccionInvalidaException {
+        return partidasService.accion_recargar(jugadoresService.obtenerJugadorConectado(idJugador), idDron);
+    }
+
+    public boolean recuperarPartida(String idJugador) {
+        return partidasService.recuperarPartida(jugadoresService.obtenerJugadorConectado(idJugador));
+    }
+
     public void pasarALobby(String idjugador) throws LobbyException {
         jugadoresService.pasarALobby(jugadoresService.obtenerJugadorConectado(idjugador));
     }

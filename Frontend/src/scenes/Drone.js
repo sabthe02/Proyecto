@@ -7,12 +7,21 @@ export class Drone extends Phaser.GameObjects.Container {
         this.estadoActual = data.estado;
         this.bateria = data.bateria;
         this.municionDisponible = data.municionDisponible;
+        this.municionMax = data.municionMax;
         this.jugadorId = data.jugadorId || data.idJugador;
         this.nickName = data.nickName;
         this.portadronPadreId = data.portadronPadreId;
         this.z = data.z;
         // Backend no serializa bateriaMax — usar constante MAX_BATERIA = 1000
         this.bateriaMax = data.bateriaMax || 1000;
+        // Rango de visión: del servidor si disponible, sino valor por defecto según equipo
+        if (data.rangoVision !== undefined) {
+            this.rangoVision = data.rangoVision;
+        } else if (this.tipoEquipo === 'AEREO') {
+            this.rangoVision = 200;
+        } else {
+            this.rangoVision = 100;
+        }
         let skin = (this.tipoEquipo === 'AEREO') ? 'dron_aereo' : 'dron_naval';
         this.sprite = scene.add.sprite(0, 0, skin);
         let escala = (this.tipoEquipo === 'AEREO') ? 0.3 : 0.25;
@@ -35,11 +44,15 @@ export class Drone extends Phaser.GameObjects.Container {
         this.estadoActual = data.estado;
         this.bateria = data.bateria;
         this.municionDisponible = data.municionDisponible;
+        if (data.municionMax !== undefined) this.municionMax = data.municionMax;
         this.nickName = data.nickName;
         if (data.bateriaMax !== undefined) {
             this.bateriaMax = data.bateriaMax;
         } else if (!this.bateriaMax) {
             this.bateriaMax = 1000;
+        }
+        if (data.rangoVision !== undefined) {
+            this.rangoVision = data.rangoVision;
         }
         // Animar movimiento suavemente en lugar de salto instantaneo
         this.scene.tweens.add({
@@ -268,7 +281,7 @@ export class Drone extends Phaser.GameObjects.Container {
 
     
     morir() {
-        console.log(`💥 Dron ${this.id} fuera de combate.`);
+        console.log(`Dron ${this.id} fuera de combate.`);
         
         // Acá podemos poner animacion de explocion cuando muera el dron.
         // this.scene.add.sprite(this.x, this.y, 'explosion').play('boom');

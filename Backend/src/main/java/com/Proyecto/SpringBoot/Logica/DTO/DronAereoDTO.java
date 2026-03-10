@@ -20,6 +20,7 @@ int id;
     String clase = "DRON";
     String tipoMunicion = "BOMBA";
     int municionDisponible;
+    int municionMax;
     int rangoVision; 
 
     List<BombaDTO> listaBombas;
@@ -36,6 +37,7 @@ int id;
         this.rangoVision = rangoVision;
         tipoMunicion = "BOMBA";
         municionDisponible = 0;
+        municionMax = 0;
         listaBombas = new ArrayList<>();
     }
 
@@ -52,7 +54,7 @@ int id;
         if (dron == null || dron.getMuniciones() == null) {
             return;
         }
-
+        municionMax = dron.getMuniciones().size();
         for (Municion municion : dron.getMuniciones()) {
             if (municion instanceof Bomba) {
                 Bomba bomba = (Bomba) municion;

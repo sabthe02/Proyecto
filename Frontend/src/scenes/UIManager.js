@@ -21,19 +21,19 @@ export class UIManager {
 
     crearHUD() {
         // Textos de información del jugador
-        this.vidaTexto = this.scene.add.text(20, 20, 'VIDA: 100%', this.estiloTexto).setScrollFactor(0).setDepth(1000);
-        this.bateriaTexto = this.scene.add.text(20, 50, 'BATERÍA: 100%', this.estiloTexto).setScrollFactor(0).setDepth(1000).setVisible(false);
-        this.municionTexto = this.scene.add.text(20, 80, 'MUNICIÓN: 0/0', this.estiloTexto).setScrollFactor(0).setDepth(1000).setVisible(false);
+        this.vidaTexto = this.scene.add.text(20, 20, 'VIDA: 100%', this.estiloTexto).setScrollFactor(0).setDepth(10000);
+        this.bateriaTexto = this.scene.add.text(20, 50, 'BATERÍA: 100%', this.estiloTexto).setScrollFactor(0).setDepth(10000).setVisible(false);
+        this.municionTexto = this.scene.add.text(20, 80, 'MUNICIÓN: 0/0', this.estiloTexto).setScrollFactor(0).setDepth(10000).setVisible(false);
         
         // Mostrar equipo del jugador
         const playerTeam = this.scene.playerTeam || 'DESCONOCIDO';
-        this.equipoTexto = this.scene.add.text(20, 110, 'EQUIPO: ' + playerTeam, { ...this.estiloTexto, fontSize: '14px' }).setScrollFactor(0).setDepth(1000);
+        this.equipoTexto = this.scene.add.text(20, 110, 'EQUIPO: ' + playerTeam, { ...this.estiloTexto, fontSize: '14px' }).setScrollFactor(0).setDepth(10000);
         
         // Texto de vista actual
-        this.vistaTexto = this.scene.add.text(20, 140, 'VISTA: PORTADRON', { ...this.estiloTexto, fontSize: '14px' }).setScrollFactor(0).setDepth(1000);
+        this.vistaTexto = this.scene.add.text(20, 140, 'VISTA: PORTADRON', { ...this.estiloTexto, fontSize: '14px' }).setScrollFactor(0).setDepth(10000);
         
         // Texto de estado de carga (solo visible cuando está cargando)
-        this.cargaTexto = this.scene.add.text(20, 170, '', { ...this.estiloTexto, fontSize: '18px', fill: '#00ff00' }).setScrollFactor(0).setDepth(1000).setVisible(false);
+        this.cargaTexto = this.scene.add.text(20, 170, '', { ...this.estiloTexto, fontSize: '18px', fill: '#00ff00' }).setScrollFactor(0).setDepth(10000).setVisible(false);
         
         // Estado actual de vista (para controlar qué mostrar)
         this.vistaActual = 'PORTADRON';
@@ -62,7 +62,7 @@ export class UIManager {
             
             // Obtener el ID del elemento activo desde InputManager
             const elementoActivoId = this.scene.inputManager?.elementoActivo;
-            if (!elementoActivoId) {
+            if (elementoActivoId === null || elementoActivoId === undefined) {
                 return; // No hay elemento activo todavía
             }
             
@@ -70,6 +70,13 @@ export class UIManager {
             const elementoActivo = gameData.elementos.find(e => e.id == elementoActivoId);
 
             if (elementoActivo) {
+                // Leer max values desde la entidad del EntityManager (más confiable que auto-detectar del primer valor)
+                const entity = this.scene.entityManager?.getUnidad(elementoActivoId);
+                if (entity) {
+                    if (entity.bateriaMax) this.bateriaMax = entity.bateriaMax;
+                    if (entity.vidaMax) this.vidaMax = entity.vidaMax;
+                    if (entity.municionMax !== undefined && entity.municionMax !== null) this.municionMax = entity.municionMax;
+                }
                 if (elementoActivo.municionMax !== undefined && elementoActivo.municionMax !== null) {
                     this.municionMax = elementoActivo.municionMax;
                 }

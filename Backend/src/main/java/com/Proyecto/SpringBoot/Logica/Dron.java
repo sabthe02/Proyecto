@@ -251,8 +251,8 @@ public class Dron extends Elemento {
     }
 
     public void setRangoVision(int rangoVision) {
-    this.rangoVision = rangoVision;
-}
+        this.rangoVision = rangoVision;
+    }
 
     public long getComenzandoCarga() {
         return comenzandoCarga;

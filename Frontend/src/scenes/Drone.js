@@ -3,7 +3,7 @@ export class Drone extends Phaser.GameObjects.Container {
         super(scene, data.x || data.posicionX, data.y || data.posicionY);
         this.id = data.id;
         this.clase = data.clase || 'DRON';
-        this.tipoEquipo = data.tipoEquipo || data.tipo || '';
+        this.tipoEquipo = (data.tipoEquipo || data.tipo || '').toUpperCase();
         this.estadoActual = data.estado;
         this.bateria = data.bateria;
         this.municionDisponible = data.municionDisponible;

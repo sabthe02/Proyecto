@@ -22,6 +22,7 @@ import com.Proyecto.SpringBoot.Logica.Excepciones.AccionInvalidaException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.ExisteNickNameException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.JugadorNoExisteException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.LobbyException;
+import com.Proyecto.SpringBoot.Logica.Excepciones.PartidaException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.UsuariosException;
 import com.Proyecto.SpringBoot.Servicios.JugadoresService;
 import com.Proyecto.SpringBoot.Servicios.LobbyService;
@@ -80,12 +81,12 @@ public class Fachada implements iFachada {
         partidasService.desconectarJugador(jugador);
     }
 
-    public boolean recuperarPartida(EntidadJugador jugador) {
-        return partidasService.recuperarPartida(jugador);
+    public boolean recuperarPartida(String idJugador) throws PartidaException {
+        return partidasService.recuperarPartida(jugadoresService.obtenerJugadorConectado(idJugador));
     }
 
-    public boolean guardarPartida(EntidadJugador jugador) {
-        return partidasService.recuperarPartida(jugador);
+    public boolean guardarPartida(String idJugador) throws PartidaException {
+        return partidasService.guardarPartida(jugadoresService.obtenerJugadorConectado(idJugador));
     }
 
     public boolean accion_mover(String idJugador, int idElemento, float x, float y, float z, int angulo)
@@ -104,10 +105,6 @@ public class Fachada implements iFachada {
 
     public boolean accion_recargar(String idJugador, int idDron) throws AccionInvalidaException {
         return partidasService.accion_recargar(jugadoresService.obtenerJugadorConectado(idJugador), idDron);
-    }
-
-    public boolean recuperarPartida(String idJugador) {
-        return partidasService.recuperarPartida(jugadoresService.obtenerJugadorConectado(idJugador));
     }
 
     public void pasarALobby(String idjugador) throws LobbyException {
@@ -147,7 +144,7 @@ public class Fachada implements iFachada {
     }
 
     @Override
-    public void EnviarFinPartida(List<EntidadJugador> jugadores, EntidadJugador ganador) {
+    public void EnviarFinPartida(List<EntidadJugador> jugadores, EntidadJugador ganador, String mensaje) {
          
         if (handler != null) {
             List<String> listaJugadores = new ArrayList<>();
@@ -157,7 +154,7 @@ public class Fachada implements iFachada {
             if(ganador != null)
                 handler.enviarFinPartida(listaJugadores, ganador.getId());
             else{
-                handler.enviarFinPartida(listaJugadores, "EMPATE");
+                handler.enviarFinPartida(listaJugadores, mensaje);
             }
         }
     }

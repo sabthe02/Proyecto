@@ -139,16 +139,30 @@ public class PartidasService implements iPartidaService{
         return true;
     }
 
-    public boolean guardarPartida(EntidadJugador jugador) {
-        MapeoSesion mpSesion = new MapeoSesion();
+     public boolean guardarPartida(EntidadJugador jugador) throws PartidaException {
+        boolean resp = true;
 
+        // Si el jugador ya tiene una partida guardada, la borra
+        EntidadSesion entidad = sesionDAO.findByJugadorPrincipal(jugador);
+        if (entidad != null) {
+            sesionDAO.delete(entidad);
+        }
+
+        MapeoSesion mpSesion = new MapeoSesion();
         String idSes = jugadorEnSesion.get(jugador.getId());
         SesionJuego sJuego = sesionesActivas.get(idSes);
+        
         EntidadSesion eSesion = mpSesion.mapearSesionJuego(sJuego, jugador);
+        sJuego.terminarSesionPartidaGuardada();
 
-        sesionDAO.save(eSesion);
+        try {
+            sesionDAO.save(eSesion);
+        } catch (Exception ex) {
+            System.err.println("Error al guardar partida: " + ex.getLocalizedMessage() + ex.getMessage());
+            throw new PartidaException("Error al guardar la partida");
+        }
 
-        return true;
+        return resp;
     }
 
     private boolean validar_accion(EntidadJugador jugador) throws AccionInvalidaException {
@@ -227,7 +241,14 @@ public class PartidasService implements iPartidaService{
     }
 
     @Override
-    public void EnviarFinPartida(List<EntidadJugador> jugadores, EntidadJugador ganador) {
-        fachada.EnviarFinPartida(jugadores, ganador);
+    public void EnviarFinPartida(List<EntidadJugador> jugadores, EntidadJugador ganador, String Mensaje) {
+        String idSesion = "";
+        
+        for (EntidadJugador entidadJugador : jugadores) {
+            idSesion = jugadorEnSesion.remove(entidadJugador.getId());
+        }
+
+        sesionesActivas.remove(idSesion);
+        fachada.EnviarFinPartida(jugadores, ganador, Mensaje);
     }
 }

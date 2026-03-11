@@ -20,6 +20,7 @@ import com.Proyecto.SpringBoot.Logica.DTO.LoginUsuarioDTO;
 import com.Proyecto.SpringBoot.Logica.Excepciones.ExisteNickNameException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.JugadorNoExisteException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.LobbyException;
+import com.Proyecto.SpringBoot.Logica.Excepciones.PartidaException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.UsuariosException;
 
 import jakarta.annotation.PostConstruct;
@@ -121,6 +122,15 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
                 return;
             }
             response = procesarRecarga(session, node);
+        } else if(tipo.equals("GUARDAR_PARTIDA")){
+            if(usuariosConectadosbySocket.get(session) == null)
+            {
+                response.put("tipo", "ERROR");
+                response.put("mensaje", "El jugador no ha iniciado sesión.");
+                sendMessageSafely(session, response);
+            }
+            response = guardarPartida(session, node);
+
         } else if (tipo.equals("RECARGAR_PARTIDA")) {
             if (usuariosConectadosbySocket.get(session) == null) {
                 response.put("tipo", "ERROR");
@@ -138,22 +148,6 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
 
         sendMessageSafely(session, response);
     }
-
-    /*
-     * private void enviarMensaje(WebSocketSession session, ObjectNode response) {
-     * 
-     * try {
-     * synchronized (session) {
-     * String s = response.toString();
-     * session.sendMessage(new TextMessage(s));
-     * }
-     * } catch (IOException e) {
-     * // TODO Auto-generated catch block
-     * e.printStackTrace();
-     * }
-     * 
-     * }
-     */
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
@@ -374,6 +368,26 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
             response.put("tipo", "PASAR_LOBBY_FALLIDO");
             response.put("mensaje", e.getMessage());
             return response;
+        }
+
+        return response;
+    }
+
+    private ObjectNode guardarPartida(WebSocketSession session, JsonNode node) {
+        ObjectNode response = new ObjectMapper().createObjectNode();
+
+        try {
+            boolean resultado = fachada.guardarPartida(usuariosConectadosbySocket.get(session).getId());
+
+            if (resultado) {
+                response.put("tipo", "PARTIDA_GUARDADA_EXITOSO");
+            } else {
+                response.put("tipo", "PARTIDA_GUARDADA_FALLIDO");
+                response.put("mensaje", "No se pudo desplegar el dron.");
+            }
+        } catch (PartidaException e) {
+            response.put("tipo", "ERROR");
+            response.put("mensaje", "Error al procesar el guardado: " + e.getMessage());
         }
 
         return response;

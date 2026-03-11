@@ -39,9 +39,9 @@ public class JugadorTest {
     @Test
     void constructor_porDefecto_seteaCamposVacios() {
         EntidadJugador jugador = new EntidadJugador();
-        assertEquals(null, jugador.getId());
-        assertEquals(null, jugador.getNickName());
-        assertEquals(null, jugador.getTeam());
+        assertEquals("", jugador.getId());
+        assertEquals("", jugador.getNickName());
+        assertEquals("", jugador.getTeam());
     }
 
 }

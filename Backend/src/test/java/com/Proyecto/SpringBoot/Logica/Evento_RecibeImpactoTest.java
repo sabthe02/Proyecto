@@ -11,7 +11,7 @@ public class Evento_RecibeImpactoTest {
     @Test   
     public void testConstructor_porDefecto() {
         Evento_RecibeImpacto evento = new Evento_RecibeImpacto();
-        assertEquals(0, evento.getIdElementoEmisor());
+        assertEquals(0, evento.getElementoEmisor().getId());
     }
 
     @Test
@@ -28,7 +28,7 @@ public class Evento_RecibeImpactoTest {
                             TipoElemento.AEREO, 
                             j1);
         Evento_RecibeImpacto evento = new Evento_RecibeImpacto(elemento, elemento);
-        assertEquals(2, evento.getIdElementoEmisor());
+        assertEquals(1, evento.getElementoEmisor().getId());
     }
 
     @Test
@@ -46,6 +46,6 @@ public class Evento_RecibeImpactoTest {
                             j2);
         Evento_RecibeImpacto evento = new Evento_RecibeImpacto(elemento, elemento);
        // evento.setIdElementoEmisor(3);
-        assertEquals(3, evento.getIdElementoEmisor());
+        assertEquals(1, evento.getElementoEmisor().getId());
     }
 }

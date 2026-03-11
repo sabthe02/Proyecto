@@ -7,5 +7,5 @@ import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 public interface iPartidaService {
     boolean EnviarActualizaciones(List<EntidadJugador> jugadores, List<Evento> acciones);
     boolean EnviarInicioPartida(List<PortaDron> portaDrones, Mapa mapa);
-    void EnviarFinPartida(List<EntidadJugador> jugadores, EntidadJugador ganador);
+    void EnviarFinPartida(List<EntidadJugador> jugadores, EntidadJugador ganador, String mensaje);
 }

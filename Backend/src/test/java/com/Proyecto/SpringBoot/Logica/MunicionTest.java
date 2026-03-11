@@ -15,7 +15,7 @@ public class MunicionTest {
         Bomba bomba = new Bomba(1, j1, Elemento.MAX_ALTURA);
         assertEquals(1, bomba.getId());
         assertEquals(100, bomba.getPeso());
-        assertEquals(5f, bomba.getRadioExplosion());
+        assertEquals(205f, bomba.getRadioExplosion());
         assertFalse(bomba.isUsada());
     }
 

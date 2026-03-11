@@ -1,12 +1,9 @@
 package com.Proyecto.SpringBoot.Servicios;
 
 import java.util.Dictionary;
-
-import org.hibernate.internal.ExceptionConverterImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
-
 import com.Proyecto.SpringBoot.Datos.DAO.JugadoresDAO;
 import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 import com.Proyecto.SpringBoot.Logica.Excepciones.ExisteNickNameException;

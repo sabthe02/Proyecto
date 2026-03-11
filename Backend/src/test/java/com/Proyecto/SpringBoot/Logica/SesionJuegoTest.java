@@ -49,7 +49,7 @@ public class SesionJuegoTest {
             }
 
             @Override
-            public void EnviarFinPartida(List<EntidadJugador> jugadores, EntidadJugador ganador) {
+            public void EnviarFinPartida(List<EntidadJugador> jugadores, EntidadJugador ganador, String mensaje) {
                 // TODO Auto-generated method stub
                 throw new UnsupportedOperationException("Unimplemented method 'EnviarFinPartida'");
             }

@@ -124,14 +124,16 @@ public class PortaDron extends Elemento {
     public void recibeImpacto() {
 
         if (getTipo() == TipoElemento.AEREO) {
-            int danos = 16;
+            // Daño por misil: vida=300, se destruye en 6 impactos (300/6=50)
+            int danos = 50;
             this.setVida(this.getVida() - danos);
             if (this.getVida() <= 5) {
                 this.setEstado(EstadoElemento.DESTRUIDO);
                 this.setVida(0);
             }
         } else if (getTipo() == TipoElemento.NAVAL) {
-            int danos = 33;
+            // Daño por bomba: vida=300, se destruye en 3 impactos (300/3=100)
+            int danos = 100;
             this.setVida(this.getVida() - danos);
             if (this.getVida() <= 2) {
                 this.setEstado(EstadoElemento.DESTRUIDO);

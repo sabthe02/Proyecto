@@ -96,6 +96,10 @@ public class MapearDTO {
                 pDron.getEstado().toString(), pDron.getJugador().getNickName(),
                 pDron.getJugador().getId());
 
+        for (Dron dron : pDron.getDrones()) {
+            dDTO.agregarDron(parsearDronAereo(dron));
+        }
+
         return dDTO;
 
     }
@@ -105,7 +109,9 @@ public class MapearDTO {
                 pDron.getPosicionY(), pDron.getPosicionZ(), pDron.getAngulo(), pDron.getVida(),
                 pDron.getEstado().toString(), pDron.getJugador().getNickName(),
                 pDron.getJugador().getId());
-
+        for (Dron dron : pDron.getDrones()) {
+            dDTO.agregarDron(parsearDronNaval(dron));
+        }
         return dDTO;
 
     }
@@ -161,7 +167,7 @@ public class MapearDTO {
                 String tipoProyectil = "Bomba";
                 String clase = "Dron";
 
-                if (rev.getIdElementoEmisor() instanceof Misil) {
+                if (rev.getElementoEmisor() instanceof Misil) {
                     tipoProyectil = "Misil";
                 }
                 if (rev.getElemento() instanceof PortaDron) {

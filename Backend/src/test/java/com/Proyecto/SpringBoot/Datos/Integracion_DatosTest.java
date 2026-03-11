@@ -76,20 +76,20 @@ public class Integracion_DatosTest {
 
             @Override
             public boolean EnviarActualizaciones(List<EntidadJugador> jugadores, List<Evento> acciones) {
-                // TODO Auto-generated method stub
-                throw new UnsupportedOperationException("Unimplemented method 'EnviarActualizaciones'");
+                
+                return true;
             }
 
             @Override
             public boolean EnviarInicioPartida(List<PortaDron> portaDrones, Mapa mapa) {
-                // TODO Auto-generated method stub
-                throw new UnsupportedOperationException("Unimplemented method 'EnviarInicioPartida'");
+                assertEquals(2, portaDrones.size());
+
+                return true;
             }
 
             @Override
-            public void EnviarFinPartida(List<EntidadJugador> jugadores, EntidadJugador ganador) {
-                // TODO Auto-generated method stub
-                throw new UnsupportedOperationException("Unimplemented method 'EnviarFinPartida'");
+            public void EnviarFinPartida(List<EntidadJugador> jugadores, EntidadJugador ganador, String mensaje) {
+               
             }
             
         });

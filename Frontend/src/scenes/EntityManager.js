@@ -25,6 +25,21 @@ export class EntityManager {
         this.jugadores = gameData.jugadores || [];
         this.mapa = gameData.mapa || null;
         gameData.elementos.forEach(datosUnidad => {
+            // Proyectil que falló (llegó al límite de distancia) o que impactó → reproducir explosión y eliminar
+            if (datosUnidad.estado === 'INACTIVO' && (datosUnidad.clase === 'MISIL' || datosUnidad.clase === 'BOMBA')) {
+                if (this.unidades.has(datosUnidad.id)) {
+                    const unidad = this.unidades.get(datosUnidad.id);
+                    // Mover a la posición final antes de explotar para que la animación quede en el lugar correcto
+                    if (unidad.actualizarDesdeServidor) {
+                        unidad.actualizarDesdeServidor(datosUnidad);
+                    }
+                    if (unidad.destruir) {
+                        unidad.destruir();
+                    }
+                    this.unidades.delete(datosUnidad.id);
+                }
+                return;
+            }
             // La destrucción la maneja el backend
             if (datosUnidad.estado === 'DESTRUIDO') {
                 if (this.unidades.has(datosUnidad.id)) {
@@ -52,6 +67,20 @@ export class EntityManager {
                 if (unidad.actualizarDesdeServidor) {
                     unidad.actualizarDesdeServidor(datosUnidad);
                 }
+            }
+        });
+
+        // Procesar eventos de impacto para mostrar la vista de impacto (ImpactView)
+        const eventos = gameData.eventos || [];
+        eventos.forEach(ev => {
+            if (ev.evento === 'RECIBIR_DANO') {
+                this.aplicarDano({
+                    idObjetivo: ev.idElemento,
+                    dano: 0,
+                    vidaRestante: undefined,
+                    estaDestruido: false,
+                    claseProyectil: ev.tipoProyectil
+                });
             }
         });
     }
@@ -118,19 +147,19 @@ export class EntityManager {
         }
         
         // Refrescar barra de vida del portadron de inmediato (sin esperar el próximo movimiento)
-        if (unidad.clase === 'PORTADRON' && unidad.dibujarBarras) {
+        if (unidad.clase === 'PORTADRON' && unidad.dibujarBarras && vidaRestante !== undefined) {
             unidad.dibujarBarras(vidaRestante);
         }
         
         if (unidad.clase === 'DRON' || unidad.clase === 'PORTADRON') {
             // Mostrar número de daño sobre la unidad
-            if (unidad.mostrarDano) {
+            if (unidad.mostrarDano && dano > 0) {
                 unidad.mostrarDano(dano);
             }
             
             // La animación se determina por el equipo del objetivo:
-            // Objetivo NAVAL → impactado por BOMBA aérea (cae desde arriba, 270°)
-            // Objetivo AEREO → impactado por MISIL naval (viene horizontal, 0°)
+            // Objetivo NAVAL - impactado por BOMBA aérea (cae desde arriba, 270°)
+            // Objetivo AEREO - impactado por MISIL naval (viene horizontal, 0°)
             let proyectilTipo;
             let angulo;
             const equipoObjetivoTipo = (unidad.tipoEquipo || '').toUpperCase();

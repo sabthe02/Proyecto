@@ -19,6 +19,7 @@ public class SesionJuego extends GameLoop {
     private List<EntidadJugador> jugadores;
     private Mapa mapa;
     private EntidadJugador ganadorJuego = null;
+    private boolean partidaGuardada = false;
 
     private iPartidaService notificadorPartida;
 
@@ -309,6 +310,8 @@ public class SesionJuego extends GameLoop {
                     }
 
                     misil.setEstado(EstadoElemento.INACTIVO);
+                    // Notificar al frontend que el misil quedó INACTIVO para que reproduzca la explosión
+                    accionesPendientesEnviar.add(new Evento_ActualizaEstado(misil));
                     return;
                 }
                 if (misil.getDistancia() < misil.getDIS_MAX()) {
@@ -468,6 +471,12 @@ public class SesionJuego extends GameLoop {
 
     }
 
+    public void terminarSesionPartidaGuardada()
+    {
+        partidaGuardada = true;
+        this.procesarFinalizacionPartida();
+    }
+
 
     public boolean finalizarSesion() {
         List<EntidadJugador> jugadorGanador = new ArrayList<>();
@@ -613,13 +622,15 @@ public class SesionJuego extends GameLoop {
     {
         if (ganadorJuego != null) {
             System.out.println("Sesion finalizada - Ganador: " + ganadorJuego.getNickName());
-            notificadorPartida.EnviarFinPartida(jugadores, ganadorJuego);
-        } else {
+            notificadorPartida.EnviarFinPartida(jugadores, ganadorJuego, "Ganador");
+        } else if(!partidaGuardada){
             System.out.println("Sesion finalizada - Empate");
-            notificadorPartida.EnviarFinPartida(jugadores, null);
+            notificadorPartida.EnviarFinPartida(jugadores, null, "Empate");
+        }else{
+            System.out.println("Sesion finalizada - Partida Guardada");
+            notificadorPartida.EnviarFinPartida(jugadores, null, "Partida Guardada");
         }
         stopGameLoop();
-
     }
 
 }

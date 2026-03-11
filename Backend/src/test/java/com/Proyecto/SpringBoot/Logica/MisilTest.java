@@ -12,8 +12,8 @@ public class MisilTest {
     public void testConstructor() {
         EntidadJugador j1 = new EntidadJugador("001", "Nacho", "ACTIVO");
         Misil misil = new Misil(1, j1);
-        assertEquals(1, misil.getVelocidad());
-        assertEquals(1, misil.getDistancia());
+        assertEquals(50, misil.getVelocidad());
+        assertEquals(1500, misil.getDistancia());
     
     }
 
@@ -31,7 +31,7 @@ public class MisilTest {
                         25f, 
                         j1);
         assertEquals(50, misil.getVelocidad());
-        assertEquals(25f, misil.getDistancia());
+        assertEquals(1500f, misil.getDistancia());
     }
 
     @Test

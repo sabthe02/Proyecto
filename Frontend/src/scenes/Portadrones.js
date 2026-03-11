@@ -11,10 +11,8 @@ export class Portadrones extends Phaser.GameObjects.Container {
         this.idJugador = this.jugadorId;
         this.nickName = data.nickName;
         this.z = data.z;
-        this.vidaMax = null;
-        if (data.vidaMax !== undefined) {
-            this.vidaMax = data.vidaMax;
-        }
+        // Vida máxima fija igual al valor del backend (SesionJuego.java, vida=300)
+        this.vidaMax = data.vidaMax !== undefined ? data.vidaMax : 300;
         // Rango de visión: del servidor si disponible, sino valor por defecto según equipo (igual que el dron)
         if (data.rangoVision !== undefined) {
             this.rangoVision = data.rangoVision;
@@ -86,7 +84,6 @@ export class Portadrones extends Phaser.GameObjects.Container {
             this.vidaMax = data.vidaMax;
         }
 
-        
         // Actualizar profundidad según altitud
         this.setDepth(200 + (data.z || 0));
         
@@ -107,7 +104,8 @@ export class Portadrones extends Phaser.GameObjects.Container {
         if (data.listaDrones !== undefined) {
             let dronesCount = 0;
             for (let i = 0; i < data.listaDrones.length; i++) {
-                if (data.listaDrones[i].estado !== 'DESTRUIDO') {
+                const estado = data.listaDrones[i].estado;
+                if (estado === 'INACTIVO' || estado === 'CARGANDO') {
                     dronesCount++;
                 }
             }
@@ -119,18 +117,10 @@ export class Portadrones extends Phaser.GameObjects.Container {
 
     dibujarBarras(vida) {
         this.barras.clear();
-        
-        // Backend usa escala de game ticks (e.g., 1000 = 100%)
-        // Detectamos el max valor y calculamos porcentaje relativo
-        if (this.vidaMax === null || vida > this.vidaMax) {
-            this.vidaMax = vida;
-        }
-        
-        // Calcular porcentaje basado en la escala del backend
-        let vidaPorcentaje = 0;
-        if (this.vidaMax > 0) {
-            vidaPorcentaje = Math.max(0, vida / this.vidaMax);
-        }
+
+        // vidaMax es 300 (fijo desde el backend). Se calcula el porcentaje sobre ese máximo
+        // para que la barra muestre la vida correctamente desde el primer update.
+        const vidaPorcentaje = this.vidaMax > 0 ? Math.max(0, Math.min(1, vida / this.vidaMax)) : 0;
         
         const ancho = 120;
         const alto = 10;

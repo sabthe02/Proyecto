@@ -19,9 +19,7 @@ public class Evento_MovimientoTest {
                             90, 
                             100, 
                             EstadoElemento.ACTIVO, 
-                            1, 
-                            0, 
-                            50, 
+                            
                             TipoElemento.AEREO, 
                             j1);
         Evento_Movimiento evento = new Evento_Movimiento(elemento, 10f, 20f, 90);
@@ -41,9 +39,7 @@ public class Evento_MovimientoTest {
                             90, 
                             100, 
                             EstadoElemento.ACTIVO, 
-                            1, 
-                            0, 
-                            50, 
+                           
                             TipoElemento.AEREO, 
                             j2);
         Evento_Movimiento evento = new Evento_Movimiento(elemento, 10f, 20f, 90);
@@ -61,9 +57,7 @@ public class Evento_MovimientoTest {
                             90, 
                             100, 
                             EstadoElemento.ACTIVO, 
-                            1, 
-                            0, 
-                            50, 
+                           
                             TipoElemento.AEREO, 
                             j3);
         Evento_Movimiento evento = new Evento_Movimiento(elemento, 10f, 20f, 90);
@@ -81,9 +75,7 @@ public class Evento_MovimientoTest {
                             90, 
                             100, 
                             EstadoElemento.ACTIVO, 
-                            1, 
-                            0, 
-                            50, 
+                           
                             TipoElemento.AEREO, 
                             j4);
         Evento_Movimiento evento = new Evento_Movimiento(elemento, 10f, 20f, 90);
@@ -101,9 +93,7 @@ public class Evento_MovimientoTest {
                             90, 
                             100, 
                             EstadoElemento.ACTIVO, 
-                            1, 
-                            0, 
-                            50, 
+                           
                             TipoElemento.AEREO, 
                             j5);
         Evento_Movimiento evento = new Evento_Movimiento(elemento, 10f, 20f, 90);
@@ -114,9 +104,7 @@ public class Evento_MovimientoTest {
                             180, 
                             45, 
                             EstadoElemento.ACTIVO, 
-                            1, 
-                            0, 
-                            50, 
+                           
                             TipoElemento.AEREO, 
                             j5);
         evento.setElemento(dron2);
@@ -133,9 +121,7 @@ public class Evento_MovimientoTest {
                             90, 
                             100, 
                             EstadoElemento.ACTIVO, 
-                            1, 
-                            0, 
-                            50, 
+                          
                             TipoElemento.AEREO, 
                             j4);
         Evento_Movimiento evento = new Evento_Movimiento(elemento, 10f, 20f, 90);
@@ -195,9 +181,7 @@ public class Evento_MovimientoTest {
                             90, 
                             100, 
                             EstadoElemento.ACTIVO, 
-                            2,
-                            0,
-                            100,
+                           
                             TipoElemento.AEREO, 
                             j1);
         Evento_Movimiento evento = new Evento_Movimiento(elemento, 15f, 25f, 92);

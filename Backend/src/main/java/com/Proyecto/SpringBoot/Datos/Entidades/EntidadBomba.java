@@ -34,4 +34,20 @@ public class EntidadBomba extends EntidadMunicion{
         this.radioExplosion = 0f;
     }
 
+    public int getPeso() {
+        return peso;
+    }
+
+    public void setPeso(int peso) {
+        this.peso = peso;
+    }
+
+    public float getRadioExplosion() {
+        return radioExplosion;
+    }
+
+    public void setRadioExplosion(float radioExplosion) {
+        this.radioExplosion = radioExplosion;
+    }
+
 }

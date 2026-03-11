@@ -53,6 +53,7 @@ public class DronNavalDTO {
         if (dron == null || dron.getMuniciones() == null) {
             return;
         }
+
         for (Municion municion : dron.getMuniciones()) {
             if (municion instanceof Misil) {
                 Misil misil = (Misil) municion;
@@ -63,7 +64,7 @@ public class DronNavalDTO {
                         misil.getPosicionZ(),
                         misil.getAngulo(),
                         misil.getVida(),
-                        misil.getEstado().toString(),
+                        misil.getEstado(),
                         misil.getDistancia(),
                         misil.getVelocidad(),
                         misil.isUsada());

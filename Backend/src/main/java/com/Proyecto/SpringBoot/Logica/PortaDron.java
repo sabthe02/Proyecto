@@ -17,9 +17,6 @@ public class PortaDron extends Elemento {
             Integer angulo,
             Integer vida,
             EstadoElemento estado,
-            int cantidadMiniciones,
-            int cantidadUsada,
-            int bateria,
             TipoElemento tipo,
             EntidadJugador jugador) {
         super(id, posicionX, posicionY, posicionZ, angulo, vida, estado, jugador);
@@ -74,19 +71,30 @@ public class PortaDron extends Elemento {
     // Busca el primer dron INACTIVO y lo activa
     public Dron desplegarDron(Evento_DesplegarDron eventoDesplegarDron) {
         Dron dronDesplegado = null;
-        
+
         // Buscar el primer dron inactivo disponible (solo INACTIVO, no CARGANDO)
         for (int i = 0; i < drones.size(); i++) {
             Dron dron = drones.get(i);
             // Solo desplegar drones INACTIVO con batería completa
             // No desplegar drones CARGANDO (están en proceso de recarga)
+            // Busca el dron que tenga municiones
             if (dron.getEstado() == EstadoElemento.INACTIVO && dron.getBateria() >= Dron.MAX_BATERIA) {
-                // Activar el dron y desplegarlo
-                dron.setEstado(EstadoElemento.ACTIVO);
-                dronDesplegado = dron;
-                // Salir del bucle una vez encontrado
-                i = drones.size();
+
+                // configura como dron a devolver si no hay ninguno seteado, o si el buscaddo
+                // tiene mas municiones que el encontrado antes
+                if (dronDesplegado == null) {
+                    dronDesplegado = dron;
+                } else if (dronDesplegado.cantidadMunicionesDisponibles() < dron.cantidadMunicionesDisponibles()) {
+                    dronDesplegado = dron;
+                }
             }
+        }
+
+        if (dronDesplegado != null) {
+            // Activar el dron y desplegarlo
+            dronDesplegado.setEstado(EstadoElemento.ACTIVO);
+            dronDesplegado.setPosicionX(getPosicionX());
+            dronDesplegado.setPosicionY(getPosicionY());
         }
 
         return dronDesplegado;
@@ -113,29 +121,33 @@ public class PortaDron extends Elemento {
     }
 
     @Override
-    public void recibeImpacto(Evento_Movimiento intencion) {
-        PortaDron portaDron = (PortaDron) intencion.getElemento();
-        if (portaDron.getTipo() == TipoElemento.AEREO) {
+    public void recibeImpacto() {
+
+        if (getTipo() == TipoElemento.AEREO) {
             int danos = 16;
-            this.setVida(this.getVida()-danos);
+            this.setVida(this.getVida() - danos);
             if (this.getVida() <= 5) {
                 this.setEstado(EstadoElemento.DESTRUIDO);
                 this.setVida(0);
             }
-        }
-        else if (portaDron.getTipo() == TipoElemento.NAVAL) {
+        } else if (getTipo() == TipoElemento.NAVAL) {
             int danos = 33;
-            this.setVida(this.getVida()-danos);
+            this.setVida(this.getVida() - danos);
             if (this.getVida() <= 2) {
                 this.setEstado(EstadoElemento.DESTRUIDO);
                 this.setVida(0);
             }
-        }   
+        }
 
     }
 
     @Override
     protected int getBateria() {
+        return 0;
+    }
+
+    @Override
+    public int cantidadMunicionesDisponibles() {
         return 0;
     }
 }

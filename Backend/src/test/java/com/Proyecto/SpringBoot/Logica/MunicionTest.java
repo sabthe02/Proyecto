@@ -12,7 +12,7 @@ public class MunicionTest {
     @Test
     void constructor_seteaCamposAereo() {
         EntidadJugador j1 = new EntidadJugador("01", "Nacho", "ACTIVO");
-        Bomba bomba = new Bomba(1, j1);
+        Bomba bomba = new Bomba(1, j1, Elemento.MAX_ALTURA);
         assertEquals(1, bomba.getId());
         assertEquals(100, bomba.getPeso());
         assertEquals(5f, bomba.getRadioExplosion());
@@ -31,7 +31,7 @@ public class MunicionTest {
     @Test
     void setUsada_cambiaEstadoAereo() {
         EntidadJugador j2 = new EntidadJugador("002", "Nacho02", "ACTIVO");
-        Bomba bomba = new Bomba(1, j2);
+        Bomba bomba = new Bomba(1, j2, Elemento.MAX_ALTURA);
         bomba.setUsada(true);
         assertEquals(true, bomba.isUsada());
     }
@@ -47,7 +47,7 @@ public class MunicionTest {
     @Test
     void setPeso_cambioPeso() {
         EntidadJugador j3 = new EntidadJugador("003", "Nacho03", "ACTIVO");
-        Bomba bomba = new Bomba(1, j3);
+        Bomba bomba = new Bomba(1, j3, Elemento.MAX_ALTURA);
         bomba.setPeso(150);
         assertEquals(150, bomba.getPeso());
     }
@@ -55,7 +55,7 @@ public class MunicionTest {
     @Test
     void setRadioExplosion_cambioRadio() {
         EntidadJugador j4 = new EntidadJugador("004", "Nacho04", "ACTIVO");
-        Bomba bomba = new Bomba(1, j4);
+        Bomba bomba = new Bomba(1, j4, Elemento.MAX_ALTURA);
         bomba.setRadioExplosion(10f);
         assertEquals(10f, bomba.getRadioExplosion());
     }

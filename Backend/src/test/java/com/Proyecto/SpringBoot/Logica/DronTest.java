@@ -25,9 +25,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                1,
-                0,
-                50,
+               
                 TipoElemento.AEREO,
                 j1);
         assertEquals(EstadoElemento.ACTIVO, dron.getEstado());
@@ -53,9 +51,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                1,
-                0,
-                50,
+               
                 TipoElemento.NAVAL,
                 j1);
         assertEquals(EstadoElemento.ACTIVO, dron.getEstado());
@@ -81,9 +77,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.AEREO,
                 j2);
         dron.agregarMunicion(1);
@@ -102,9 +96,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.NAVAL,
                 j3);
         dron.agregarMunicion(1);
@@ -122,9 +114,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.AEREO,
                 j4);
         Municion municion1 = dron.agregarMunicion(1);
@@ -145,9 +135,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.NAVAL,
                 j5);
         dron.agregarMunicion(1);
@@ -169,9 +157,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.AEREO,
                 j6);
         Map<Integer, Elemento> elementosEnJuego = new HashMap<>();
@@ -194,9 +180,6 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
                 TipoElemento.NAVAL,
                 j7);
         dron.cargarMunicionInicial(null);
@@ -213,9 +196,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.AEREO,
                 j8);
         dron.setTipo(TipoElemento.NAVAL);
@@ -234,13 +215,10 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
                 TipoElemento.AEREO,
                 j9);
         Evento_Movimiento eventoMovimiento = new Evento_Movimiento(dron, 10f, 20f, 90);
-        dron.recibeImpacto(eventoMovimiento);
+        dron.recibeImpacto();
         assertEquals(EstadoElemento.DESTRUIDO, dron.getEstado());
         assertEquals(0, dron.getVida());
     }
@@ -255,9 +233,6 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
                 TipoElemento.NAVAL,
                 j10);
         Evento_Movimiento eventoMovimiento = new Evento_Movimiento(dron, 15f, 25f, 90);
@@ -277,9 +252,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.INACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.AEREO,
                 j11);
         Evento_Movimiento eventoMovimiento = new Evento_Movimiento(dron, 15f, 25f, 90);
@@ -297,9 +270,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.NAVAL,
                 j12);
         Evento_Disparo eventoDisparo = new Evento_Disparo(dron);
@@ -317,9 +288,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.NAVAL,
                 j13);
 
@@ -346,9 +315,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.AEREO,
                 j13);
 
@@ -370,9 +337,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.NAVAL,
                 j14);
 
@@ -395,9 +360,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.AEREO,
                 j14);
 
@@ -418,9 +381,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.CARGANDO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.AEREO,
                 j15);
         dron.setBateria(900);
@@ -439,9 +400,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.NAVAL,
                 j16);
         dron.setBateria(900);
@@ -460,9 +419,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.CARGANDO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.AEREO,
                 j17);
         dron.setBateria(999);
@@ -483,9 +440,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.CARGANDO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.NAVAL,
                 j18);
         dron.setBateria(999);
@@ -505,9 +460,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.AEREO,
                 j19);
         dron.consumirBateriaPorMovimiento();
@@ -524,9 +477,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.DESTRUIDO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.NAVAL,
                 j20);
         dron.consumirBateriaPorMovimiento();
@@ -543,9 +494,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.AEREO,
                 j21);
         dron.setBateria(1);
@@ -564,9 +513,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.NAVAL,
                 j22);
         dron.setBateria(1);
@@ -586,9 +533,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.AEREO,
                 j23);
         dron.setBateria(0);
@@ -610,9 +555,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.NAVAL,
                 j24);
         dron.setBateria(0);
@@ -633,9 +576,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.AEREO,
                 j25);
         dron.setBateria(1000);
@@ -654,9 +595,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.NAVAL,
                 j26);
         dron.setBateria(1000);
@@ -675,9 +614,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.INACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.AEREO,
                 j27);
         dron.setBateria(1000);
@@ -696,9 +633,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.INACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.NAVAL,
                 j28);
         dron.setBateria(1000);
@@ -717,9 +652,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.AEREO,
                 j29);
         dron.setBateria(1000);
@@ -740,9 +673,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.NAVAL,
                 j30);
         dron.setBateria(1000);
@@ -762,9 +693,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.DESTRUIDO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.AEREO,
                 j31);
         dron.setBateria(0);
@@ -783,9 +712,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.DESTRUIDO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.NAVAL,
                 j32);
         dron.setBateria(0);
@@ -804,13 +731,11 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.AEREO,
                 j9);
         Evento_Movimiento eventoMovimiento = new Evento_Movimiento(dron, 10f, 20f, 90);
-        dron.recibeImpacto(eventoMovimiento);
+        dron.recibeImpacto();
         Evento_Movimiento eventoMovimiento2 = new Evento_Movimiento(dron, 15f, 25f, 90);
         dron.moverse(eventoMovimiento2);
         assertFalse(eventoMovimiento2.estaHabilitado());
@@ -828,13 +753,11 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.NAVAL,
                 j9);
         Evento_Movimiento eventoMovimiento = new Evento_Movimiento(dron, 10f, 20f, 90);
-        dron.recibeImpacto(eventoMovimiento);
+        dron.recibeImpacto();
         Evento_Movimiento eventoMovimiento2 = new Evento_Movimiento(dron, 15f, 25f, 90);
         dron.moverse(eventoMovimiento2);
         assertFalse(eventoMovimiento2.estaHabilitado());
@@ -852,9 +775,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.AEREO,
                 j13);
 
@@ -878,9 +799,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.NAVAL,
                 j13);
 
@@ -904,9 +823,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.CARGANDO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.AEREO,
                 j33);
 
@@ -923,9 +840,7 @@ public class DronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                50,
+                
                 TipoElemento.NAVAL,
                 j34);
         dron.recargar(new Evento_Recarga(dron));

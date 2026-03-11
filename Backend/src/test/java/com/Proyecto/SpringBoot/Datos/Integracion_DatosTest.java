@@ -96,7 +96,7 @@ public class Integracion_DatosTest {
         sJ.iniciarSesion();
 
 
-        EntidadSesion entidad = new MapeoSesion().mapearSesionJuego(sJ);
+        EntidadSesion entidad = new MapeoSesion().mapearSesionJuego(sJ, j1);
 
         sesionDAO.save(entidad);
 

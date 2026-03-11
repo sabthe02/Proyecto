@@ -2,6 +2,7 @@ package com.Proyecto.SpringBoot.Servicios;
 
 import java.util.Dictionary;
 
+import org.hibernate.internal.ExceptionConverterImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -29,13 +30,11 @@ public class JugadoresService {
     @Lazy
     private LobbyService lobbyService;
 
-    public JugadoresService()
-    {
+    public JugadoresService() {
         usuariosConectados = new java.util.Hashtable<>();
     }
 
-
-    public EntidadJugador loginUsuario(String nickName) throws JugadorNoExisteException {
+    public EntidadJugador loginUsuario(String nickName) throws JugadorNoExisteException, UsuariosException {
 
         EntidadJugador jugador = null;
 
@@ -45,31 +44,39 @@ public class JugadoresService {
             System.err.println("Error al buscar jugador: " + e.getMessage());
         }
 
-        if (jugador != null) {
+        if (jugador == null) {
+            throw new JugadorNoExisteException("El jugador " + nickName + " no existe");
+        } else {
             if (usuariosConectados.get(jugador.getId()) == null) {
                 usuariosConectados.put(jugador.getId(), jugador);
+            }else{
+                throw new UsuariosException("El usuario ya se encuentra logueado");
             }
 
             return jugador;
         }
 
-        throw new JugadorNoExisteException("El jugador " + nickName + " no existe");
     }
 
-    public EntidadJugador crearUsuario(String nickName, String team) throws ExisteNickNameException {
+    public EntidadJugador crearUsuario(String nickName, String team) throws ExisteNickNameException, UsuariosException {
         if (jugadoresDAO.findByNickName(nickName) != null) {
             throw new ExisteNickNameException("El NickName " + nickName + " ya existe.");
         }
 
-        EntidadJugador nuevoJugador = new EntidadJugador();
-
-        nuevoJugador.setNickName(nickName);
-        nuevoJugador.setTeam(team);
-        return jugadoresDAO.save(nuevoJugador);
+        EntidadJugador nuevo = new EntidadJugador(nickName, team);
+        EntidadJugador jugadorCreado = null;
+        try{
+            jugadorCreado = jugadoresDAO.save(nuevo);
+            usuariosConectados.put(jugadorCreado.getId(), jugadorCreado);
+        }catch(IllegalArgumentException ex)
+        {
+            throw new UsuariosException("Error al crear el usuario: ");
+        }
+        
+        return jugadorCreado;
     }
 
-    public boolean desconectarUsuario(EntidadJugador jugador)
-    {
+    public boolean desconectarUsuario(EntidadJugador jugador) {
         usuariosConectados.remove(jugador.getId());
         return true;
     }
@@ -78,15 +85,14 @@ public class JugadoresService {
 
         if (usuariosConectados.get(jugador.getId()) != null) {
             lobbyService.ingresarJugador(jugador);
-            
-        }else{
+
+        } else {
             throw new UsuariosException("El usuario no esta logueado en el sistema.");
         }
 
     }
 
-    public EntidadJugador obtenerJugadorConectado(String idJugador)
-    {
+    public EntidadJugador obtenerJugadorConectado(String idJugador) {
         return usuariosConectados.get(idJugador);
     }
 

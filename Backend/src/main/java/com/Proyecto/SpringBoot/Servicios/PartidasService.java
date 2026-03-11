@@ -1,5 +1,6 @@
 package com.Proyecto.SpringBoot.Servicios;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -10,23 +11,18 @@ import com.Proyecto.SpringBoot.Datos.MapeoSesion;
 import com.Proyecto.SpringBoot.Datos.DAO.SesionDAO;
 import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 import com.Proyecto.SpringBoot.Datos.Entidades.EntidadSesion;
-import com.Proyecto.SpringBoot.Logica.Bomba;
-import com.Proyecto.SpringBoot.Logica.Dron;
-import com.Proyecto.SpringBoot.Logica.Elemento;
-import com.Proyecto.SpringBoot.Logica.EstadoElemento;
 import com.Proyecto.SpringBoot.Logica.Evento;
 import com.Proyecto.SpringBoot.Logica.Evento_DesplegarDron;
 import com.Proyecto.SpringBoot.Logica.Evento_Disparo;
 import com.Proyecto.SpringBoot.Logica.Evento_Movimiento;
 import com.Proyecto.SpringBoot.Logica.Evento_Recarga;
 import com.Proyecto.SpringBoot.Logica.Mapa;
-import com.Proyecto.SpringBoot.Logica.Misil;
-import com.Proyecto.SpringBoot.Logica.Municion;
 import com.Proyecto.SpringBoot.Logica.PortaDron;
 import com.Proyecto.SpringBoot.Logica.SesionJuego;
 import com.Proyecto.SpringBoot.Logica.iFachada;
 import com.Proyecto.SpringBoot.Logica.iPartidaService;
 import com.Proyecto.SpringBoot.Logica.Excepciones.AccionInvalidaException;
+import com.Proyecto.SpringBoot.Logica.Excepciones.PartidaException;
 
 @Service
 public class PartidasService implements iPartidaService{
@@ -73,11 +69,15 @@ public class PartidasService implements iPartidaService{
     public boolean existePartidaByJugador(EntidadJugador jugador)
     {
         return sesionDAO.findByJugadorPrincipal(jugador) != null;
-
     }
 
-    public boolean desconectarJugador(EntidadJugador jugador) throws Exception {
-        throw new Exception("Metodo no implementado");
+     public void desconectarJugador(EntidadJugador jugador) throws Exception {
+
+        if (jugadorEnSesion.containsKey(jugador.getId())) {
+            String idSesion = jugadorEnSesion.get(jugador.getId());
+            sesionesActivas.get(idSesion).jugadorDesconectado(jugador);
+            jugadorEnSesion.remove(jugador.getId());
+        }
 
     }
 
@@ -98,29 +98,43 @@ public class PartidasService implements iPartidaService{
         return true;
     }
 
-    public boolean recuperarPartida(EntidadJugador jugador) {
+  public boolean recuperarPartida(EntidadJugador jugador) throws PartidaException {
 
-        // Buscar todas las partidas guardadas del jugador
-        List<EntidadSesion> listaSesiones = sesionDAO.buscarSesionesPorNombreJugador(jugador.getNickName());
-        if (listaSesiones == null || listaSesiones.isEmpty()) {
-            return false;
+        // Recupero la partida guardada del jugador
+        EntidadSesion entidad = sesionDAO.findByJugadorPrincipal(jugador);
+        if (entidad == null) {
+            throw new PartidaException("El jugador no tiene partidas guardadas.");
         }
 
-        // Tomar la partida más reciente
-        EntidadSesion entidad = listaSesiones.get(listaSesiones.size() - 1);
+        boolean estanTodos = true;
+        int i = 0;
 
-        // Restaurar la sesión de juego con el mapeador
-        SesionJuego sesion = new MapeoSesion().mapearEntidadSesion(entidad);
-        sesion.setNotificadorPartida(this);
+        List<EntidadJugador> lista = new ArrayList<>();
 
-        // Registrar a todos los jugadores de la sesión restaurada
-        for (EntidadJugador j : entidad.getListaJugadores()) {
-            jugadorEnSesion.put(j.getId(), sesion.getIdSesion());
+        while (i < entidad.getListaJugadores().size() && estanTodos) {
+            // Se obtiene si el jugador esta conectado y no esta en ninguna sesion de juego
+            EntidadJugador jAux = jugadores.obtenerJugadorConectado(entidad.getListaJugadores().get(i).getId());
+            if (jAux != null && jugadorEnSesion.get(jAux.getId()) == null) {
+                lista.add(jAux);
+            } else {
+                estanTodos = false;
+            }
+            i++;
         }
-        sesionesActivas.put(sesion.getIdSesion(), sesion);
 
-        // Inicia la sesión (envía PARTIDA_INICIADA a todos los jugadores)
-        sesion.iniciarSesion();
+        if (estanTodos) {
+            for (EntidadJugador entidadJugador : lista) {
+                jugadorEnSesion.put(entidadJugador.getId(), entidad.getIdSesion());
+            }
+
+            SesionJuego sesion = new SesionJuego(entidad.getIdSesion(), entidad.getListaJugadores(), this);
+            sesionesActivas.put(entidad.getIdSesion(), sesion);
+            List<PortaDron> listaPdron = new MapeoSesion().mapearEntidadSesion(entidad);
+            sesion.recuperarPartidda(listaPdron);
+
+        } else {
+            throw new PartidaException("No se encuentran todos los jugadores conectados para iniciar la partida");
+        }
 
         return true;
     }
@@ -130,7 +144,7 @@ public class PartidasService implements iPartidaService{
 
         String idSes = jugadorEnSesion.get(jugador.getId());
         SesionJuego sJuego = sesionesActivas.get(idSes);
-        EntidadSesion eSesion = mpSesion.mapearSesionJuego(sJuego);
+        EntidadSesion eSesion = mpSesion.mapearSesionJuego(sJuego, jugador);
 
         sesionDAO.save(eSesion);
 

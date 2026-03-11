@@ -22,22 +22,19 @@ public class Dron extends Elemento {
             Integer angulo,
             Integer vida,
             EstadoElemento estado,
-            int cantidadMiniciones,
-            int cantidadUsada,
-            int bateria,
             TipoElemento tipo,
             EntidadJugador jugador) {
         super(id, posicionX, posicionY, posicionZ, angulo, vida, estado, jugador);
 
-        municiones = new java.util.ArrayList<Municion>(); 
+        municiones = new java.util.ArrayList<Municion>();
         this.bateria = MAX_BATERIA;
         this.tipo = tipo;
 
         if (tipo == TipoElemento.AEREO) {
-             this.rangoVision = 200;
-            } else {
-                 this.rangoVision = 100;
-            }
+            this.rangoVision = 200;
+        } else {
+            this.rangoVision = 100;
+        }
 
     }
 
@@ -45,13 +42,20 @@ public class Dron extends Elemento {
 
         Municion municion = null;
         if (tipo == TipoElemento.AEREO) {
-            municion = new Bomba(idMunicion, jugador); 
+            municion = new Bomba(idMunicion, jugador, this.posicionZ);
         } else if (tipo == TipoElemento.NAVAL) {
-            municion = new Misil(idMunicion, jugador); 
+            municion = new Misil(idMunicion, jugador);
         }
 
         municiones.add(municion);
         return municion;
+
+    }
+
+     public Municion agregarMunicion(Municion mun) {
+
+        municiones.add(mun);
+        return mun;
 
     }
 
@@ -84,7 +88,7 @@ public class Dron extends Elemento {
         }
     }
 
-      public int getRangoVision() {
+    public int getRangoVision() {
         return rangoVision;
     }
 
@@ -152,34 +156,45 @@ public class Dron extends Elemento {
         if (this.estado != EstadoElemento.ACTIVO) {
             return;
         }
-        
+
         // Consume bateria al moverse
         this.bateria = Math.max(this.bateria - recargaPorTick, 0);
-        
+
         // Si se agota la bateria, el dron se destruye
         if (this.bateria <= 0) {
             this.estado = EstadoElemento.DESTRUIDO;
         }
     }
 
-    public Elemento disparar(Evento_Disparo intencion) {
+    public Municion disparar(Evento_Disparo intencion) {
 
         if (this.getTipo() == TipoElemento.AEREO) {
 
-            if(this.cantidadMunicionesDisponibles() > 0) {
+            if (this.cantidadMunicionesDisponibles() > 0) {
                 this.municiones.get(0).setUsada(true);
-                return this.municiones.get(0);
+                Municion m = this.municiones.get(0);
+                m.setPosicionX(posicionX);
+                m.setPosicionY(posicionY);
+                m.setPosicionZ(posicionZ);
+                // this.municiones.get(0).setEstado(EstadoElemento.INACTIVO);
+                return m;
             }
 
         } else if (this.getTipo() == TipoElemento.NAVAL) {
-            
+
             for (Municion municion : municiones) {
                 if (!municion.isUsada()) {
                     municion.setUsada(true);
+                    
+                    municion.setPosicionX(posicionX);
+                    municion.setPosicionY(posicionY);
+                    municion.setPosicionZ(posicionZ);
+                    municion.setAngulo(angulo);
+                    // municion.setEstado(EstadoElemento.INACTIVO);
                     return municion;
                 }
             }
-            
+
         }
         return null;
     }
@@ -229,7 +244,7 @@ public class Dron extends Elemento {
                     }
                 }
             }
-            this.setComenzandoCarga(0); 
+            this.setComenzandoCarga(0);
             eventoRecarga.finalizarCarga();
             eventoRecarga.deshabilitar();
 
@@ -242,10 +257,10 @@ public class Dron extends Elemento {
 
     public void setEstado(EstadoElemento estado) {
         this.estado = estado;
-    }   
+    }
 
     @Override
-    public void recibeImpacto(Evento_Movimiento intencion) {
+    public void recibeImpacto() {
         this.setVida(0);
         this.setEstado(EstadoElemento.DESTRUIDO);
     }

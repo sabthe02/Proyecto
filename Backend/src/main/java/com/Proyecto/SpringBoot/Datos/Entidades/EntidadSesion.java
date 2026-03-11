@@ -5,6 +5,7 @@ import java.util.List;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToMany;
@@ -17,10 +18,10 @@ public class EntidadSesion {
     @Id
     private String idSesion;
 
-    @OneToMany (cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany (cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<EntidadPortadron> listaPortadrones;
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     private List<EntidadJugador> listaJugadores;
 
     @OneToOne
@@ -79,5 +80,11 @@ public class EntidadSesion {
         this.idSesion = idSesion;
     }
 
-    
+    public EntidadJugador getJugadorPrincipal() {
+        return jugadorPrincipal;
+    }
+
+    public void setJugadorPrincipal(EntidadJugador jugadorPrincipal) {
+        this.jugadorPrincipal = jugadorPrincipal;
+    }
 }

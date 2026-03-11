@@ -1,5 +1,7 @@
 package com.Proyecto.SpringBoot.Logica.DTO;
 
+import com.Proyecto.SpringBoot.Logica.EstadoElemento;
+
 public class MisilDTO {
 
     int id;
@@ -8,13 +10,14 @@ public class MisilDTO {
     float z;
     int angulo;
     int vida;
-    String estado;
+    EstadoElemento estado;
+    String clase = "MISIL";
 
     float alcance;
     int velocidad;
     boolean usada;
 
-    public MisilDTO(int id, float x, float y, float z, int angulo, int vida, String estado, int velocidad, float alcance) {
+    public MisilDTO(int id, float x, float y, float z, int angulo, int vida, EstadoElemento estado, int velocidad, float alcance) {
         this.id = id;
         this.x = x;
         this.y = y;
@@ -27,7 +30,7 @@ public class MisilDTO {
         this.usada = false;
     }
 
-    public MisilDTO(int id, float x, float y, float z, int angulo, int vida, String estado, float alcance, int velocidad, boolean usada) {
+    public MisilDTO(int id, float x, float y, float z, int angulo, int vida, EstadoElemento estado, float alcance, int velocidad, boolean usada) {
         this.id = id;
         this.x = x;
         this.y = y;
@@ -88,11 +91,11 @@ public class MisilDTO {
         this.vida = vida;
     }
 
-    public String getEstado() {
+    public EstadoElemento getEstado() {
         return estado;
     }
 
-    public void setEstado(String estado) {
+    public void setEstado(EstadoElemento estado) {
         this.estado = estado;
     }
 
@@ -118,6 +121,11 @@ public class MisilDTO {
 
     public void setUsada(boolean usada) {
         this.usada = usada;
+    }
+
+    public String getClase()
+    {
+        return clase;
     }
 
 }

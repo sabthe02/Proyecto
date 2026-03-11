@@ -1,7 +1,6 @@
 package com.Proyecto.SpringBoot.Logica;
 
 import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public abstract class Elemento {
 
@@ -137,15 +136,12 @@ public abstract class Elemento {
 
     public abstract void moverse(Evento_Movimiento intencion); 
 
-    public abstract void recibeImpacto(Evento_Movimiento intencion);
+    public abstract void recibeImpacto();
 
     protected abstract TipoElemento getTipo();
 
     protected abstract int getBateria();
 
-    public int cantidadMunicionesDisponibles() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'cantidadMunicionesDisponibles'");
-    }
+    public abstract int cantidadMunicionesDisponibles();
 
 }

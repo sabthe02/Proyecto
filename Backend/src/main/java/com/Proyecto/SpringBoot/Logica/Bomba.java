@@ -11,11 +11,12 @@ public class Bomba extends Municion {
     private float distancia;
     private final float DIS_MAX = 1500f;
 
-    public Bomba(int id, EntidadJugador jugador) {
+    public Bomba(int id, EntidadJugador jugador, float posZ) {
         super(id, jugador);
         this.peso = 100;
-        this.radioExplosion = 5f;
+        this.radioExplosion = 205f;
         this.distancia = DIS_MAX;
+        this.posicionZ = posZ;
     }
 
     public Bomba(int id, 
@@ -53,11 +54,9 @@ public class Bomba extends Municion {
         return distancia;
     }
 
-    public void calculoDeNuevaPosicion(float speed) {
-        double ang = Math.toRadians(this.angulo);
-        this.posicionX += (float) (Math.cos(ang) * speed);
-        this.posicionY += (float) (Math.sin(ang) * speed);
-        this.distancia -= speed;
+    public float calculoDeNuevaPosicion() {
+       float velocidadInicioaux = velocidadInicio + gravedad;
+       return getPosicionZ() - velocidadInicioaux;   
     }
 
     public void setDistanciaMaxima(float distanciaMaxima) {
@@ -70,23 +69,20 @@ public class Bomba extends Municion {
     }
 
     @Override
-    public void moverse(Evento_Movimiento intencion) {
+    public void moverse(Evento_Movimiento intencion) {    
         velocidadInicio = velocidadInicio + gravedad;
         Bomba bomba = (Bomba) intencion.getElemento();
         bomba.setPosicionZ(bomba.getPosicionZ() - velocidadInicio);        
+    }
+
+    @Override
+    public void recibeImpacto() {
         
     }
 
     @Override
-    public void recibeImpacto(Evento_Movimiento intencion) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'recibeImpacto'");
-    }
-
-    @Override
     protected TipoElemento getTipo() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getTipo'");
+        return TipoElemento.AEREO;
     }
 
     @Override
@@ -96,6 +92,11 @@ public class Bomba extends Municion {
 
     public float getVelocidadInicio() {
         return velocidadInicio;
+    }
+
+    @Override
+    public int cantidadMunicionesDisponibles() {
+        return 0;
     }
 
 }

@@ -18,7 +18,9 @@ import com.Proyecto.SpringBoot.Logica.DTO.EscenarioInicialDTO;
 import com.Proyecto.SpringBoot.Logica.DTO.JugadorDTO;
 import com.Proyecto.SpringBoot.Logica.DTO.LoginUsuarioDTO;
 import com.Proyecto.SpringBoot.Logica.Excepciones.ExisteNickNameException;
+import com.Proyecto.SpringBoot.Logica.Excepciones.JugadorNoExisteException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.LobbyException;
+import com.Proyecto.SpringBoot.Logica.Excepciones.UsuariosException;
 
 import jakarta.annotation.PostConstruct;
 import tools.jackson.databind.JsonNode;
@@ -127,15 +129,11 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
                 return;
             }
             response = procesarRecargaPartida(session, node);
-        } else if (tipo.equals("PING")) {
-            // Responder a PING con PONG para medir latencia
-            response.put("tipo", "PONG");
-            response.put("timestamp", System.currentTimeMillis());
-        } else {
+        }  else {
             // Tipo de mensaje no reconocido - responder con error
-            System.out.println("Tipo de mensaje no reconocido: " + tipo);
-            response.put("tipo", "ERROR");
-            response.put("mensaje", "Tipo de mensaje no reconocido: " + tipo);
+           // System.out.println("Tipo de mensaje no reconocido: " + tipo);
+            //response.put("tipo", "ERROR");
+            //response.put("mensaje", "Tipo de mensaje no reconocido: " + tipo);
         }
 
         sendMessageSafely(session, response);
@@ -192,7 +190,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
                 if (session != null && session.isOpen()) {
                     sendMessageSafely(session, sobre);
 
-                    System.out.println("ACTUALIZAR_PARTIDA enviado a jugador:" + jugador.getId());
+                   // System.out.println("ACTUALIZAR_PARTIDA enviado a jugador:" + jugador.getId());
                 } else {
                     System.out.println("No se envio ACTUALIZAR_PARTIDA a jugador:" + jugador.getId()
                             + " (session nula o cerrada)");
@@ -439,12 +437,15 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
             System.err.println("Jugador " + login.getNickName() + " ha iniciado sesión con ID: " + login.getId());
 
             response.put("tipo", "LOGIN_EXITOSO");
-        } catch (Exception JugadorNoExisteException) {
+        } catch (UsuariosException usuario)
+        {
+            response.put("tipo", "LOGIN_FALLIDO");
+            response.put("mensaje", usuario.getMessage());
+        }catch (JugadorNoExisteException JugadorNoExisteException) {
 
             response.put("tipo", "LOGIN_FALLIDO");
             response.put("mensaje", "Nickname no encontrado");
-
-        }
+        } 
 
         return response;
 
@@ -455,6 +456,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
             return;
         }
         synchronized (session) {
+            String json = message.toString();
             session.sendMessage(new TextMessage(message.toString()));
         }
     }

@@ -28,9 +28,7 @@ public class Evento_RecargaTest {
                             90, 
                             100, 
                             EstadoElemento.ACTIVO, 
-                            0, 
-                            0, 
-                            50, 
+                           
                             TipoElemento.AEREO, 
                             j1); 
         Evento_Recarga evento = new Evento_Recarga(elemento);
@@ -48,9 +46,7 @@ public class Evento_RecargaTest {
                             90, 
                             100, 
                             EstadoElemento.ACTIVO, 
-                            0, 
-                            0, 
-                            50, 
+                            
                             TipoElemento.AEREO, 
                             j1); 
         Evento_Recarga evento = new Evento_Recarga(elemento);
@@ -69,9 +65,7 @@ public class Evento_RecargaTest {
                             90, 
                             100, 
                             EstadoElemento.ACTIVO, 
-                            0, 
-                            0, 
-                            50, 
+                           
                             TipoElemento.AEREO, 
                             j1); 
         Evento_Recarga evento = new Evento_Recarga(elemento);

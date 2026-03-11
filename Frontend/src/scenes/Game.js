@@ -210,7 +210,7 @@ export class Game extends Phaser.Scene {
         this.configurarEventListeners();
         
         // Manejador de redimensionamiento de ventana
-        window.addEventListener('resize', () => this.manejarRedimension());
+        //window.addEventListener('resize', () => this.manejarRedimension());
     }
 
     configurarEventListeners() {

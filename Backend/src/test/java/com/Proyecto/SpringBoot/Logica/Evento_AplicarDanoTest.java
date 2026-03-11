@@ -20,9 +20,7 @@ public class Evento_AplicarDanoTest {
                             90, 
                             100, 
                             EstadoElemento.ACTIVO, 
-                            0, 
-                            0, 
-                            50, 
+                            
                             TipoElemento.AEREO, 
                             j1); 
         Evento_AplicarDano evento = new Evento_AplicarDano (elemento, 100, 0, true, "Misil");

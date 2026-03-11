@@ -18,9 +18,7 @@ public class Evento_DisparoTest {
                             90, 
                             100, 
                             EstadoElemento.ACTIVO, 
-                            0, 
-                            0, 
-                            50, 
+                      
                             TipoElemento.AEREO, 
                             j8); 
         Evento_Disparo evento = new Evento_Disparo(elemento);

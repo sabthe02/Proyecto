@@ -2,23 +2,23 @@ package com.Proyecto.SpringBoot.Logica;
 
 public class Evento_RecibeImpacto extends Evento {
 
-    int idElementoEmisor;
+    Elemento ElementoEmisor;
 
     public Evento_RecibeImpacto() {
-        idElementoEmisor = 0;
+        ElementoEmisor = null;
     }
 
-    public Evento_RecibeImpacto(Elemento idElemento, int idElementoEmisor) {
+    public Evento_RecibeImpacto(Elemento idElemento, Elemento idElementoEmisor) {
         super(idElemento);
-        this.idElementoEmisor = idElementoEmisor;
+        this.ElementoEmisor = idElementoEmisor;
     }
 
-    public int getIdElementoEmisor() {
-        return idElementoEmisor;
+    public Elemento getIdElementoEmisor() {
+        return ElementoEmisor;
     }
 
-    public void setIdElementoEmisor(int idElementoEmisor) {
-        this.idElementoEmisor = idElementoEmisor;
+    public void setIdElementoEmisor(Elemento idElementoEmisor) {
+        this.ElementoEmisor = idElementoEmisor;
     }
 
 }

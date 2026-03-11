@@ -45,29 +45,14 @@ public class Misil extends Municion {
         this.distancia = distancia;
     }
 
-    public void moverse(Evento_Movimiento intencion) {
-
-        Misil misil = (Misil) intencion.getElemento();
-        this.posicionX = misil.posicionX;
-        this.posicionY = misil.posicionY;
-        this.posicionZ = misil.posicionZ;
-        this.distancia = this.distancia - velocidad;
-        if (this.distancia <= 0) {
-            this.setEstado(EstadoElemento.INACTIVO);
-        }
-
-    }
-
     @Override
-    public void recibeImpacto(Evento_Movimiento intencion) {
+    public void recibeImpacto() {
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'recibeImpacto'");
     }
 
     @Override
     protected TipoElemento getTipo() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getTipo'");
+        return TipoElemento.NAVAL;
     }
 
     @Override
@@ -79,11 +64,6 @@ public class Misil extends Municion {
         return DIS_MAX;
     }
 
-    public void mover(Evento_Movimiento eventoMovimientoMisil) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'mover'");
-    }
-
     public void calculoDeNuevaPosicion() {
         double angleRad = Math.toRadians(this.angulo);
         float deltaX = (float) (Math.cos(angleRad) * this.velocidad);
@@ -91,6 +71,23 @@ public class Misil extends Municion {
         this.posicionX += deltaX;
         this.posicionY += deltaY;
         this.distancia = this.distancia - velocidad;
+    }
+
+    @Override
+    public void moverse(Evento_Movimiento intencion) {
+        Misil misil = (Misil) intencion.getElemento();
+        this.posicionX = misil.posicionX;
+        this.posicionY = misil.posicionY;
+        this.posicionZ = misil.posicionZ;
+        this.distancia = this.distancia - velocidad;
+        if (this.distancia <= 0) {
+            this.setEstado(EstadoElemento.INACTIVO);
+        }
+    }
+
+    @Override
+    public int cantidadMunicionesDisponibles() {
+        return 0;
     }
 
 }

@@ -18,9 +18,7 @@ public class PortaDronTest {
                                         90, 
                                         100, 
                                         EstadoElemento.ACTIVO, 
-                                        0, 
-                                        0, 
-                                        0, 
+                                       
                                         TipoElemento.AEREO, 
                                         j1);
         assertEquals(001, portaDron.getId());
@@ -45,9 +43,7 @@ public class PortaDronTest {
                                         90, 
                                         100, 
                                         EstadoElemento.ACTIVO, 
-                                        0, 
-                                        0, 
-                                        0, 
+                                     
                                         TipoElemento.AEREO, 
                                         j1);
         Dron dron1 = new Dron(1, 
@@ -57,9 +53,7 @@ public class PortaDronTest {
                             90, 
                             100, 
                             EstadoElemento.ACTIVO, 
-                            1, 
-                            0, 
-                            50, 
+                            
                             TipoElemento.AEREO, 
                             j1);
         portaDron.AgregarDron(dron1);
@@ -77,9 +71,7 @@ public class PortaDronTest {
                                         90, 
                                         100, 
                                         EstadoElemento.ACTIVO, 
-                                        0, 
-                                        0, 
-                                        0, 
+                                        
                                         TipoElemento.AEREO, 
                                         j1);
         portaDron.setTipo(TipoElemento.NAVAL);
@@ -96,20 +88,18 @@ public class PortaDronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                0,
+              
                 TipoElemento.AEREO,
                 j1);
 
         Evento_Movimiento evento = new Evento_Movimiento(portaDron, 10f, 20f, 90);
-        portaDron.recibeImpacto(evento);
+        portaDron.recibeImpacto();
         assertEquals(84, portaDron.getVida());
         assertEquals(EstadoElemento.ACTIVO, portaDron.getEstado());
 
         // Simular más impactos para destruir el PortaDron
         for (int i = 0; i < 5; i++) {
-            portaDron.recibeImpacto(evento);
+            portaDron.recibeImpacto();
         }
         assertEquals(0, portaDron.getVida());
         assertEquals(EstadoElemento.DESTRUIDO, portaDron.getEstado());
@@ -125,20 +115,18 @@ public class PortaDronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                0,
+              
                 TipoElemento.NAVAL,
                 j1);
 
         Evento_Movimiento evento = new Evento_Movimiento(portaDron, 10f, 20f, 90);
-        portaDron.recibeImpacto(evento);
+        portaDron.recibeImpacto();
         assertEquals(67, portaDron.getVida());
         assertEquals(EstadoElemento.ACTIVO, portaDron.getEstado());
 
         // Simular más impactos para destruir el PortaDron
         for (int i = 0; i < 2; i++) {
-            portaDron.recibeImpacto(evento);
+            portaDron.recibeImpacto();
         }
         assertEquals(0, portaDron.getVida());
         assertEquals(EstadoElemento.DESTRUIDO, portaDron.getEstado());
@@ -154,9 +142,7 @@ public class PortaDronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                0,
+               
                 TipoElemento.AEREO,
                 j1);
         Dron dron1 = new Dron(1,
@@ -166,9 +152,7 @@ public class PortaDronTest {
                 90,
                 100,
                 EstadoElemento.INACTIVO,
-                1,
-                0,
-                50,
+               
                 TipoElemento.AEREO,
                 j1);
         Dron dron3 = new Dron(3,
@@ -178,9 +162,7 @@ public class PortaDronTest {
                 90,
                 100,
                 EstadoElemento.INACTIVO,
-                1,
-                0,
-                50,
+               
                 TipoElemento.AEREO,
                 j1);
         Dron dron2 = new Dron(2,
@@ -190,9 +172,7 @@ public class PortaDronTest {
                 90,
                 100,
                 EstadoElemento.DESTRUIDO,
-                1,
-                0,
-                50,
+               
                 TipoElemento.AEREO,
                 j1);
         Dron dron4 = new Dron(4,
@@ -202,9 +182,7 @@ public class PortaDronTest {
                 90,
                 100,
                 EstadoElemento.INACTIVO,
-                1,
-                0,
-                50,
+                
                 TipoElemento.AEREO,
                 j1);
         portaDron.AgregarDron(dron1);
@@ -228,9 +206,7 @@ public class PortaDronTest {
                 90,
                 100,
                 EstadoElemento.ACTIVO,
-                0,
-                0,
-                0,
+                
                 TipoElemento.AEREO,
                 j1);
         Evento_Movimiento evento = new Evento_Movimiento(portaDron, 15f, 25f, 180);

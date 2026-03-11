@@ -25,9 +25,7 @@ public class Evento_DesplegarDronTest {
                             90, 
                             100, 
                             EstadoElemento.ACTIVO, 
-                            0, 
-                            0, 
-                            50, 
+                   
                             TipoElemento.AEREO, 
                             j1); 
         Evento_DesplegarDron evento = new Evento_DesplegarDron(elemento);

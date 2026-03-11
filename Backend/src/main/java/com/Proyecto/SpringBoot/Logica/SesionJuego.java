@@ -1,10 +1,9 @@
 package com.Proyecto.SpringBoot.Logica;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-
-import org.hibernate.action.internal.EntityAction;
 
 import com.Proyecto.SpringBoot.Datos.Entidades.EntidadJugador;
 import com.Proyecto.SpringBoot.Logica.Excepciones.PartidaException;
@@ -15,61 +14,45 @@ public class SesionJuego extends GameLoop {
     private Map<EntidadJugador, PortaDron> elementosJugadores;
     private Map<Integer, Elemento> elementosEnJuego;
     private List<Evento> accionesPendientesEnviar;
-    private List<Evento> accionesPendientesProcesar;
+    private LinkedList<Evento> accionesPendientesProcesar;
+    private List<Evento> accionesPendientesProcesarProximoTick;
     private List<EntidadJugador> jugadores;
     private Mapa mapa;
     private EntidadJugador ganadorJuego = null;
 
     private iPartidaService notificadorPartida;
-/////////////////////////
-    public void setNotificadorPartida(iPartidaService notificadorPartida) {
-        this.notificadorPartida = notificadorPartida;
-    }
-////////////////////////
+
     public SesionJuego(String idSesion, List<EntidadJugador> jugadores, iPartidaService notificadorPartida) {
         this.mapa = new Mapa();
         this.idSesion = idSesion;
         this.notificadorPartida = notificadorPartida;
         this.elementosJugadores = new java.util.Hashtable<EntidadJugador, PortaDron>();
         this.jugadores = jugadores;
-        for (EntidadJugador jugador : jugadores) {
-            this.elementosJugadores.put(jugador, crearPortaDronParaJugador(jugador));
-        }
         elementosEnJuego = new java.util.Hashtable<Integer, Elemento>();
+        accionesPendientesProcesarProximoTick = new java.util.ArrayList<Evento>();
         accionesPendientesEnviar = new java.util.ArrayList<Evento>();
-        accionesPendientesProcesar = new ArrayList<>();
+        accionesPendientesProcesar = new LinkedList<>();
     }
 
-    private PortaDron crearPortaDronParaJugador(EntidadJugador jugador) {
-        TipoElemento tipoJugador = obtenerTipoElementoJugador(jugador);
-        
-        // Calcular vida segun tipo:
-        // AEREO: atacado por misiles (50 dano) - debe resistir 6 misiles = 6 * 50 = 300
-        // NAVAL: atacado por bombas (100 dano) - debe resistir 3 bombas = 3 * 100 = 300
-        int vidaPortadron;
-        if (tipoJugador == TipoElemento.AEREO) {
-            vidaPortadron = 6 * 50; // 6 misiles
-        } else {
-            vidaPortadron = 3 * 100; // 3 bombas
-        }
-        
-        return new PortaDron(0, 0f, 0f, 0f, 0, vidaPortadron, EstadoElemento.ACTIVO, 0, 0, 0, tipoJugador, jugador);
+    public void setNotificadorPartida(iPartidaService notificadorPartida) {
+        this.notificadorPartida = notificadorPartida;
     }
 
-    private TipoElemento obtenerTipoElementoJugador(EntidadJugador jugador) {
-        if (jugador == null || jugador.getTeam() == null) {
-            return TipoElemento.NAVAL;
-        }
+    
+    public void jugadorDesconectado(EntidadJugador jugador)
+    {
+        elementosJugadores.remove(jugador);
+        jugadores.remove(jugador);
 
-        String team = jugador.getTeam().trim().toUpperCase();
-        if ("AEREO".equals(team)) {
-            return TipoElemento.AEREO;
+        if(jugadores.size() == 0)
+        {
+            setGanador(jugadores.get(0));  
+            procesarFinalizacionPartida();
         }
-
-        return TipoElemento.NAVAL;
     }
 
-    public void iniciarSesion() {
+    private void crearElementosPartida() {
+
         // Recorro la lista de jugadores y les creo los portadrones y drones.
         for (int h = 0; h < jugadores.size(); h++) {
 
@@ -81,8 +64,7 @@ public class SesionJuego extends GameLoop {
 
             if (tipoJugador == TipoElemento.AEREO) {
                 // Debe resistir 6 impactos de misil
-                PortaDron p = new PortaDron(elementosEnJuego.size(), 500f, 500f, 99f, 0, 300, EstadoElemento.ACTIVO, 0, 0,
-                        0,
+                PortaDron p = new PortaDron(elementosEnJuego.size(), 500f, 500f, 99f, 0, 300, EstadoElemento.ACTIVO,
                         TipoElemento.AEREO, jugador);
                 elementosEnJuego.put(p.getId(), p);
                 elementosJugadores.put(jugador, p);
@@ -97,8 +79,7 @@ public class SesionJuego extends GameLoop {
 
                     // Drones deben comenzar inactivos (dentro del portadron)
                     // Se despliegan con la accion DESPLEGAR
-                    Dron d = new Dron(elementosEnJuego.size(), dronX, dronY, 100f, 0, 100, EstadoElemento.INACTIVO, 0,
-                            0, 0,
+                    Dron d = new Dron(elementosEnJuego.size(), dronX, dronY, 100f, 0, 100, EstadoElemento.INACTIVO,
                             TipoElemento.AEREO, jugador);
                     elementosEnJuego.put(d.getId(), d);
                     d.cargarMunicionInicial(elementosEnJuego);
@@ -108,7 +89,7 @@ public class SesionJuego extends GameLoop {
                 }
             } else {
                 // Debe resistir 3 impactos de bomba
-                PortaDron p = new PortaDron(elementosEnJuego.size(), 3500f, 3500f, 0f, 0, 300, EstadoElemento.ACTIVO, 0, 0, 0,
+                PortaDron p = new PortaDron(elementosEnJuego.size(), 3500f, 3500f, 0f, 0, 300, EstadoElemento.ACTIVO,
                         TipoElemento.NAVAL, jugador);
                 elementosEnJuego.put(p.getId(), p);
                 elementosJugadores.put(jugador, p);
@@ -116,15 +97,14 @@ public class SesionJuego extends GameLoop {
                 int j = 0;
                 while (j < 6) {
                     // Posicionar drones en círculo alrededor del portadrón
-                    float angulo = (float)(j * 2 * Math.PI / 6);
+                    float angulo = (float) (j * 2 * Math.PI / 6);
                     float radioCirculo = 200f;
                     float dronX = 3500f + (float) (Math.cos(angulo) * radioCirculo);
                     float dronY = 3500f + (float) (Math.sin(angulo) * radioCirculo);
 
                     // Drones deben comenzar inactivos (dentro del portadron)
                     // Se despliegan con la accion DESPLEGAR
-                    Dron d = new Dron(elementosEnJuego.size(), dronX, dronY, 1f, 0, 100, EstadoElemento.INACTIVO, 0, 0,
-                            0,
+                    Dron d = new Dron(elementosEnJuego.size(), dronX, dronY, 1f, 0, 100, EstadoElemento.INACTIVO,
                             TipoElemento.NAVAL, jugador);
                     elementosEnJuego.put(d.getId(), d);
                     d.cargarMunicionInicial(elementosEnJuego);
@@ -135,37 +115,61 @@ public class SesionJuego extends GameLoop {
             }
 
         }
+    }
+
+    public void recuperarPartidda(List<PortaDron> listaPortadron) {
+        for (PortaDron portaDron : listaPortadron) {
+            elementosJugadores.put(portaDron.getJugador(), portaDron);
+            elementosEnJuego.put(portaDron.getId(), portaDron);
+
+            for (Dron dron : portaDron.getDrones()) {
+                elementosEnJuego.put(dron.getId(), dron);
+
+                for (Municion municion : dron.getMuniciones()) {
+                    elementosEnJuego.put(municion.getId(), municion);
+                }
+            }
+        }
+
+        iniciarSesion();
+    }
+
+    public void iniciarSesion() {
+
+        if (elementosJugadores.values().size() == 0)
+            crearElementosPartida();
+
         List<PortaDron> portaDrones = new java.util.ArrayList<PortaDron>();
         elementosJugadores.forEach((jugador, portaDron) -> {
             portaDrones.add(portaDron);
         });
-
         notificadorPartida.EnviarInicioPartida(portaDrones, mapa);
 
         iniciar();
 
-
         // Enviar estado inicial del juego (elementos creados)
         List<EntidadJugador> jugadores = new java.util.ArrayList<>(elementosJugadores.keySet());
-        
+
         List<Evento> estadoInicial = new java.util.ArrayList<>();
 
         // Crear eventos de movimiento para todos los elementos creados
         elementosEnJuego.forEach((id, elemento) -> {
             String tipo;
             if (elemento instanceof PortaDron) {
-                tipo = String.valueOf(((PortaDron)elemento).getTipo());
+                tipo = String.valueOf(((PortaDron) elemento).getTipo());
             } else if (elemento instanceof Dron) {
-                tipo = String.valueOf(((Dron)elemento).getTipo());
+                tipo = String.valueOf(((Dron) elemento).getTipo());
             } else {
                 tipo = "N/A";
             }
-            
-            System.out.println("  - Elemento id=" + id + " clase=" + elemento.getClass().getSimpleName() + 
-                             " tipo=" + tipo +
-                             " pos=(" + elemento.getPosicionX() + "," + elemento.getPosicionY() + "," + elemento.getPosicionZ() + ")" +
-                             " estado=" + elemento.getEstado());
-            estadoInicial.add(new Evento_Movimiento(elemento, elemento.getPosicionX(), elemento.getPosicionY(), elemento.getAngulo()));
+
+            System.out.println("  - Elemento id=" + id + " clase=" + elemento.getClass().getSimpleName() +
+                    " tipo=" + tipo +
+                    " pos=(" + elemento.getPosicionX() + "," + elemento.getPosicionY() + "," + elemento.getPosicionZ()
+                    + ")" +
+                    " estado=" + elemento.getEstado());
+            estadoInicial.add(new Evento_Movimiento(elemento, elemento.getPosicionX(), elemento.getPosicionY(),
+                    elemento.getAngulo()));
         });
 
         System.out.println("Enviando ACTUALIZAR_PARTIDA con " + estadoInicial.size() + " eventos");
@@ -190,8 +194,6 @@ public class SesionJuego extends GameLoop {
         return accionesPendientesEnviar;
     }
 
-   
-
     public Elemento getElemento(int idElemento) throws PartidaException {
         Elemento el = elementosEnJuego.get(idElemento);
 
@@ -209,36 +211,143 @@ public class SesionJuego extends GameLoop {
 
     @Override
     protected void render() {
-        if(accionesPendientesEnviar.size()>0)
-        {
+        if (accionesPendientesEnviar.size() > 0) {
             notificadorPartida.EnviarActualizaciones(jugadores, accionesPendientesEnviar);
             accionesPendientesEnviar.clear();
         }
+    }
+
+    public List<Elemento> enLaTrayectoria(Evento_Movimiento intencion) {
+        List<Elemento> respuesta = new ArrayList<>();
+
+        Elemento elementoAtacante = intencion.getElemento();
+
+        float radio = 50;
+        if (intencion.elemento instanceof Bomba) {
+            radio = ((Bomba) intencion.elemento).getRadioExplosion();
+        }
+
+        for (PortaDron portaDron : elementosJugadores.values()) {
+
+            if (portaDron.getTipo() != elementoAtacante.getTipo()) {
+                if (portaDron.getEstado() == EstadoElemento.ACTIVO) {
+
+                    if (intencion.getElemento().getPosicionZ() == 0) {
+
+                        String s;
+                    }
+
+                    if (intencion.getElemento() instanceof Bomba) {
+                        if (mapa.estaEnLaTrayectoriaBomba(intencion.getElemento().getPosicionX(),
+                                intencion.getElemento().getPosicionY(), intencion.getElemento().getPosicionZ(),
+                                portaDron.getPosicionX(), portaDron.getPosicionY(),
+                                portaDron.getPosicionZ(), radio)) {
+                            respuesta.add(portaDron);
+                        }
+                    } else {
+                        if (mapa.estaEnLaTrayectoriaMisil(intencion.getElemento().getPosicionX(),
+                                intencion.getElemento().getPosicionY(),
+                                portaDron.getPosicionX(), portaDron.getPosicionY(),
+                                radio, intencion.getElemento().getAngulo())) {
+                            respuesta.add(portaDron);
+                        }
+                    }
+                }
+
+                for (Dron dron : portaDron.getDrones()) {
+                    if (dron.getEstado() == EstadoElemento.ACTIVO) {
+                        if (intencion.getElemento() instanceof Bomba) {
+                            if (mapa.estaEnLaTrayectoriaBomba(intencion.getElemento().getPosicionX(),
+                                    intencion.getElemento().getPosicionY(), intencion.getElemento().getPosicionZ(),
+                                    dron.getPosicionX(), dron.getPosicionY(),
+                                    dron.getPosicionZ(), radio)) {
+                                respuesta.add(dron);
+                            }
+                        } else {
+                            if (mapa.estaEnLaTrayectoriaMisil(intencion.getElemento().getPosicionX(),
+                                    intencion.getElemento().getPosicionY(),
+                                    dron.getPosicionX(), dron.getPosicionY(),
+                                    radio, intencion.getElemento().getAngulo())) {
+                                respuesta.add(dron);
+                            }
+                        }
+                    }
+                }
+            }
+
+        }
+        return respuesta;
     }
 
     @Override
     protected void processInput(Evento intencion) {
         // Valida eventos y agrega a la cola local de procesamiento
         String tipoEvento = intencion.getClass().getSimpleName();
-        
-        if (tipoEvento.equals("Evento_Movimiento")) {
-            Evento_Movimiento eventoMovimiento = (Evento_Movimiento) intencion;
 
-            Elemento dron = (Elemento) elementosEnJuego.get(intencion.getIdElemento());
-            if (dron.getEstado() != EstadoElemento.ACTIVO ||  dron.getVida() <= 0) {
+        if (tipoEvento.equals("Evento_Movimiento")) {
+
+            Evento_Movimiento eventoMovimiento = (Evento_Movimiento) intencion;
+            Elemento elemento = elementosEnJuego.get(intencion.getIdElemento());
+            if (elemento.getEstado() != EstadoElemento.ACTIVO || elemento.getVida() <= 0) {
                 return;
             }
 
-            if(dron instanceof Dron)
-            {
-                if(dron.getBateria() <= 0)
+            if (elemento instanceof Dron && elemento.getBateria() <= 0) {
+                return;
+            }
+
+            if (elemento instanceof Misil) {
+                Misil misil = (Misil) elemento;
+                misil.moverse(eventoMovimiento);
+                List<Elemento> objetivo = enLaTrayectoria(eventoMovimiento);
+                if (objetivo.size() > 0) {
+                    for (Elemento elemento2 : objetivo) {
+                        elemento2.recibeImpacto();
+                        accionesPendientesEnviar
+                                .add(new Evento_RecibeImpacto(elemento2, eventoMovimiento.getElemento()));
+                        accionesPendientesEnviar.add(new Evento_ActualizaEstado(elemento2));
+                    }
+
+                    misil.setEstado(EstadoElemento.INACTIVO);
                     return;
+                }
+                if (misil.getDistancia() < misil.getDIS_MAX()) {
+                    misil.calculoDeNuevaPosicion();
+                    accionesPendientesProcesarProximoTick.add(new Evento_Movimiento(misil, misil.getPosicionX(),
+                            misil.getPosicionY(), misil.getAngulo()));
+                } else {
+                    misil.setEstado(EstadoElemento.INACTIVO);
+
+                }
+
+            } else if (elemento instanceof Bomba) {
+                Bomba bomba = (Bomba) elemento;
+                bomba.moverse(eventoMovimiento);
+                List<Elemento> objetivos = enLaTrayectoria(eventoMovimiento);
+                if (objetivos.size() > 0) {
+                    for (Elemento elementoAux : objetivos) {
+                        elementoAux.recibeImpacto();
+                        accionesPendientesEnviar
+                                .add(new Evento_RecibeImpacto(elementoAux, eventoMovimiento.getElemento()));
+                        accionesPendientesEnviar.add(new Evento_ActualizaEstado(elementoAux));
+
+                    }
+                    bomba.setEstado(EstadoElemento.INACTIVO);
+                }
+                if (bomba.getPosicionZ() > 0) {
+                    bomba.calculoDeNuevaPosicion();
+                    accionesPendientesProcesarProximoTick.add(new Evento_Movimiento(bomba, bomba.getPosicionX(),
+                            bomba.getPosicionY(), bomba.getAngulo()));
+                } else {
+                    bomba.setEstado(EstadoElemento.INACTIVO);
+                }
+
             }
 
             eventoMovimiento.habilitar();
-            return;
+
         }
-        
+
         if (tipoEvento.equals("Evento_Disparo")) {
             Evento_Disparo eventoDisparo = (Evento_Disparo) intencion;
             Dron dronDisparador = (Dron) elementosEnJuego.get(intencion.getIdElemento());
@@ -248,14 +357,12 @@ public class SesionJuego extends GameLoop {
                     dronDisparador.cantidadMunicionesDisponibles() <= 0) {
                 return;
             }
-            Elemento municion = dronDisparador.disparar(eventoDisparo);
-            if (municion != null) {
-                elementosEnJuego.put(municion.getId(), municion);
-                eventoDisparo.habilitar();
-            }
+
+            eventoDisparo.habilitar();
+
             return;
         }
-        
+
         if (tipoEvento.equals("Evento_Recarga")) {
             Evento_Recarga eventoRecarga = (Evento_Recarga) intencion;
             Dron dronRecarga = (Dron) elementosEnJuego.get(intencion.getIdElemento());
@@ -269,7 +376,7 @@ public class SesionJuego extends GameLoop {
             eventoRecarga.habilitar();
             return;
         }
-        
+
         if (tipoEvento.equals("Evento_DesplegarDron")) {
             Evento_DesplegarDron eventoDesplegarDron = (Evento_DesplegarDron) intencion;
             PortaDron portaDron = (PortaDron) elementosEnJuego.get(intencion.getIdElemento());
@@ -280,39 +387,49 @@ public class SesionJuego extends GameLoop {
             eventoDesplegarDron.habilitar();
             return;
         }
-        
+
     }
 
     private void update(Evento accion) {
         String tipoEvento = accion.getClass().getSimpleName();
-        
+
         if (tipoEvento.equals("Evento_Movimiento")) {
             if (accion.estaHabilitado()) {
                 Evento_Movimiento eventoMovimiento = (Evento_Movimiento) accion;
-                Elemento dron = (Elemento) elementosEnJuego.get(accion.getIdElemento());
-                dron.moverse(eventoMovimiento);
+                Elemento elem = (Elemento) elementosEnJuego.get(accion.getIdElemento());
+                if (!(elem instanceof Municion))
+                    elem.moverse(eventoMovimiento);
+
+                this.accionesPendientesEnviar.add(new Evento_ActualizaEstado(elem));
             }
-            this.accionesPendientesEnviar.add(accion);
+
             return;
         }
-        
+
         if (tipoEvento.equals("Evento_Disparo")) {
             if (accion.estaHabilitado()) {
                 Evento_Disparo eventoDisparo = (Evento_Disparo) accion;
                 Dron dronDisparador = (Dron) elementosEnJuego.get(accion.getIdElemento());
                 Elemento municion = dronDisparador.disparar(eventoDisparo);
-                if (municion != null) {
-                    elementosEnJuego.put(municion.getId(), municion);
-                }
-                Evento_Movimiento eventoMovimientoMunicion = new Evento_Movimiento();
+
+                elementosEnJuego.put(municion.getId(), municion);
+
+                Evento_Movimiento eventoMovimientoMunicion = new Evento_Movimiento(municion,
+                        dronDisparador.getPosicionX(), dronDisparador.getPosicionY(), dronDisparador.getAngulo());
+
                 municion.moverse(eventoMovimientoMunicion);
-                processInput(eventoMovimientoMunicion);
                 accion.deshabilitar();
+
+                this.accionesPendientesProcesarProximoTick
+                        .add(new Evento_Movimiento(eventoMovimientoMunicion.getElemento(), municion.getPosicionX(),
+                                municion.getPosicionY(), municion.getAngulo()));
+                this.accionesPendientesEnviar.add(new Evento_ActualizaEstado(municion));
+
             }
-            this.accionesPendientesEnviar.add(accion);
+
             return;
         }
-        
+
         if (tipoEvento.equals("Evento_Recarga")) {
             if (accion.estaHabilitado()) {
                 Evento_Recarga eventoRecarga = (Evento_Recarga) accion;
@@ -328,40 +445,39 @@ public class SesionJuego extends GameLoop {
                     dronRecarga.recargaMunicion(eventoRecarga);
                 }
             }
-            this.accionesPendientesEnviar.add(accion);
+            this.accionesPendientesEnviar.add(new Evento_ActualizaEstado(accion.getElemento()));
             return;
         }
-        
+
         if (tipoEvento.equals("Evento_DesplegarDron")) {
             if (accion.estaHabilitado()) {
                 Evento_DesplegarDron eventoDesplegarDron = (Evento_DesplegarDron) accion;
                 PortaDron portaDron = (PortaDron) elementosEnJuego.get(accion.getIdElemento());
-                portaDron.getEstado().equals(EstadoElemento.INACTIVO);
+                //portaDron.getEstado().equals(EstadoElemento.INACTIVO);
                 Dron dronDesplegado = portaDron.desplegarDron(eventoDesplegarDron);
                 if (dronDesplegado != null) {
                     elementosEnJuego.put(dronDesplegado.getId(), dronDesplegado);
                     dronDesplegado.descargaBateria();
                 }
             }
-            this.accionesPendientesEnviar.add(accion);
+            this.accionesPendientesEnviar.add(new Evento_ActualizaEstado(accion.getElemento()));
             return;
         }
-        
-        if (this.finalizarSesion()) {
 
-        }
+        this.finalizarSesion();
 
     }
+
 
     public boolean finalizarSesion() {
         List<EntidadJugador> jugadorGanador = new ArrayList<>();
         List<EntidadJugador> jugadorPerdedor = new ArrayList<>();
 
         for (PortaDron portaDron : elementosJugadores.values()) {
-            if (portaDron.getEstado() == EstadoElemento.DESTRUIDO && portaDron.cantidadDronesDestruidos() <= portaDron.drones.size()) {
+            if (portaDron.getEstado() == EstadoElemento.DESTRUIDO
+                    || portaDron.cantidadDronesDestruidos() == portaDron.drones.size()) {
                 jugadorPerdedor.add(portaDron.getJugador());
-            }else
-            {
+            } else {
                 jugadorGanador.add(portaDron.getJugador());
             }
         }
@@ -370,7 +486,7 @@ public class SesionJuego extends GameLoop {
             setGanador(jugadorGanador.get(0));
             return true;
         }
-        
+
         // Juego continua
         return false;
     }
@@ -383,9 +499,17 @@ public class SesionJuego extends GameLoop {
     protected void update(long deltaTime) {
         // Lógica de actualización por tick - llamado por GameLoop cada 30ms
         // Maneja sistemas automatizados que necesitan actualizaciones continuas
-        // Las acciones del jugador (mover/disparar/desplegar) se manejan inmediatamente via WebSocket
-        
-        // Procesar eventos pendientes de la cola local (para compatibilidad con WebSocket)
+        // Las acciones del jugador (mover/disparar/desplegar) se manejan inmediatamente
+        // via WebSocket
+
+        // Procesar eventos pendientes de la cola local (para compatibilidad con
+        // WebSocket)
+
+        while (!accionesPendientesProcesarProximoTick.isEmpty()) {
+            Evento accion = accionesPendientesProcesarProximoTick.remove(0);
+            accionesPendientesProcesar.addFirst(accion);
+        }
+
         while (!accionesPendientesProcesar.isEmpty()) {
             Evento accion = accionesPendientesProcesar.remove(0);
 
@@ -393,30 +517,30 @@ public class SesionJuego extends GameLoop {
             processInput(accion);
             update(accion);
         }
-        
+
         // Actualizar todos los drones - lógica automatizada por tick
         for (Elemento elemento : elementosEnJuego.values()) {
             if (elemento instanceof Dron) {
                 Dron dron = (Dron) elemento;
                 boolean necesitaActualizacion = false;
-                
+
                 // Verificar agotamiento de batería para drones ACTIVO
                 if (dron.getEstado() == EstadoElemento.ACTIVO) {
                     // Consumir batería por estar activo (1 por tick)
                     int bateriaAntes = dron.getBateria();
                     dron.consumirBateriaPorMovimiento();
-                    
+
                     if (dron.getBateria() != bateriaAntes) {
                         necesitaActualizacion = true;
                     }
-                    
+
                     if (dron.getBateria() <= 0) {
                         dron.setEstado(EstadoElemento.DESTRUIDO);
                         System.out.println("Dron " + dron.getId() + " destruido por bateria agotada");
                         necesitaActualizacion = true;
                     }
                 }
-                
+
                 // Manejar estado cargando - recarga de batería y munición por tick
                 if (dron.getEstado() == EstadoElemento.CARGANDO) {
                     // Crear o encontrar Evento_Recarga para este dron
@@ -428,14 +552,13 @@ public class SesionJuego extends GameLoop {
                             encontrado = true;
                         }
                     }
-                    
+
                     // Si no existe evento de recarga, crear uno nuevo
                     if (eventoRecarga == null) {
                         eventoRecarga = new Evento_Recarga(dron);
                         eventoRecarga.habilitar();
-                        accionesPendientesEnviar.add(eventoRecarga);
                     }
-                    
+
                     if (eventoRecarga.estaHabilitado()) {
                         // Recarga de batería (1 por tick hasta MAX_BATERIA)
                         if (dron.getBateria() < dron.getMAX_BATERIA()) {
@@ -450,65 +573,53 @@ public class SesionJuego extends GameLoop {
                         // Ambas completas - transición a INACTIVO
                         else {
                             eventoRecarga.deshabilitar();
-                            accionesPendientesEnviar.remove(eventoRecarga);
                             dron.setEstado(EstadoElemento.INACTIVO);
                             necesitaActualizacion = true;
                         }
                     }
                 }
-                
+
                 // Enviar actualización de estado del dron si hubo cambios
                 if (necesitaActualizacion) {
-                    Evento_Movimiento actualizacionDron = new Evento_Movimiento(
-                        dron, 
-                        dron.getPosicionX(), 
-                        dron.getPosicionY(), 
-                        dron.getAngulo()
-                    );
-                    actualizacionDron.habilitar();
-                    accionesPendientesEnviar.add(actualizacionDron);
+                    accionesPendientesEnviar.add(new Evento_ActualizaEstado(dron));
                 }
             }
         }
-        
-        // Manejar destrucción de portadrones - destruir todos sus drones INACTIVO y CARGANDO
+
+        // Manejar destrucción de portadrones - destruir todos sus drones INACTIVO y
+        // CARGANDO
         for (Map.Entry<EntidadJugador, PortaDron> entrada : elementosJugadores.entrySet()) {
             PortaDron portaDron = entrada.getValue();
-            
+
             if (portaDron.getEstado() == EstadoElemento.DESTRUIDO) {
                 // Destruir todos los drones no activos de este portadron
                 for (Dron dron : portaDron.getDrones()) {
                     if (dron.getEstado() == EstadoElemento.INACTIVO || dron.getEstado() == EstadoElemento.CARGANDO) {
                         dron.setEstado(EstadoElemento.DESTRUIDO);
                         System.out.println("Dron " + dron.getId() + " destruido junto con su portadron");
-                        
-                        // Enviar actualización
-                        Evento_Movimiento actualizacionDron = new Evento_Movimiento(
-                            dron, 
-                            dron.getPosicionX(), 
-                            dron.getPosicionY(), 
-                            dron.getAngulo()
-                        );
-                        actualizacionDron.habilitar();
-                        accionesPendientesEnviar.add(actualizacionDron);
+                        accionesPendientesEnviar.add(new Evento_ActualizaEstado(dron));
                     }
                 }
             }
         }
-        
+
         // Verificar condiciones de victoria cada tick
         if (finalizarSesion()) {
-            
-            if (ganadorJuego != null) {
-                System.out.println("Sesion finalizada - Ganador: " + ganadorJuego.getNickName());
-                notificadorPartida.EnviarFinPartida(jugadores, ganadorJuego);
-            } else {
-                System.out.println("Sesion finalizada - Empate");
-                notificadorPartida.EnviarFinPartida(jugadores, null);
-            }
-            stopGameLoop();
+            procesarFinalizacionPartida();
         }
     }
 
-   
+    void procesarFinalizacionPartida()
+    {
+        if (ganadorJuego != null) {
+            System.out.println("Sesion finalizada - Ganador: " + ganadorJuego.getNickName());
+            notificadorPartida.EnviarFinPartida(jugadores, ganadorJuego);
+        } else {
+            System.out.println("Sesion finalizada - Empate");
+            notificadorPartida.EnviarFinPartida(jugadores, null);
+        }
+        stopGameLoop();
+
+    }
+
 }

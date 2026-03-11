@@ -1,6 +1,5 @@
 package com.Proyecto.SpringBoot.Logica;
 
-import org.jspecify.annotations.Nullable;
 
 public class Evento_Movimiento extends Evento {
 

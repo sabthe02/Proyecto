@@ -130,6 +130,14 @@ public abstract class EntidadElemento {
             this.jugador = jugador;
         }
 
+        public EstadoElemento getEstado() {
+            return estado;
+        }
+
+        public void setEstado(EstadoElemento estado) {
+            this.estado = estado;
+        }
+
 
 
 

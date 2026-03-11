@@ -22,6 +22,7 @@ import com.Proyecto.SpringBoot.Logica.Excepciones.AccionInvalidaException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.ExisteNickNameException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.JugadorNoExisteException;
 import com.Proyecto.SpringBoot.Logica.Excepciones.LobbyException;
+import com.Proyecto.SpringBoot.Logica.Excepciones.UsuariosException;
 import com.Proyecto.SpringBoot.Servicios.JugadoresService;
 import com.Proyecto.SpringBoot.Servicios.LobbyService;
 import com.Proyecto.SpringBoot.Servicios.PartidasService;
@@ -54,7 +55,7 @@ public class Fachada implements iFachada {
         this.partidasService.setiFachada(this);
     }
 
-    public LoginUsuarioDTO loginUsuario(String nickName) throws JugadorNoExisteException {
+    public LoginUsuarioDTO loginUsuario(String nickName) throws JugadorNoExisteException, UsuariosException {
         EntidadJugador jugador = jugadoresService.loginUsuario(nickName);
        
         boolean partidaGuardada = partidasService.existePartidaByJugador(jugador);
@@ -71,7 +72,7 @@ public class Fachada implements iFachada {
         return usuarioDTO;
     }
 
-    public void desconectarUsuario(String idJugador) throws Exception
+   public void desconectarUsuario(String idJugador) throws Exception
     {
         EntidadJugador jugador = jugadoresService.obtenerJugadorConectado(idJugador);
         jugadoresService.desconectarUsuario(jugador);

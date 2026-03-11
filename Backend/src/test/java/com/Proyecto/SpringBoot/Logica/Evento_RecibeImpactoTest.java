@@ -24,12 +24,10 @@ public class Evento_RecibeImpactoTest {
                             90, 
                             100, 
                             EstadoElemento.ACTIVO, 
-                            1, 
-                            0, 
-                            50, 
+                            
                             TipoElemento.AEREO, 
                             j1);
-        Evento_RecibeImpacto evento = new Evento_RecibeImpacto(elemento, 2);
+        Evento_RecibeImpacto evento = new Evento_RecibeImpacto(elemento, elemento);
         assertEquals(2, evento.getIdElementoEmisor());
     }
 
@@ -43,13 +41,11 @@ public class Evento_RecibeImpactoTest {
                             90, 
                             100, 
                             EstadoElemento.ACTIVO, 
-                            1, 
-                            0, 
-                            50, 
+                           
                             TipoElemento.AEREO, 
                             j2);
-        Evento_RecibeImpacto evento = new Evento_RecibeImpacto(elemento, 2);
-        evento.setIdElementoEmisor(3);
+        Evento_RecibeImpacto evento = new Evento_RecibeImpacto(elemento, elemento);
+       // evento.setIdElementoEmisor(3);
         assertEquals(3, evento.getIdElementoEmisor());
     }
 }

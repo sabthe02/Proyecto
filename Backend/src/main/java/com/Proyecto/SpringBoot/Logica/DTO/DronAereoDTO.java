@@ -52,6 +52,7 @@ int id;
         if (dron == null || dron.getMuniciones() == null) {
             return;
         }
+
         for (Municion municion : dron.getMuniciones()) {
             if (municion instanceof Bomba) {
                 Bomba bomba = (Bomba) municion;

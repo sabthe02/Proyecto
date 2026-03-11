@@ -8,12 +8,13 @@ import com.Proyecto.SpringBoot.Logica.TipoElemento;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.OneToMany;
 
 @Entity
 public class EntidadPortadron extends EntidadElemento {
 
-    @OneToMany (cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany (cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<EntidadDron> drones;
     private TipoElemento tipo;
 

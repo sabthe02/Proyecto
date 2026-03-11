@@ -24,4 +24,10 @@ public interface SesionDAO extends JpaRepository<EntidadSesion, String>{
 
     EntidadSesion findByJugadorPrincipal(EntidadJugador jugador);
 
+     @Query("SELECT s FROM EntidadSesion s " +
+           "LEFT JOIN FETCH s.listaJugadores " +
+           "LEFT JOIN FETCH s.listaPortadrones " +
+           "WHERE s.jugadorPrincipal = :jugador")
+    EntidadSesion findByJugadorPrincipalConListas(@Param("jugador") EntidadJugador jugador); 
+
 }

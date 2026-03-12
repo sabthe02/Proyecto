@@ -76,6 +76,8 @@ export class Portadrones extends Phaser.GameObjects.Container {
 
  
     actualizarDesdeServidor(data) {
+        // Si la escena fue destruida (por reinicio), no hacer nada
+        if (!this.scene || !this.scene.tweens) return;
         // Sincronizar propiedades desde el servidor
         this.estadoActual = data.estado;
         this.vida = data.vida;

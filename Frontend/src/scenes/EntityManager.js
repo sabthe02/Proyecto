@@ -10,9 +10,19 @@ export class EntityManager {
         // Acá van a vivir nuestras unidades
         this.unidades = new Map(); 
 
+        // Guardar referencia a los callbacks para poder eliminarlos al cerrar la escena
+        this._onActualizar = (data) => this.sincronizar(data);
+        this._onDano = (data) => this.aplicarDano(data);
+
         // Escuchamos al NetworkManager
-        this.scene.events.on('ACTUALIZAR_PARTIDA', (data) => this.sincronizar(data));
-        this.scene.events.on('APLICAR_DANO', (data) => this.aplicarDano(data));
+        this.scene.events.on('ACTUALIZAR_PARTIDA', this._onActualizar);
+        this.scene.events.on('APLICAR_DANO', this._onDano);
+
+        // Limpiar listeners al cerrar la escena para evitar acumulación en reinicios
+        this.scene.events.once('shutdown', () => {
+            this.scene.events.off('ACTUALIZAR_PARTIDA', this._onActualizar);
+            this.scene.events.off('APLICAR_DANO', this._onDano);
+        });
     }
 
     sincronizar(data) {

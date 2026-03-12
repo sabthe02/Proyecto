@@ -128,6 +128,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
                 response.put("tipo", "ERROR");
                 response.put("mensaje", "El jugador no ha iniciado sesión.");
                 sendMessageSafely(session, response);
+                return;
             }
             response = guardarPartida(session, node);
 
@@ -383,7 +384,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler implements iHandl
                 response.put("tipo", "PARTIDA_GUARDADA_EXITOSO");
             } else {
                 response.put("tipo", "PARTIDA_GUARDADA_FALLIDO");
-                response.put("mensaje", "No se pudo desplegar el dron.");
+                response.put("mensaje", "No se pudo guardar la partida.");
             }
         } catch (PartidaException e) {
             response.put("tipo", "ERROR");

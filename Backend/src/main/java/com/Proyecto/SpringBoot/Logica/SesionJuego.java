@@ -620,15 +620,15 @@ public class SesionJuego extends GameLoop {
 
     void procesarFinalizacionPartida()
     {
-        if (ganadorJuego != null) {
-            System.out.println("Sesion finalizada - Ganador: " + ganadorJuego.getNickName());
-            notificadorPartida.EnviarFinPartida(jugadores, ganadorJuego, "Ganador");
-        } else if(!partidaGuardada){
-            System.out.println("Sesion finalizada - Empate");
-            notificadorPartida.EnviarFinPartida(jugadores, null, "Empate");
-        }else{
+        if (partidaGuardada) {
             System.out.println("Sesion finalizada - Partida Guardada");
             notificadorPartida.EnviarFinPartida(jugadores, null, "Partida Guardada");
+        } else if (ganadorJuego != null) {
+            System.out.println("Sesion finalizada - Ganador: " + ganadorJuego.getNickName());
+            notificadorPartida.EnviarFinPartida(jugadores, ganadorJuego, "Ganador");
+        } else {
+            System.out.println("Sesion finalizada - Empate");
+            notificadorPartida.EnviarFinPartida(jugadores, null, "Empate");
         }
         stopGameLoop();
     }

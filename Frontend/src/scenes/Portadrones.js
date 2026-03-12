@@ -4,7 +4,7 @@ export class Portadrones extends Phaser.GameObjects.Container {
         this.scene = scene;
         this.id = data.id;
         this.clase = data.clase || 'PORTADRON';
-        this.tipoEquipo = data.tipoEquipo || data.tipo || '';
+        this.tipoEquipo = (data.tipoEquipo || data.tipo || '').toUpperCase();
         this.estadoActual = data.estado;
         this.vida = data.vida;
         this.jugadorId = data.jugadorId || data.idJugador;

@@ -86,7 +86,7 @@ public class PortaDronTest {
                 20f,
                 30f,
                 90,
-                100,
+                300,
                 EstadoElemento.ACTIVO,
               
                 TipoElemento.AEREO,
@@ -94,7 +94,7 @@ public class PortaDronTest {
 
         Evento_Movimiento evento = new Evento_Movimiento(portaDron, 10f, 20f, 90);
         portaDron.recibeImpacto();
-        assertEquals(84, portaDron.getVida());
+        assertEquals(250, portaDron.getVida());
         assertEquals(EstadoElemento.ACTIVO, portaDron.getEstado());
 
         // Simular más impactos para destruir el PortaDron
@@ -113,7 +113,7 @@ public class PortaDronTest {
                 20f,
                 30f,
                 90,
-                100,
+                300,
                 EstadoElemento.ACTIVO,
               
                 TipoElemento.NAVAL,
@@ -121,7 +121,7 @@ public class PortaDronTest {
 
         Evento_Movimiento evento = new Evento_Movimiento(portaDron, 10f, 20f, 90);
         portaDron.recibeImpacto();
-        assertEquals(67, portaDron.getVida());
+        assertEquals(200, portaDron.getVida());
         assertEquals(EstadoElemento.ACTIVO, portaDron.getEstado());
 
         // Simular más impactos para destruir el PortaDron
